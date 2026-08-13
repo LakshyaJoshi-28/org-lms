@@ -339,8 +339,14 @@ const submitQuiz = async (req, res, next) => {
       });
     }
 
-    if (trainingAssignmentId && passed) {
-      await updateOverallProgress(trainingAssignmentId, req.user._id);
+    let targetAssignmentId = trainingAssignmentId;
+    if (!targetAssignmentId && quiz.trainingId) {
+      const foundTa = await TrainingAssignment.findOne({ trainingId: quiz.trainingId, employeeId: req.user._id });
+      if (foundTa) targetAssignmentId = foundTa._id;
+    }
+
+    if (targetAssignmentId && passed) {
+      await updateOverallProgress(targetAssignmentId, req.user._id);
     }
 
     res.status(200).json(

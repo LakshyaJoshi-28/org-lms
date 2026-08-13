@@ -102,8 +102,8 @@ export const TrainingPlayer = () => {
       // Auto-resume: Find first incomplete item
       if (!isRefresh || !activeItem) {
         const completedIds = new Set(payload.progress?.completedSubSectionIds?.map(id => id.toString()) || []);
-        const passedQuizIds = new Set(payload.quizAttempts?.map(a => a.quizId?.toString()) || []);
-        const submittedAssignmentIds = new Set(payload.assignmentSubmissions?.map(s => s.assignmentId?.toString()) || []);
+        const passedQuizIds = new Set(payload.quizAttempts?.filter(a => a.passed).map(a => (a.quizId?._id || a.quizId)?.toString()) || []);
+        const submittedAssignmentIds = new Set(payload.assignmentSubmissions?.map(s => (s.assignmentId?._id || s.assignmentId)?.toString()) || []);
 
         let nextActive = items.find(item => {
           if (item.type === 'lesson') return !completedIds.has(item.id.toString());
@@ -113,9 +113,7 @@ export const TrainingPlayer = () => {
         });
 
         if (!nextActive && items.length > 0) {
-          nextActive = payload.progress?.progressPercentage === 100
-            ? { type: 'completed' }
-            : items[items.length - 1];
+          nextActive = { type: 'completed' };
         }
 
         setActiveItem(nextActive || items[0]);
@@ -228,8 +226,8 @@ export const TrainingPlayer = () => {
   const getItemStatus = (item) => {
     if (!data || !data.progress) return { isCompleted: false, isLocked: true };
     const completedSubSectionIds = new Set(data.progress.completedSubSectionIds?.map(id => id.toString()) || []);
-    const passedQuizIds = new Set(data.quizAttempts?.map(a => a.quizId?.toString()) || []);
-    const submittedAssignmentIds = new Set(data.assignmentSubmissions?.map(s => s.assignmentId?.toString()) || []);
+    const passedQuizIds = new Set(data.quizAttempts?.filter(a => a.passed).map(a => (a.quizId?._id || a.quizId)?.toString()) || []);
+    const submittedAssignmentIds = new Set(data.assignmentSubmissions?.map(s => (s.assignmentId?._id || s.assignmentId)?.toString()) || []);
 
     const allItems = extractSyllabusItems(data);
     const itemIndex = allItems.findIndex(i => i.id === item.id && i.type === item.type);
@@ -645,8 +643,11 @@ export const TrainingPlayer = () => {
   const canGoPrev = currentIdx > 0;
   const canGoNext = currentIdx >= 0 && currentIdx < allItems.length - 1 && activeStatus.isCompleted;
 
-  const completedCount = progress?.completedSubSectionIds?.length || 0;
-  const totalSubSections = training.sections?.reduce((acc, sec) => acc + (sec.subSections?.length || 0), 0) || 0;
+  const completedCount = allItems.filter(item => getItemStatus(item).isCompleted).length;
+  const totalItemsCount = allItems.length;
+  const calculatedPercentage = totalItemsCount > 0
+    ? (completedCount === totalItemsCount ? 100 : Math.round((completedCount / totalItemsCount) * 100))
+    : 0;
 
   return (
     <div className="space-y-6 animate-fade-in pb-16">
@@ -670,7 +671,7 @@ export const TrainingPlayer = () => {
         <div className="flex items-center space-x-4">
           <div className="text-right hidden sm:block">
             <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              {progress?.progressPercentage || 0}% Completed
+              {calculatedPercentage}% Completed
             </p>
             <p className="text-[11px] text-slate-500 flex items-center justify-end">
               <Clock className="w-3 h-3 mr-1" /> Due: {formatDate(assignment.deadline)}
@@ -1293,12 +1294,24 @@ export const TrainingPlayer = () => {
 
             <button
               onClick={() => {
-                if (canGoNext) setActiveItem(allItems[currentIdx + 1]);
+                if (canGoNext) {
+                  setActiveItem(allItems[currentIdx + 1]);
+                } else if (currentIdx === allItems.length - 1 && activeStatus.isCompleted) {
+                  setActiveItem({ type: 'completed' });
+                }
               }}
-              disabled={!canGoNext}
+              disabled={!canGoNext && !(currentIdx === allItems.length - 1 && activeStatus.isCompleted)}
               className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold disabled:opacity-40 disabled:bg-slate-300 dark:disabled:bg-slate-800 cursor-pointer"
             >
-              Next <ChevronRight className="w-4 h-4 ml-1" />
+              {currentIdx === allItems.length - 1 && activeStatus.isCompleted ? (
+                <>
+                  Finish Training <Sparkles className="w-4 h-4 ml-1.5 text-amber-300" />
+                </>
+              ) : (
+                <>
+                  Continue Learning <ChevronRight className="w-4 h-4 ml-1" />
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1312,13 +1325,13 @@ export const TrainingPlayer = () => {
               {/* Progress Summary */}
               <div className="space-y-1.5 pt-3">
                 <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
-                  <span>Progress: {completedCount} / {totalSubSections} completed</span>
-                  <span className="text-blue-600 dark:text-blue-400">{progress?.progressPercentage || 0}%</span>
+                  <span>Progress: {completedCount} / {totalItemsCount} completed</span>
+                  <span className="text-blue-600 dark:text-blue-400">{calculatedPercentage}%</span>
                 </div>
                 <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${progress?.progressPercentage || 0}%` }}
+                    style={{ width: `${calculatedPercentage}%` }}
                   />
                 </div>
               </div>

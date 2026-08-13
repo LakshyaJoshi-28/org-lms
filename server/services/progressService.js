@@ -21,7 +21,7 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
     const training = await Training.findById(assignment.trainingId);
     if (!training) return null;
 
-    // Collect all required item IDs across training sections & course level
+    // Collect all required item IDs across training sections & syllabus structure
     let totalSubSections = 0;
     const requiredQuizIds = new Set();
     const requiredAssignmentIds = new Set();
@@ -40,16 +40,11 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
       });
     });
 
-    // Also include any quizzes or assignments linked directly to this trainingId
-    const courseQuizzes = await Quiz.find({ trainingId: training._id });
-    courseQuizzes.forEach(cq => {
-      requiredQuizIds.add(cq._id.toString());
-    });
-
-    const courseAssignments = await Assignment.find({ trainingId: training._id });
-    courseAssignments.forEach(ca => {
-      requiredAssignmentIds.add(ca._id.toString());
-    });
+    // Include root assignment if linked to training
+    if (training.assignmentId) {
+      const rootAId = training.assignmentId._id ? training.assignmentId._id.toString() : training.assignmentId.toString();
+      requiredAssignmentIds.add(rootAId);
+    }
 
     const totalRequiredCount = totalSubSections + requiredQuizIds.size + requiredAssignmentIds.size;
     if (totalRequiredCount === 0) return assignment;
@@ -84,7 +79,6 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
       passedQuizAttempts.forEach(a => {
         if (a.quizId) uniquePassedQuizIds.add(a.quizId.toString());
       });
-      // Cap passed quiz count at requiredQuizIds.size
       passedQuizCount = Math.min(requiredQuizIds.size, uniquePassedQuizIds.size > 0 ? uniquePassedQuizIds.size : (passedQuizAttempts.length > 0 ? requiredQuizIds.size : 0));
     }
 
