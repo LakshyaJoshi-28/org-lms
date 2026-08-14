@@ -18,10 +18,7 @@ export const LoadingSpinner = ({ size = 'md', text = 'Loading IT360 LMS...' }) =
 export const FullScreenLoader = () => (
   <div className="min-h-screen bg-slate-950 flex items-center justify-center">
     <div className="text-center space-y-4">
-      <div className="inline-flex items-center space-x-3 text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-500/25">
-          IT
-        </div>
+      <div className="inline-flex items-center text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent font-heading">
         <span>IT360 LMS</span>
       </div>
       <LoadingSpinner size="lg" text="Authenticating enterprise portal..." />

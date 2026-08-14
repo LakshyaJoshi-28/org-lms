@@ -27,12 +27,9 @@ export const Navbar = () => {
       <header className="sticky top-0 z-40 w-full h-16 glass-panel bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800/80 px-4 sm:px-6 flex items-center justify-between transition-colors">
         {/* Left: Branding & Org Name */}
         <div className="flex items-center space-x-3 sm:space-x-4">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-indigo-500/20">
-              360
-            </div>
+          <div className="flex items-center">
             <span className="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white font-heading">
-              IT360 <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm ml-1">LMS</span>
+              IT360 <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm ml-0.5">LMS</span>
             </span>
           </div>
 
