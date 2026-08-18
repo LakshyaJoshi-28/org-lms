@@ -1,9 +1,72 @@
-const Assignment = require('../models/Assignment');
-const AssignmentSubmission = require('../models/AssignmentSubmission');
-const Training = require('../models/Training');
+const { prisma, withId } = require('../config/prismaClient');
 const { updateOverallProgress } = require('../services/progressService');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
+
+/**
+ * Helper to fetch a populated assignment matching Mongoose structure
+ */
+const getPopulatedAssignment = async (assignmentId) => {
+  const aId = String(assignmentId);
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: aId },
+    include: {
+      instructor: { select: { id: true, name: true, email: true } },
+      training: { select: { id: true, title: true, createdBy: true } }
+    }
+  });
+
+  if (!assignment) return null;
+  const transformed = withId(assignment);
+  if (transformed.instructor) transformed.createdBy = transformed.instructor;
+  return transformed;
+};
+
+/**
+ * Helper to fetch a populated submission matching Mongoose structure
+ */
+const getPopulatedSubmission = async (submissionId) => {
+  const sId = String(submissionId);
+  const sub = await prisma.assignmentSubmission.findUnique({
+    where: { id: sId },
+    include: {
+      employee: { select: { id: true, name: true, email: true, profilePicture: true, departmentId: true, jobRole: true } },
+      assignment: {
+        select: {
+          id: true,
+          title: true,
+          instructions: true,
+          maxScore: true,
+          trainingId: true,
+          training: {
+            select: {
+              id: true,
+              title: true,
+              createdBy: true,
+              instructor: { select: { id: true, name: true, email: true, profilePicture: true } },
+              category: { select: { id: true, name: true } }
+            }
+          }
+        }
+      },
+      reviewer: { select: { id: true, name: true, email: true, profilePicture: true } }
+    }
+  });
+
+  if (!sub) return null;
+  const transformed = withId(sub);
+  if (transformed.employee) transformed.employeeId = transformed.employee;
+  if (transformed.reviewer) transformed.reviewedBy = transformed.reviewer;
+  if (transformed.assignment) {
+    transformed.assignmentId = transformed.assignment;
+    if (transformed.assignment.training) {
+      transformed.assignmentId.trainingId = transformed.assignment.training;
+      if (transformed.assignment.training.instructor) transformed.assignmentId.trainingId.createdBy = transformed.assignment.training.instructor;
+      if (transformed.assignment.training.category) transformed.assignmentId.trainingId.categoryId = transformed.assignment.training.category;
+    }
+  }
+  return transformed;
+};
 
 /**
  * @desc    Create Assignment for a SubSection
@@ -13,51 +76,62 @@ const ApiResponse = require('../utils/apiResponse');
 const createAssignment = async (req, res, next) => {
   try {
     const { title, instructions, trainingId, sectionId, subSectionId, maxScore } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const instructorId = String(req.user.id || req.user._id);
 
     if (!title || !instructions || !trainingId) {
       throw new ApiError(400, 'Please provide title, instructions, and trainingId');
     }
 
-    const training = await Training.findOne({ _id: trainingId, organizationId: req.user.organizationId });
+    const trgId = String(trainingId);
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) {
       throw new ApiError(404, 'Training not found');
     }
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== instructorId) {
       throw new ApiError(403, 'Not authorized to add assignment to this training');
     }
 
-    let targetSubSectionId = subSectionId;
+    let targetSubSectionId = subSectionId ? String(subSectionId) : null;
     if (!targetSubSectionId && sectionId) {
-      const section = training.sections.id(sectionId);
-      if (section && section.subSections.length > 0) {
-        targetSubSectionId = section.subSections[0]._id;
+      const secId = String(sectionId);
+      const firstSub = await prisma.trainingSubSection.findFirst({
+        where: { sectionId: secId },
+        orderBy: { order: 'asc' }
+      });
+      if (firstSub) {
+        targetSubSectionId = firstSub.id;
       }
     }
 
-    const assignment = await Assignment.create({
-      title,
-      instructions,
-      trainingId,
-      subSectionId: targetSubSectionId || training._id,
-      maxScore: maxScore || 100,
-      createdBy: req.user._id,
-      organizationId: req.user.organizationId
+    const assignment = await prisma.assignment.create({
+      data: {
+        title: title.trim(),
+        instructions: instructions.trim(),
+        trainingId: training.id,
+        subSectionId: targetSubSectionId || training.id,
+        maxScore: Number(maxScore) || 100,
+        createdBy: instructorId,
+        organizationId: orgId
+      }
     });
 
-    if (sectionId && targetSubSectionId) {
-      const section = training.sections.id(sectionId);
-      if (section) {
-        const subSection = section.subSections.id(targetSubSectionId);
-        if (subSection) {
-          subSection.hasAssignment = true;
-          subSection.assignmentId = assignment._id;
-          await training.save();
+    if (targetSubSectionId) {
+      await prisma.trainingSubSection.update({
+        where: { id: targetSubSectionId },
+        data: {
+          hasAssignment: true,
+          assignmentId: assignment.id
         }
-      }
+      });
     }
 
-    res.status(201).json(new ApiResponse(201, { assignment }, 'Assignment created successfully'));
+    const populatedAssignment = await getPopulatedAssignment(assignment.id);
+
+    res.status(201).json(new ApiResponse(201, { assignment: populatedAssignment }, 'Assignment created successfully'));
   } catch (error) {
     next(error);
   }
@@ -70,30 +144,43 @@ const createAssignment = async (req, res, next) => {
  */
 const getAssignmentById = async (req, res, next) => {
   try {
-    let assignment = await Assignment.findOne({ _id: req.params.id, organizationId: req.user.organizationId })
-      .populate('createdBy', 'name email');
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const paramId = String(req.params.id);
+
+    let assignment = await prisma.assignment.findFirst({
+      where: { id: paramId, organizationId: orgId }
+    });
 
     if (!assignment) {
-      assignment = await Assignment.findOne({ subSectionId: req.params.id, organizationId: req.user.organizationId })
-        .populate('createdBy', 'name email');
+      assignment = await prisma.assignment.findFirst({
+        where: { subSectionId: paramId, organizationId: orgId }
+      });
     }
 
     if (!assignment) {
-      assignment = await Assignment.findOne({ trainingId: req.params.id, organizationId: req.user.organizationId })
-        .populate('createdBy', 'name email');
+      assignment = await prisma.assignment.findFirst({
+        where: { trainingId: paramId, organizationId: orgId }
+      });
     }
 
     if (!assignment) {
       throw new ApiError(404, 'Assignment not found');
     }
 
-    // Check if current user has already submitted
-    const userSubmission = await AssignmentSubmission.findOne({
-      assignmentId: assignment._id,
-      employeeId: req.user._id
-    }).populate('reviewedBy', 'name email');
+    const populatedAssignment = await getPopulatedAssignment(assignment.id);
 
-    res.status(200).json(new ApiResponse(200, { assignment, userSubmission }, 'Assignment details retrieved successfully'));
+    // Check if current user has already submitted
+    const subRecord = await prisma.assignmentSubmission.findFirst({
+      where: {
+        assignmentId: assignment.id,
+        employeeId: userId
+      }
+    });
+
+    const userSubmission = subRecord ? await getPopulatedSubmission(subRecord.id) : null;
+
+    res.status(200).json(new ApiResponse(200, { assignment: populatedAssignment, userSubmission }, 'Assignment details retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -106,24 +193,36 @@ const getAssignmentById = async (req, res, next) => {
  */
 const updateAssignment = async (req, res, next) => {
   try {
-    const assignment = await Assignment.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const aId = String(req.params.id);
+
+    const assignment = await prisma.assignment.findFirst({
+      where: { id: aId, organizationId: orgId }
+    });
     if (!assignment) {
       throw new ApiError(404, 'Assignment not found');
     }
 
-    if (req.user.role === 'Instructor' && assignment.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && assignment.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized to update this assignment');
     }
 
     const { title, instructions, maxScore } = req.body;
 
-    if (title) assignment.title = title;
-    if (instructions) assignment.instructions = instructions;
-    if (maxScore) assignment.maxScore = maxScore;
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (instructions) updateData.instructions = instructions.trim();
+    if (maxScore) updateData.maxScore = Number(maxScore);
 
-    await assignment.save();
+    await prisma.assignment.update({
+      where: { id: assignment.id },
+      data: updateData
+    });
 
-    res.status(200).json(new ApiResponse(200, { assignment }, 'Assignment updated successfully'));
+    const updatedAssignment = await getPopulatedAssignment(assignment.id);
+
+    res.status(200).json(new ApiResponse(200, { assignment: updatedAssignment }, 'Assignment updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -137,6 +236,9 @@ const updateAssignment = async (req, res, next) => {
 const submitAssignment = async (req, res, next) => {
   try {
     const { submissionType, githubUrl, fileUrl, filePublicId, trainingAssignmentId } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const paramId = String(req.params.id);
 
     if (!submissionType || !['github', 'file'].includes(submissionType)) {
       throw new ApiError(400, 'Invalid submission type. Must be "github" or "file"');
@@ -155,12 +257,18 @@ const submitAssignment = async (req, res, next) => {
       throw new ApiError(400, 'File upload is required for file submission');
     }
 
-    let assignment = await Assignment.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    let assignment = await prisma.assignment.findFirst({
+      where: { id: paramId, organizationId: orgId }
+    });
     if (!assignment) {
-      assignment = await Assignment.findOne({ subSectionId: req.params.id, organizationId: req.user.organizationId });
+      assignment = await prisma.assignment.findFirst({
+        where: { subSectionId: paramId, organizationId: orgId }
+      });
     }
     if (!assignment) {
-      assignment = await Assignment.findOne({ trainingId: req.params.id, organizationId: req.user.organizationId });
+      assignment = await prisma.assignment.findFirst({
+        where: { trainingId: paramId, organizationId: orgId }
+      });
     }
 
     if (!assignment) {
@@ -168,37 +276,46 @@ const submitAssignment = async (req, res, next) => {
     }
 
     // Upsert employee submission
-    let submission = await AssignmentSubmission.findOne({
-      assignmentId: assignment._id,
-      employeeId: req.user._id
+    let submission = await prisma.assignmentSubmission.findFirst({
+      where: {
+        assignmentId: assignment.id,
+        employeeId: userId
+      }
     });
 
     if (submission) {
-      submission.submissionType = submissionType;
-      submission.githubUrl = githubUrl ? githubUrl.trim() : '';
-      submission.fileUrl = fileUrl ? fileUrl.trim() : '';
-      submission.filePublicId = filePublicId || '';
-      submission.status = 'submitted';
-      submission.submittedAt = Date.now();
-      await submission.save();
+      submission = await prisma.assignmentSubmission.update({
+        where: { id: submission.id },
+        data: {
+          submissionType,
+          githubUrl: githubUrl ? githubUrl.trim() : '',
+          fileUrl: fileUrl ? fileUrl.trim() : '',
+          filePublicId: filePublicId || '',
+          status: 'submitted',
+          submittedAt: new Date()
+        }
+      });
     } else {
-      submission = await AssignmentSubmission.create({
-        assignmentId: assignment._id,
-        trainingAssignmentId: trainingAssignmentId || null,
-        employeeId: req.user._id,
-        submissionType,
-        githubUrl: githubUrl ? githubUrl.trim() : '',
-        fileUrl: fileUrl ? fileUrl.trim() : '',
-        filePublicId: filePublicId || '',
-        status: 'submitted'
+      submission = await prisma.assignmentSubmission.create({
+        data: {
+          assignmentId: assignment.id,
+          trainingAssignmentId: trainingAssignmentId ? String(trainingAssignmentId) : null,
+          employeeId: userId,
+          submissionType,
+          githubUrl: githubUrl ? githubUrl.trim() : '',
+          fileUrl: fileUrl ? fileUrl.trim() : '',
+          filePublicId: filePublicId || '',
+          status: 'submitted'
+        }
       });
     }
 
-    if (trainingAssignmentId) {
-      await updateOverallProgress(trainingAssignmentId, req.user._id);
+    const tAssignId = trainingAssignmentId ? String(trainingAssignmentId) : null;
+    if (tAssignId) {
+      await updateOverallProgress(tAssignId, userId);
     }
 
-    res.status(201).json(new ApiResponse(201, { submission }, 'Assignment submitted successfully'));
+    res.status(201).json(new ApiResponse(201, { submission: withId(submission) }, 'Assignment submitted successfully'));
   } catch (error) {
     next(error);
   }
@@ -211,34 +328,45 @@ const submitAssignment = async (req, res, next) => {
  */
 const getAssignmentSubmissions = async (req, res, next) => {
   try {
-    const idParam = req.params.id;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const idParam = String(req.params.id);
 
-    // Search assignments by _id or trainingId
-    let assignments = await Assignment.find({ _id: idParam, organizationId: req.user.organizationId });
+    let assignments = await prisma.assignment.findMany({
+      where: { id: idParam, organizationId: orgId }
+    });
     if (assignments.length === 0) {
-      assignments = await Assignment.find({ trainingId: idParam, organizationId: req.user.organizationId });
+      assignments = await prisma.assignment.findMany({
+        where: { trainingId: idParam, organizationId: orgId }
+      });
     }
 
     if (assignments.length === 0) {
-      // Return empty list if no assignments exist for this training
       return res.status(200).json(new ApiResponse(200, { submissions: [] }, 'No submissions found for training'));
     }
 
-    // Filter by instructor ownership if Instructor
     if (req.user.role === 'Instructor') {
-      assignments = assignments.filter(a => a.createdBy.toString() === req.user._id.toString());
+      assignments = assignments.filter(a => a.createdBy === userId);
     }
 
-    const assignmentIds = assignments.map(a => a._id);
-    const submissions = await AssignmentSubmission.find({ assignmentId: { $in: assignmentIds } })
-      .populate('employeeId', 'name email profilePicture departmentId jobRole')
-      .populate({
-        path: 'assignmentId',
-        select: 'title instructions maxScore trainingId',
-        populate: { path: 'trainingId', select: 'title' }
-      })
-      .populate('reviewedBy', 'name email')
-      .sort({ submittedAt: -1, createdAt: -1 });
+    const assignmentIds = assignments.map(a => a.id);
+    const submissionsList = await prisma.assignmentSubmission.findMany({
+      where: { assignmentId: { in: assignmentIds } },
+      include: {
+        assignment: { select: { id: true, title: true, maxScore: true, trainingId: true } },
+        employee: { select: { id: true, name: true, email: true, departmentId: true, profilePicture: true } },
+        reviewer: { select: { id: true, name: true, email: true } }
+      },
+      orderBy: { submittedAt: 'desc' }
+    });
+
+    const submissions = submissionsList.map(s => {
+      const transformed = withId(s);
+      if (transformed.assignment) transformed.assignmentId = transformed.assignment;
+      if (transformed.employee) transformed.employeeId = transformed.employee;
+      if (transformed.reviewer) transformed.reviewedBy = transformed.reviewer;
+      return transformed;
+    });
 
     res.status(200).json(new ApiResponse(200, { submissions }, 'Assignment submissions retrieved successfully'));
   } catch (error) {
@@ -253,42 +381,68 @@ const getAssignmentSubmissions = async (req, res, next) => {
  */
 const getInstructorSubmissions = async (req, res, next) => {
   try {
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
     const { trainingId } = req.query;
 
-    const ownedTrainings = await Training.find({
-      createdBy: req.user._id,
-      organizationId: req.user.organizationId
-    }).select('_id title');
+    const ownedTrainings = await prisma.training.findMany({
+      where: {
+        createdBy: userId,
+        organizationId: orgId
+      },
+      select: { id: true, title: true }
+    });
 
-    const ownedTrainingIds = ownedTrainings.map(t => t._id);
+    const ownedTrainingIds = ownedTrainings.map(t => t.id);
 
     let targetTrainingIds = ownedTrainingIds;
     if (trainingId && trainingId !== 'all') {
-      targetTrainingIds = ownedTrainingIds.filter(id => id.toString() === trainingId.toString());
+      const paramTrgId = String(trainingId);
+      targetTrainingIds = ownedTrainingIds.filter(id => id === paramTrgId);
     }
 
-    const assignments = await Assignment.find({
-      $or: [
-        { trainingId: { $in: targetTrainingIds } },
-        { createdBy: req.user._id }
-      ]
-    }).select('_id title trainingId');
+    const assignments = await prisma.assignment.findMany({
+      where: {
+        OR: [
+          { trainingId: { in: targetTrainingIds } },
+          { createdBy: userId }
+        ]
+      },
+      select: { id: true }
+    });
 
-    const assignmentIds = assignments.map(a => a._id);
+    const assignmentIds = assignments.map(a => a.id);
 
-    const submissions = await AssignmentSubmission.find({ assignmentId: { $in: assignmentIds } })
-      .populate('employeeId', 'name email profilePicture departmentId jobRole')
-      .populate({
-        path: 'assignmentId',
-        select: 'title instructions maxScore trainingId',
-        populate: { path: 'trainingId', select: 'title' }
-      })
-      .populate('reviewedBy', 'name email')
-      .sort({ submittedAt: -1, createdAt: -1 });
+    const submissionsList = await prisma.assignmentSubmission.findMany({
+      where: { assignmentId: { in: assignmentIds } },
+      include: {
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            maxScore: true,
+            training: { select: { id: true, title: true } }
+          }
+        },
+        employee: { select: { id: true, name: true, email: true, departmentId: true, profilePicture: true } },
+        reviewer: { select: { id: true, name: true, email: true } }
+      },
+      orderBy: { submittedAt: 'desc' }
+    });
 
-    // Filter by trainingId if specified
+    const submissions = submissionsList.map(s => {
+      const transformed = withId(s);
+      if (transformed.assignment) {
+        transformed.assignmentId = transformed.assignment;
+        if (transformed.assignment.training) transformed.assignmentId.trainingId = transformed.assignment.training;
+      }
+      if (transformed.employee) transformed.employeeId = transformed.employee;
+      if (transformed.reviewer) transformed.reviewedBy = transformed.reviewer;
+      return transformed;
+    });
+
     const filteredSubmissions = trainingId && trainingId !== 'all'
-      ? submissions.filter(s => s.assignmentId?.trainingId?._id?.toString() === trainingId.toString())
+      ? submissions.filter(s => String(s.assignmentId?.trainingId?.id || s.assignmentId?.trainingId?._id || s.assignmentId?.trainingId) === String(trainingId))
       : submissions;
 
     const totalSubmissions = filteredSubmissions.length;
@@ -305,7 +459,7 @@ const getInstructorSubmissions = async (req, res, next) => {
             reviewedCount
           },
           submissions: filteredSubmissions,
-          trainings: ownedTrainings
+          trainings: withId(ownedTrainings)
         },
         'Instructor assignment submissions retrieved successfully'
       )
@@ -323,41 +477,53 @@ const getInstructorSubmissions = async (req, res, next) => {
 const reviewSubmission = async (req, res, next) => {
   try {
     const { grade, feedback, score } = req.body;
+    const userId = String(req.user.id || req.user._id);
+    const subId = String(req.params.submissionId);
 
-    const submission = await AssignmentSubmission.findById(req.params.submissionId)
-      .populate({
-        path: 'assignmentId',
-        select: 'createdBy maxScore title'
-      });
+    const submission = await prisma.assignmentSubmission.findUnique({
+      where: { id: subId },
+      include: { assignment: true }
+    });
 
     if (!submission) {
       throw new ApiError(404, 'Submission not found');
     }
 
-    if (req.user.role === 'Instructor' && submission.assignmentId.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && submission.assignment.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized to review this submission');
     }
 
     const validGrades = ['Excellent', 'Good', 'Satisfactory', 'Needs Improvement', 'Poor'];
 
+    let finalGrade = submission.grade;
     if (grade && validGrades.includes(grade)) {
-      submission.grade = grade;
-    } else if (!submission.grade) {
-      submission.grade = 'Good';
+      finalGrade = grade;
+    } else if (!finalGrade) {
+      finalGrade = 'Good';
     }
+
+    const updateData = {
+      grade: finalGrade,
+      status: 'reviewed',
+      reviewedBy: userId,
+      reviewedAt: new Date()
+    };
 
     if (score !== undefined && !isNaN(Number(score))) {
-      submission.score = Number(score);
+      updateData.score = Number(score);
+    }
+    if (feedback !== undefined) {
+      updateData.feedback = feedback.trim();
     }
 
-    if (feedback !== undefined) submission.feedback = feedback;
-    submission.status = 'reviewed';
-    submission.reviewedBy = req.user._id;
-    submission.reviewedAt = Date.now();
+    await prisma.assignmentSubmission.update({
+      where: { id: submission.id },
+      data: updateData
+    });
 
-    await submission.save();
+    const updatedSubmission = await getPopulatedSubmission(submission.id);
 
-    res.status(200).json(new ApiResponse(200, { submission }, 'Submission evaluated & grade saved successfully'));
+    res.status(200).json(new ApiResponse(200, { submission: updatedSubmission }, 'Submission evaluated & grade saved successfully'));
   } catch (error) {
     next(error);
   }
@@ -370,24 +536,18 @@ const reviewSubmission = async (req, res, next) => {
  */
 const getEmployeeFeedback = async (req, res, next) => {
   try {
-    const submissions = await AssignmentSubmission.find({
-      employeeId: req.user._id,
-      status: 'reviewed'
-    })
-      .populate({
-        path: 'assignmentId',
-        select: 'title instructions maxScore trainingId',
-        populate: {
-          path: 'trainingId',
-          select: 'title createdBy categoryId',
-          populate: [
-            { path: 'createdBy', select: 'name email profilePicture' },
-            { path: 'categoryId', select: 'name' }
-          ]
-        }
-      })
-      .populate('reviewedBy', 'name email profilePicture')
-      .sort({ reviewedAt: -1, updatedAt: -1 });
+    const userId = String(req.user.id || req.user._id);
+
+    const submissionsList = await prisma.assignmentSubmission.findMany({
+      where: {
+        employeeId: userId,
+        status: 'reviewed'
+      },
+      select: { id: true },
+      orderBy: { reviewedAt: 'desc' }
+    });
+
+    const submissions = await Promise.all(submissionsList.map(s => getPopulatedSubmission(s.id)));
 
     res.status(200).json(
       new ApiResponse(

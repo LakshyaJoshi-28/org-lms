@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUser = async (retryCount = 0) => {
     try {
       setLoading(true);
       const res = await getMe();
@@ -16,6 +16,10 @@ export const AuthProvider = ({ children }) => {
         setUser(res.data.data.user);
       }
     } catch (err) {
+      if (retryCount < 1 && (err.code === 'ERR_NETWORK' || !err.response)) {
+        setTimeout(() => fetchCurrentUser(retryCount + 1), 1000);
+        return;
+      }
       setUser(null);
     } finally {
       setLoading(false);
@@ -34,7 +38,7 @@ export const AuthProvider = ({ children }) => {
       setUser(u);
       return u;
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed';
+      const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' ? 'Unable to connect to server' : 'Login failed');
       setError(msg);
       throw new Error(msg);
     }
@@ -48,7 +52,7 @@ export const AuthProvider = ({ children }) => {
       setUser(u);
       return u;
     } catch (err) {
-      const msg = err.response?.data?.message || 'Organization setup failed';
+      const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' ? 'Unable to connect to server' : 'Organization setup failed');
       setError(msg);
       throw new Error(msg);
     }
@@ -62,7 +66,7 @@ export const AuthProvider = ({ children }) => {
       setUser(u);
       return u;
     } catch (err) {
-      const msg = err.response?.data?.message || 'Registration failed';
+      const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' ? 'Unable to connect to server' : 'Registration failed');
       setError(msg);
       throw new Error(msg);
     }

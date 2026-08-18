@@ -1,4 +1,4 @@
-const TrainingCategory = require('../models/TrainingCategory');
+const { prisma, withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 
@@ -10,27 +10,32 @@ const ApiResponse = require('../utils/apiResponse');
 const createCategory = async (req, res, next) => {
   try {
     const { name, description } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
     if (!name) {
       throw new ApiError(400, 'Category name is required');
     }
 
-    const existingCategory = await TrainingCategory.findOne({
-      name: name.trim(),
-      organizationId: req.user.organizationId
+    const existingCategory = await prisma.trainingCategory.findFirst({
+      where: {
+        name: name.trim(),
+        organizationId: orgId
+      }
     });
 
     if (existingCategory) {
       throw new ApiError(400, 'Training category with this name already exists in your organization');
     }
 
-    const category = await TrainingCategory.create({
-      name: name.trim(),
-      description,
-      organizationId: req.user.organizationId
+    const category = await prisma.trainingCategory.create({
+      data: {
+        name: name.trim(),
+        description: description || null,
+        organizationId: orgId
+      }
     });
 
-    res.status(201).json(new ApiResponse(201, { category }, 'Training category created successfully'));
+    res.status(201).json(new ApiResponse(201, { category: withId(category) }, 'Training category created successfully'));
   } catch (error) {
     next(error);
   }
@@ -43,12 +48,17 @@ const createCategory = async (req, res, next) => {
  */
 const getCategories = async (req, res, next) => {
   try {
-    const categories = await TrainingCategory.find({
-      organizationId: req.user.organizationId,
-      status: 'active'
-    }).sort({ name: 1 });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    res.status(200).json(new ApiResponse(200, { categories }, 'Training categories retrieved successfully'));
+    const categories = await prisma.trainingCategory.findMany({
+      where: {
+        organizationId: orgId,
+        status: 'active'
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    res.status(200).json(new ApiResponse(200, { categories: withId(categories) }, 'Training categories retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -62,23 +72,31 @@ const getCategories = async (req, res, next) => {
 const updateCategory = async (req, res, next) => {
   try {
     const { name, description, status } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const catId = String(req.params.id);
 
-    const category = await TrainingCategory.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const category = await prisma.trainingCategory.findFirst({
+      where: {
+        id: catId,
+        organizationId: orgId
+      }
     });
 
     if (!category) {
       throw new ApiError(404, 'Training category not found');
     }
 
-    if (name) category.name = name.trim();
-    if (description !== undefined) category.description = description;
-    if (status) category.status = status;
+    const updateData = {};
+    if (name) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description;
+    if (status) updateData.status = status;
 
-    await category.save();
+    const updatedCategory = await prisma.trainingCategory.update({
+      where: { id: category.id },
+      data: updateData
+    });
 
-    res.status(200).json(new ApiResponse(200, { category }, 'Training category updated successfully'));
+    res.status(200).json(new ApiResponse(200, { category: withId(updatedCategory) }, 'Training category updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -91,17 +109,24 @@ const updateCategory = async (req, res, next) => {
  */
 const deleteCategory = async (req, res, next) => {
   try {
-    const category = await TrainingCategory.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const catId = String(req.params.id);
+
+    const category = await prisma.trainingCategory.findFirst({
+      where: {
+        id: catId,
+        organizationId: orgId
+      }
     });
 
     if (!category) {
       throw new ApiError(404, 'Training category not found');
     }
 
-    category.status = 'deactivated';
-    await category.save();
+    await prisma.trainingCategory.update({
+      where: { id: category.id },
+      data: { status: 'deactivated' }
+    });
 
     res.status(200).json(new ApiResponse(200, {}, 'Training category deactivated successfully'));
   } catch (error) {

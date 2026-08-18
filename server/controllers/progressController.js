@@ -1,8 +1,4 @@
-const TrainingProgress = require('../models/TrainingProgress');
-const TrainingAssignment = require('../models/TrainingAssignment');
-const Training = require('../models/Training');
-const QuizAttempt = require('../models/QuizAttempt');
-const AssignmentSubmission = require('../models/AssignmentSubmission');
+const { prisma, withId } = require('../config/prismaClient');
 const { updateOverallProgress } = require('../services/progressService');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
@@ -15,25 +11,39 @@ const ApiResponse = require('../utils/apiResponse');
 const completeSubSection = async (req, res, next) => {
   try {
     const { trainingAssignmentId, subSectionId } = req.body;
+    const userId = String(req.user.id || req.user._id);
 
     if (!trainingAssignmentId || !subSectionId) {
       throw new ApiError(400, 'trainingAssignmentId and subSectionId are required');
     }
 
-    const assignment = await TrainingAssignment.findOne({
-      _id: trainingAssignmentId,
-      employeeId: req.user._id
+    const tAssignId = String(trainingAssignmentId);
+    const subSecId = String(subSectionId);
+
+    const assignment = await prisma.trainingAssignment.findFirst({
+      where: {
+        id: tAssignId,
+        employeeId: userId
+      }
     });
 
     if (!assignment) {
       throw new ApiError(404, 'Training assignment not found');
     }
 
-    if (assignment.lockStatus && assignment.lockStatus.isLocked) {
+    if (assignment.isLocked) {
       throw new ApiError(403, 'This training is locked by your instructor. You cannot continue learning until unlocked.');
     }
 
-    const training = await Training.findById(assignment.trainingId);
+    const training = await prisma.training.findUnique({
+      where: { id: assignment.trainingId },
+      include: {
+        sections: {
+          include: { subSections: true }
+        }
+      }
+    });
+
     if (!training) {
       throw new ApiError(404, 'Training details not found');
     }
@@ -42,7 +52,7 @@ const completeSubSection = async (req, res, next) => {
     let targetSubSection = null;
     training.sections.forEach(section => {
       section.subSections.forEach(sub => {
-        if (sub._id.toString() === subSectionId.toString()) {
+        if (sub.id === subSecId) {
           targetSubSection = sub;
         }
       });
@@ -53,32 +63,41 @@ const completeSubSection = async (req, res, next) => {
     }
 
     // Fetch or create TrainingProgress record
-    let progress = await TrainingProgress.findOne({ trainingAssignmentId: assignment._id });
+    let progress = await prisma.trainingProgress.findUnique({
+      where: { trainingAssignmentId: assignment.id }
+    });
 
     if (!progress) {
-      progress = new TrainingProgress({
-        trainingAssignmentId: assignment._id,
-        employeeId: req.user._id,
-        trainingId: training._id,
-        completedSubSectionIds: [],
-        lastAccessedSubSectionId: subSectionId,
-        progressPercentage: 0
+      progress = await prisma.trainingProgress.create({
+        data: {
+          trainingAssignmentId: assignment.id,
+          employeeId: userId,
+          trainingId: training.id,
+          completedSubSectionIds: [subSecId],
+          lastAccessedSubSectionId: subSecId,
+          progressPercentage: 0
+        }
+      });
+    } else {
+      const completedList = Array.isArray(progress.completedSubSectionIds) ? progress.completedSubSectionIds : [];
+      const updatedCompletedList = completedList.includes(subSecId)
+        ? completedList
+        : [...completedList, subSecId];
+
+      progress = await prisma.trainingProgress.update({
+        where: { id: progress.id },
+        data: {
+          completedSubSectionIds: updatedCompletedList,
+          lastAccessedSubSectionId: subSecId
+        }
       });
     }
 
-    // Add subSectionId if not already present
-    const completedStrList = progress.completedSubSectionIds.map(id => id.toString());
-    if (!completedStrList.includes(subSectionId.toString())) {
-      progress.completedSubSectionIds.push(subSectionId);
-    }
-    progress.lastAccessedSubSectionId = subSectionId;
-    await progress.save();
-
     // Recalculate overall progress dynamically via progressService
-    const result = await updateOverallProgress(assignment._id, req.user._id);
+    const result = await updateOverallProgress(assignment.id, userId);
 
-    const finalProgress = result ? result.progress : progress;
-    const finalAssignment = result ? result.assignment : assignment;
+    const finalProgress = result ? result.progress : withId(progress);
+    const finalAssignment = result ? result.assignment : withId(assignment);
 
     res.status(200).json(
       new ApiResponse(
@@ -103,41 +122,126 @@ const completeSubSection = async (req, res, next) => {
  */
 const getProgressByAssignment = async (req, res, next) => {
   try {
-    const assignment = await TrainingAssignment.findById(req.params.trainingAssignmentId)
-      .populate({
-        path: 'trainingId',
-        populate: {
-          path: 'categoryId',
-          select: 'name'
-        }
-      })
-      .populate('employeeId', 'name email');
+    const tAssignId = String(req.params.trainingAssignmentId);
+    const userId = String(req.user.id || req.user._id);
 
-    if (!assignment) {
+    const assignmentRecord = await prisma.trainingAssignment.findUnique({
+      where: { id: tAssignId },
+      include: {
+        training: {
+          include: {
+            category: { select: { id: true, name: true } },
+            sections: {
+              orderBy: { order: 'asc' },
+              include: {
+                subSections: {
+                  orderBy: { order: 'asc' },
+                  include: {
+                    pdfResources: true,
+                    assignment: true
+                  }
+                }
+              }
+            },
+            quizzes: {
+              include: { questions: true }
+            },
+            assignments: true
+          }
+        },
+        employee: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    if (!assignmentRecord) {
       throw new ApiError(404, 'Training assignment not found');
     }
 
-    const progress = await TrainingProgress.findOne({ trainingAssignmentId: assignment._id });
+    const assignment = withId(assignmentRecord);
+    if (assignment.training) {
+      assignment.trainingId = assignment.training;
+      if (assignment.training.category) assignment.trainingId.categoryId = assignment.training.category;
 
-    // Fetch ALL completed quiz attempts for this employee (both passed & failed attempts with full evaluation)
-    const quizAttempts = await QuizAttempt.find({
-      employeeId: req.user._id,
-      status: { $ne: 'in_progress' }
-    })
-      .sort({ createdAt: -1 })
-      .select('quizId passed percentage totalScore maxScore answers status createdAt');
+      if (Array.isArray(assignment.trainingId.sections)) {
+        assignment.trainingId.sections = assignment.trainingId.sections.map(sec => {
+          const transformedSec = withId(sec);
+          if (Array.isArray(transformedSec.subSections)) {
+            transformedSec.subSections = transformedSec.subSections.map(sub => {
+              const transformedSub = withId(sub);
+              transformedSub.pdfResources = withId(sub.pdfResources || []);
+
+              // Check matching quiz
+              const matchingQuiz = assignmentRecord.training.quizzes?.find(q => q.subSectionId === sub.id);
+              if (matchingQuiz || sub.hasQuiz || sub.quizId) {
+                transformedSub.hasQuiz = true;
+                transformedSub.quizId = matchingQuiz ? withId(matchingQuiz) : sub.quizId;
+              } else {
+                transformedSub.hasQuiz = false;
+              }
+
+              // Check matching assignment
+              const matchingAssignment = assignmentRecord.training.assignments?.find(a => a.subSectionId === sub.id);
+              if (matchingAssignment || sub.hasAssignment || sub.assignmentId || sub.assignment) {
+                transformedSub.hasAssignment = true;
+                transformedSub.assignmentId = matchingAssignment ? withId(matchingAssignment) : (sub.assignment ? withId(sub.assignment) : sub.assignmentId);
+              } else {
+                transformedSub.hasAssignment = false;
+              }
+
+              return transformedSub;
+            });
+          }
+          return transformedSec;
+        });
+      }
+
+      // Attach main course assignment if present
+      const mainAssignment = assignmentRecord.training.assignments?.find(a => !a.subSectionId);
+      if (mainAssignment) {
+        assignment.trainingId.assignmentId = withId(mainAssignment);
+      }
+    }
+    if (assignment.employee) assignment.employeeId = assignment.employee;
+
+    const progressRecord = await prisma.trainingProgress.findUnique({
+      where: { trainingAssignmentId: assignmentRecord.id }
+    });
+
+    const progress = progressRecord ? withId(progressRecord) : {
+      completedSubSectionIds: [],
+      progressPercentage: assignmentRecord.progressPercentage,
+      lastAccessedSubSectionId: null
+    };
+
+    // Fetch ALL completed quiz attempts for this employee
+    const quizAttemptsList = await prisma.quizAttempt.findMany({
+      where: {
+        employeeId: userId,
+        status: { not: 'in_progress' }
+      },
+      include: {
+        answers: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const quizAttempts = withId(quizAttemptsList);
 
     // Fetch assignment submissions
-    const assignmentSubmissions = await AssignmentSubmission.find({
-      employeeId: req.user._id
-    }).select('assignmentId submissionType githubUrl fileUrl status submittedAt score feedback');
+    const submissionsList = await prisma.assignmentSubmission.findMany({
+      where: {
+        employeeId: userId
+      }
+    });
+
+    const assignmentSubmissions = withId(submissionsList);
 
     res.status(200).json(
       new ApiResponse(
         200,
         {
           assignment,
-          progress: progress || { completedSubSectionIds: [], progressPercentage: assignment.progressPercentage, lastAccessedSubSectionId: null },
+          progress,
           quizAttempts,
           assignmentSubmissions
         },

@@ -1,6 +1,16 @@
-const Notification = require('../models/Notification');
+const { prisma, withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
+
+const formatNotification = (n) => {
+  if (!n) return null;
+  const transformed = withId(n);
+  transformed.relatedEntity = {
+    entityType: n.relatedEntityType,
+    entityId: n.relatedEntityId
+  };
+  return transformed;
+};
 
 /**
  * @desc    Get Notifications for Logged-In User
@@ -9,20 +19,31 @@ const ApiResponse = require('../utils/apiResponse');
  */
 const getNotifications = async (req, res, next) => {
   try {
-    let query = { organizationId: req.user.organizationId };
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+
+    const whereClause = { organizationId: orgId };
 
     if (req.user.role === 'Admin') {
-      // Admins get notifications specifically for them or broadcasted to Admin role
-      query.$or = [{ recipientId: req.user._id }, { role: 'Admin' }];
+      whereClause.OR = [{ recipientId: userId }, { role: 'Admin' }];
     } else {
-      query.recipientId = req.user._id;
+      whereClause.recipientId = userId;
     }
 
-    const notifications = await Notification.find(query)
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const notificationsList = await prisma.notification.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
 
-    const unreadCount = await Notification.countDocuments({ ...query, isRead: false });
+    const unreadCount = await prisma.notification.count({
+      where: {
+        ...whereClause,
+        isRead: false
+      }
+    });
+
+    const notifications = notificationsList.map(formatNotification);
 
     res.status(200).json(
       new ApiResponse(
@@ -43,19 +64,26 @@ const getNotifications = async (req, res, next) => {
  */
 const markAsRead = async (req, res, next) => {
   try {
-    const notification = await Notification.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const notifId = String(req.params.id);
+
+    const notification = await prisma.notification.findFirst({
+      where: {
+        id: notifId,
+        organizationId: orgId
+      }
     });
 
     if (!notification) {
       throw new ApiError(404, 'Notification not found');
     }
 
-    notification.isRead = true;
-    await notification.save();
+    const updated = await prisma.notification.update({
+      where: { id: notification.id },
+      data: { isRead: true }
+    });
 
-    res.status(200).json(new ApiResponse(200, { notification }, 'Notification marked as read'));
+    res.status(200).json(new ApiResponse(200, { notification: formatNotification(updated) }, 'Notification marked as read'));
   } catch (error) {
     next(error);
   }
@@ -68,15 +96,21 @@ const markAsRead = async (req, res, next) => {
  */
 const markAllAsRead = async (req, res, next) => {
   try {
-    let query = { organizationId: req.user.organizationId, isRead: false };
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+
+    const whereClause = { organizationId: orgId, isRead: false };
 
     if (req.user.role === 'Admin') {
-      query.$or = [{ recipientId: req.user._id }, { role: 'Admin' }];
+      whereClause.OR = [{ recipientId: userId }, { role: 'Admin' }];
     } else {
-      query.recipientId = req.user._id;
+      whereClause.recipientId = userId;
     }
 
-    await Notification.updateMany(query, { $set: { isRead: true } });
+    await prisma.notification.updateMany({
+      where: whereClause,
+      data: { isRead: true }
+    });
 
     res.status(200).json(new ApiResponse(200, {}, 'All notifications marked as read'));
   } catch (error) {

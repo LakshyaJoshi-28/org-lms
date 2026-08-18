@@ -1,12 +1,4 @@
-const User = require('../models/User');
-const Department = require('../models/Department');
-const Training = require('../models/Training');
-const TrainingAssignment = require('../models/TrainingAssignment');
-const AutoAssignmentRule = require('../models/AutoAssignmentRule');
-const Assignment = require('../models/Assignment');
-const AssignmentSubmission = require('../models/AssignmentSubmission');
-const QuizAttempt = require('../models/QuizAttempt');
-const AuditLog = require('../models/AuditLog');
+const { prisma, withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 
@@ -17,23 +9,87 @@ const ApiResponse = require('../utils/apiResponse');
  */
 const getFullOrgReport = async (req, res, next) => {
   try {
-    const orgId = req.user.organizationId;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
     const now = new Date();
 
-    // 1. Overview High-Level Statistics
-    const totalEmployees = await User.countDocuments({ organizationId: orgId, role: 'Employee' });
-    const totalInstructors = await User.countDocuments({ organizationId: orgId, role: 'Instructor' });
-    const totalDepartments = await Department.countDocuments({ organizationId: orgId, status: 'active' });
-    const activeTrainingsCount = await Training.countDocuments({ organizationId: orgId, isPublished: true, status: 'published' });
-
-    const allAssignments = await TrainingAssignment.find({ organizationId: orgId })
-      .populate('employeeId', 'name email departmentId jobRole profilePicture status')
-      .populate({
-        path: 'trainingId',
-        select: 'title categoryId durationDays isMandatory',
-        populate: { path: 'categoryId', select: 'name' }
+    const [
+      totalEmployees,
+      totalInstructors,
+      totalDepartments,
+      activeTrainingsCount,
+      rawAssignmentsList,
+      departmentsList,
+      employeesList,
+      trainingsList,
+      activeAutoRulesList,
+      mandatoryTrainingsList
+    ] = await Promise.all([
+      prisma.user.count({ where: { organizationId: orgId, role: 'Employee' } }),
+      prisma.user.count({ where: { organizationId: orgId, role: 'Instructor' } }),
+      prisma.department.count({ where: { organizationId: orgId, status: 'active' } }),
+      prisma.training.count({ where: { organizationId: orgId, isPublished: true, status: 'published' } }),
+      prisma.trainingAssignment.findMany({
+        where: { organizationId: orgId },
+        include: {
+          employee: { select: { id: true, name: true, email: true, departmentId: true, jobRole: true, profilePicture: true, status: true } },
+          training: {
+            select: {
+              id: true,
+              title: true,
+              categoryId: true,
+              durationDays: true,
+              isMandatory: true,
+              category: { select: { id: true, name: true } }
+            }
+          },
+          assigner: { select: { id: true, name: true, email: true, role: true } }
+        }
+      }),
+      prisma.department.findMany({
+        where: { organizationId: orgId, status: 'active' },
+        orderBy: { name: 'asc' }
+      }),
+      prisma.user.findMany({
+        where: { organizationId: orgId, role: 'Employee' },
+        include: { department: { select: { id: true, name: true, jobRoles: true } } }
+      }),
+      prisma.training.findMany({
+        where: { organizationId: orgId, isPublished: true },
+        include: { category: { select: { id: true, name: true } } },
+        orderBy: { title: 'asc' }
+      }),
+      prisma.autoAssignmentRule.findMany({
+        where: { organizationId: orgId, status: 'active' },
+        include: {
+          training: {
+            select: {
+              id: true,
+              title: true,
+              categoryId: true,
+              durationDays: true,
+              isMandatory: true,
+              category: { select: { id: true, name: true } }
+            }
+          },
+          creator: { select: { id: true, name: true, email: true } }
+        }
+      }),
+      prisma.training.findMany({
+        where: { organizationId: orgId, isMandatory: true, isPublished: true },
+        include: { category: { select: { id: true, name: true } } }
       })
-      .populate('assignedBy', 'name email role');
+    ]);
+
+    const allAssignments = rawAssignmentsList.map(a => {
+      const transformed = withId(a);
+      if (transformed.employee) transformed.employeeId = transformed.employee;
+      if (transformed.training) {
+        transformed.trainingId = transformed.training;
+        if (transformed.training.category) transformed.trainingId.categoryId = transformed.training.category;
+      }
+      if (transformed.assigner) transformed.assignedBy = transformed.assigner;
+      return transformed;
+    });
 
     const totalAssignments = allAssignments.length;
     const completedAssignments = allAssignments.filter(a => a.status === 'Completed').length;
@@ -44,10 +100,14 @@ const getFullOrgReport = async (req, res, next) => {
     const overallComplianceRate = totalAssignments > 0 ? Math.round((completedAssignments / totalAssignments) * 100) : 0;
 
     // 2. Department & Role Drill-Down Analytics
-    const departments = await Department.find({ organizationId: orgId, status: 'active' }).sort({ name: 1 });
-    const employees = await User.find({ organizationId: orgId, role: 'Employee' })
-      .select('-password')
-      .populate('departmentId', 'name jobRoles');
+    const departments = withId(departmentsList);
+
+    const employees = employeesList.map(e => {
+      const transformed = withId(e);
+      delete transformed.password;
+      if (transformed.department) transformed.departmentId = transformed.department;
+      return transformed;
+    });
 
     const departmentAnalytics = [];
 
@@ -172,9 +232,11 @@ const getFullOrgReport = async (req, res, next) => {
     });
 
     // 4. Training-Wise Report
-    const trainings = await Training.find({ organizationId: orgId, isPublished: true })
-      .populate('categoryId', 'name')
-      .sort({ title: 1 });
+    const trainings = trainingsList.map(t => {
+      const transformed = withId(t);
+      if (transformed.category) transformed.categoryId = transformed.category;
+      return transformed;
+    });
 
     const trainingAnalytics = trainings.map(t => {
       const tAssigns = allAssignments.filter(a => a.trainingId && a.trainingId._id.toString() === t._id.toString());
@@ -236,17 +298,22 @@ const getFullOrgReport = async (req, res, next) => {
         };
       });
 
-    // 6. Mandatory & Auto-Assigned Training Rules Report (from AutoAssignmentRule MongoDB model)
-    const activeAutoRules = await AutoAssignmentRule.find({ organizationId: orgId, status: 'active' })
-      .populate({
-        path: 'trainingId',
-        select: 'title categoryId durationDays isMandatory',
-        populate: { path: 'categoryId', select: 'name' }
-      })
-      .populate('createdBy', 'name email');
+    // 6. Mandatory & Auto-Assigned Training Rules Report
+    const activeAutoRules = activeAutoRulesList.map(r => {
+      const transformed = withId(r);
+      if (transformed.training) {
+        transformed.trainingId = transformed.training;
+        if (transformed.training.category) transformed.trainingId.categoryId = transformed.training.category;
+      }
+      if (transformed.creator) transformed.createdBy = transformed.creator;
+      return transformed;
+    });
 
-    const mandatoryTrainings = await Training.find({ organizationId: orgId, isMandatory: true, isPublished: true })
-      .populate('categoryId', 'name');
+    const mandatoryTrainings = mandatoryTrainingsList.map(t => {
+      const transformed = withId(t);
+      if (transformed.category) transformed.categoryId = transformed.category;
+      return transformed;
+    });
 
     const ruleTrainingMap = new Map();
 
@@ -367,37 +434,72 @@ const getFullOrgReport = async (req, res, next) => {
  */
 const getAdminDashboardReports = async (req, res, next) => {
   try {
-    const orgId = req.user.organizationId;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    const totalEmployees = await User.countDocuments({ organizationId: orgId, role: 'Employee' });
-    const totalInstructors = await User.countDocuments({ organizationId: orgId, role: 'Instructor' });
-    const activeTrainingsCount = await Training.countDocuments({ organizationId: orgId, isPublished: true, status: 'published' });
+    const [
+      totalEmployees,
+      totalInstructors,
+      activeTrainingsCount,
+      completedAssignmentsCount,
+      inProgressAssignmentsCount,
+      overdueAssignmentsCount,
+      totalAssignmentsCount,
+      departments,
+      allEmployees,
+      allAssignments,
+      logsList
+    ] = await Promise.all([
+      prisma.user.count({ where: { organizationId: orgId, role: 'Employee' } }),
+      prisma.user.count({ where: { organizationId: orgId, role: 'Instructor' } }),
+      prisma.training.count({ where: { organizationId: orgId, isPublished: true, status: 'published' } }),
+      prisma.trainingAssignment.count({ where: { organizationId: orgId, status: 'Completed' } }),
+      prisma.trainingAssignment.count({ where: { organizationId: orgId, status: 'In Progress' } }),
+      prisma.trainingAssignment.count({ where: { organizationId: orgId, status: 'Overdue' } }),
+      prisma.trainingAssignment.count({ where: { organizationId: orgId } }),
+      prisma.department.findMany({ where: { organizationId: orgId, status: 'active' }, orderBy: { name: 'asc' } }),
+      prisma.user.findMany({ where: { organizationId: orgId, role: 'Employee' }, select: { id: true, departmentId: true } }),
+      prisma.trainingAssignment.findMany({ where: { organizationId: orgId }, select: { id: true, employeeId: true, status: true, progressPercentage: true } }),
+      prisma.auditLog.findMany({ where: { organizationId: orgId }, orderBy: { timestamp: 'desc' }, take: 10 })
+    ]);
 
-    const completedAssignmentsCount = await TrainingAssignment.countDocuments({ organizationId: orgId, status: 'Completed' });
-    const inProgressAssignmentsCount = await TrainingAssignment.countDocuments({ organizationId: orgId, status: 'In Progress' });
-    const overdueAssignmentsCount = await TrainingAssignment.countDocuments({ organizationId: orgId, status: 'Overdue' });
-    const totalAssignmentsCount = await TrainingAssignment.countDocuments({ organizationId: orgId });
+    // Map employees by department
+    const empByDept = new Map();
+    allEmployees.forEach(e => {
+      if (e.departmentId) {
+        if (!empByDept.has(e.departmentId)) empByDept.set(e.departmentId, new Set());
+        empByDept.get(e.departmentId).add(e.id);
+      }
+    });
 
-    // Department Performance & Compliance Breakdown
-    const departments = await Department.find({ organizationId: orgId, status: 'active' }).sort({ name: 1 });
-    const departmentPerformance = [];
+    // Map assignments by employeeId
+    const assignsByEmp = new Map();
+    allAssignments.forEach(a => {
+      if (a.employeeId) {
+        if (!assignsByEmp.has(a.employeeId)) assignsByEmp.set(a.employeeId, []);
+        assignsByEmp.get(a.employeeId).push(a);
+      }
+    });
 
-    for (const dep of departments) {
-      const depEmployees = await User.find({ organizationId: orgId, departmentId: dep._id, role: 'Employee' }).select('_id');
-      const empIds = depEmployees.map(e => e._id);
+    const departmentPerformance = departments.map(dep => {
+      const empIds = empByDept.get(dep.id) || new Set();
+      const depAssignments = [];
+      empIds.forEach(empId => {
+        const empAssigns = assignsByEmp.get(empId) || [];
+        depAssignments.push(...empAssigns);
+      });
 
-      const depTotal = await TrainingAssignment.countDocuments({ organizationId: orgId, employeeId: { $in: empIds } });
-      const depCompleted = await TrainingAssignment.countDocuments({ organizationId: orgId, employeeId: { $in: empIds }, status: 'Completed' });
-      const depInProgress = await TrainingAssignment.countDocuments({ organizationId: orgId, employeeId: { $in: empIds }, status: 'In Progress' });
-      const depPending = await TrainingAssignment.countDocuments({ organizationId: orgId, employeeId: { $in: empIds }, status: 'Assigned', progressPercentage: 0 });
-      const depOverdue = await TrainingAssignment.countDocuments({ organizationId: orgId, employeeId: { $in: empIds }, status: 'Overdue' });
+      const depTotal = depAssignments.length;
+      const depCompleted = depAssignments.filter(a => a.status === 'Completed').length;
+      const depInProgress = depAssignments.filter(a => a.status === 'In Progress').length;
+      const depPending = depAssignments.filter(a => a.status === 'Assigned' && (a.progressPercentage || 0) === 0).length;
+      const depOverdue = depAssignments.filter(a => a.status === 'Overdue').length;
 
       const rawRate = depTotal > 0 ? Math.round((depCompleted / depTotal) * 100) : 0;
 
-      departmentPerformance.push({
-        departmentId: dep._id,
+      return {
+        departmentId: dep.id,
         departmentName: dep.name,
-        totalEmployees: empIds.length,
+        totalEmployees: empIds.size,
         totalAssigned: depTotal,
         totalAssignments: depTotal,
         completed: depCompleted,
@@ -407,13 +509,10 @@ const getAdminDashboardReports = async (req, res, next) => {
         overdue: depOverdue,
         completionRate: `${rawRate}%`,
         completionPercentage: rawRate
-      });
-    }
+      };
+    });
 
-    // Recent Audit Activity Logs for Admin Dashboard
-    const recentLogs = await AuditLog.find({ organizationId: orgId })
-      .sort({ timestamp: -1, createdAt: -1 })
-      .limit(10);
+    const recentLogs = withId(logsList);
 
     res.status(200).json(
       new ApiResponse(
@@ -430,7 +529,7 @@ const getAdminDashboardReports = async (req, res, next) => {
             overallCompletionRate: totalAssignmentsCount > 0 ? `${Math.round((completedAssignmentsCount / totalAssignmentsCount) * 100)}%` : '0%'
           },
           departmentPerformance,
-          departmentCompletion: departmentPerformance, // Alias for frontend compatibility
+          departmentCompletion: departmentPerformance,
           recentLogs
         },
         'Admin dashboard analytics retrieved successfully'
@@ -448,23 +547,33 @@ const getAdminDashboardReports = async (req, res, next) => {
  */
 const getEmployeeReport = async (req, res, next) => {
   try {
-    const employee = await User.findOne({
-      _id: req.params.employeeId,
-      organizationId: req.user.organizationId
-    })
-      .select('-password')
-      .populate('departmentId', 'name');
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const empParamId = String(req.params.employeeId);
 
-    if (!employee) {
+    const employeeRecord = await prisma.user.findFirst({
+      where: { id: empParamId, organizationId: orgId },
+      include: { department: { select: { id: true, name: true } } }
+    });
+
+    if (!employeeRecord) {
       throw new ApiError(404, 'Employee not found');
     }
 
-    const assignments = await TrainingAssignment.find({
-      employeeId: employee._id,
-      organizationId: req.user.organizationId
-    })
-      .populate('trainingId', 'title categoryId durationDays')
-      .sort({ assignedDate: -1 });
+    const employee = withId(employeeRecord);
+    delete employee.password;
+    if (employee.department) employee.departmentId = employee.department;
+
+    const assignmentsList = await prisma.trainingAssignment.findMany({
+      where: { employeeId: employeeRecord.id, organizationId: orgId },
+      include: { training: { select: { id: true, title: true, categoryId: true, durationDays: true } } },
+      orderBy: { assignedDate: 'desc' }
+    });
+
+    const assignments = assignmentsList.map(a => {
+      const transformed = withId(a);
+      if (transformed.training) transformed.trainingId = transformed.training;
+      return transformed;
+    });
 
     const totalAssigned = assignments.length;
     const completed = assignments.filter(a => a.status === 'Completed').length;
@@ -504,39 +613,57 @@ const getEmployeeReport = async (req, res, next) => {
  */
 const getInstructorDashboardReports = async (req, res, next) => {
   try {
-    const orgId = req.user.organizationId;
-    const instructorId = req.user._id;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const instructorId = String(req.user.id || req.user._id);
     const now = new Date();
 
-    const ownedTrainings = await Training.find({ createdBy: instructorId, organizationId: orgId }).sort({ createdAt: -1 });
+    const ownedTrainingsList = await prisma.training.findMany({
+      where: { createdBy: instructorId, organizationId: orgId },
+      orderBy: { createdAt: 'desc' }
+    });
+    const ownedTrainings = withId(ownedTrainingsList);
     const trainingIds = ownedTrainings.map(t => t._id);
 
     const totalTrainings = ownedTrainings.length;
 
-    const assignments = await TrainingAssignment.find({ trainingId: { $in: trainingIds } })
-      .populate('employeeId', 'name email departmentId jobRole profilePicture')
-      .populate('trainingId', 'title');
+    const rawAssignmentsList = await prisma.trainingAssignment.findMany({
+      where: { trainingId: { in: trainingIds } },
+      include: {
+        employee: { select: { id: true, name: true, email: true, departmentId: true, jobRole: true, profilePicture: true } },
+        training: { select: { id: true, title: true } }
+      }
+    });
+
+    const assignments = rawAssignmentsList.map(a => {
+      const transformed = withId(a);
+      if (transformed.employee) transformed.employeeId = transformed.employee;
+      if (transformed.training) transformed.trainingId = transformed.training;
+      return transformed;
+    });
 
     const totalEnrolled = new Set(assignments.map(a => a.employeeId?._id?.toString()).filter(Boolean)).size;
 
-    // Instructor's assignments requiring review
-    const instructorAssignments = await Assignment.find({
-      $or: [
-        { createdBy: instructorId },
-        { trainingId: { $in: trainingIds } }
-      ]
-    }).select('_id title trainingId');
+    const instructorAssignmentsList = await prisma.assignment.findMany({
+      where: {
+        OR: [
+          { createdBy: instructorId },
+          { trainingId: { in: trainingIds } }
+        ]
+      },
+      select: { id: true, title: true, trainingId: true }
+    });
 
-    const assignmentIds = instructorAssignments.map(a => a._id);
+    const assignmentIds = instructorAssignmentsList.map(a => a.id);
 
-    const pendingReviewsCount = await AssignmentSubmission.countDocuments({
-      assignmentId: { $in: assignmentIds },
-      status: 'submitted'
+    const pendingReviewsCount = await prisma.assignmentSubmission.count({
+      where: {
+        assignmentId: { in: assignmentIds },
+        status: 'submitted'
+      }
     });
 
     const overdueCount = assignments.filter(a => a.status === 'Overdue' || (new Date(a.deadline) < now && a.status !== 'Completed')).length;
 
-    // Overdue list for instructor's trainings
     const overdueEmployees = assignments
       .filter(a => a.status === 'Overdue' || (new Date(a.deadline) < now && a.status !== 'Completed'))
       .map(a => ({
@@ -549,15 +676,25 @@ const getInstructorDashboardReports = async (req, res, next) => {
         daysOverdue: Math.max(1, Math.floor((now - new Date(a.deadline)) / (1000 * 60 * 60 * 24)))
       }));
 
-    // Recent assignment submissions requiring review
-    const recentSubmissions = await AssignmentSubmission.find({
-      assignmentId: { $in: assignmentIds },
-      status: 'submitted'
-    })
-      .populate('assignmentId', 'title trainingId')
-      .populate('employeeId', 'name email profilePicture')
-      .sort({ submittedAt: -1, createdAt: -1 })
-      .limit(5);
+    const recentSubmissionsList = await prisma.assignmentSubmission.findMany({
+      where: {
+        assignmentId: { in: assignmentIds },
+        status: 'submitted'
+      },
+      include: {
+        assignment: { select: { id: true, title: true, trainingId: true } },
+        employee: { select: { id: true, name: true, email: true, profilePicture: true } }
+      },
+      orderBy: { submittedAt: 'desc' },
+      take: 5
+    });
+
+    const recentSubmissions = recentSubmissionsList.map(s => {
+      const transformed = withId(s);
+      if (transformed.assignment) transformed.assignmentId = transformed.assignment;
+      if (transformed.employee) transformed.employeeId = transformed.employee;
+      return transformed;
+    });
 
     const pendingSubmissions = recentSubmissions.map(sub => {
       const tr = ownedTrainings.find(t => t._id.toString() === sub.assignmentId?.trainingId?.toString());
@@ -572,7 +709,6 @@ const getInstructorDashboardReports = async (req, res, next) => {
       };
     });
 
-    // My Training Summary List for Instructor Studio
     const myTrainings = ownedTrainings.map(t => {
       const tAssigns = assignments.filter(a => a.trainingId && a.trainingId._id.toString() === t._id.toString());
       const tEnrolled = new Set(tAssigns.map(a => a.employeeId?._id?.toString()).filter(Boolean)).size;
@@ -595,7 +731,6 @@ const getInstructorDashboardReports = async (req, res, next) => {
       };
     });
 
-    // Recent Activity Feed
     const recentActivity = [];
     pendingSubmissions.forEach(sub => {
       recentActivity.push({
@@ -651,48 +786,99 @@ const getInstructorDashboardReports = async (req, res, next) => {
  */
 const getMyReport = async (req, res, next) => {
   try {
-    const employeeId = req.user._id;
-    const orgId = req.user.organizationId;
+    const employeeId = String(req.user.id || req.user._id);
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
     const now = new Date();
 
-    // 1. Fetch Employee details with department & organization
-    const employee = await User.findById(employeeId)
-      .select('name email role jobRole profilePicture departmentId organizationId createdAt')
-      .populate('departmentId', 'name')
-      .populate('organizationId', 'name code');
+    const employeeRecord = await prisma.user.findUnique({
+      where: { id: employeeId },
+      include: {
+        department: { select: { id: true, name: true } },
+        organization: { select: { id: true, name: true, code: true } }
+      }
+    });
 
-    // 2. Fetch all Training Assignments for Employee
-    const assignments = await TrainingAssignment.find({
-      employeeId,
-      organizationId: orgId
-    })
-      .populate({
-        path: 'trainingId',
-        select: 'title description thumbnailUrl durationDays isMandatory createdBy categoryId sections',
-        populate: [
-          { path: 'categoryId', select: 'name' },
-          { path: 'createdBy', select: 'name email profilePicture' }
-        ]
-      })
-      .sort({ createdAt: -1 });
+    const employee = withId(employeeRecord);
 
-    // 3. Fetch Quiz Attempts for Employee
-    const quizAttempts = await QuizAttempt.find({ employeeId })
-      .populate({
-        path: 'quizId',
-        select: 'title passingScorePercent questions trainingId subSectionId'
-      })
-      .sort({ createdAt: -1 });
+    const assignmentsList = await prisma.trainingAssignment.findMany({
+      where: {
+        employeeId,
+        organizationId: orgId
+      },
+      include: {
+        training: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            thumbnailUrl: true,
+            durationDays: true,
+            isMandatory: true,
+            createdBy: true,
+            categoryId: true,
+            category: { select: { id: true, name: true } },
+            instructor: { select: { id: true, name: true, email: true, profilePicture: true } }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
 
-    // 4. Fetch Assignment Submissions for Employee
-    const assignmentSubmissions = await AssignmentSubmission.find({ employeeId })
-      .populate({
-        path: 'assignmentId',
-        select: 'title instructions maxScore trainingId subSectionId'
-      })
-      .sort({ submittedAt: -1 });
+    const assignments = assignmentsList.map(a => {
+      const transformed = withId(a);
+      if (transformed.training) {
+        transformed.trainingId = transformed.training;
+        if (transformed.training.category) transformed.trainingId.categoryId = transformed.training.category;
+        if (transformed.training.instructor) transformed.trainingId.createdBy = transformed.training.instructor;
+      }
+      return transformed;
+    });
 
-    // 5. Calculate Metrics
+    const quizAttemptsList = await prisma.quizAttempt.findMany({
+      where: { employeeId },
+      include: {
+        quiz: {
+          select: {
+            id: true,
+            title: true,
+            passingScorePercent: true,
+            trainingId: true,
+            subSectionId: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const quizAttempts = quizAttemptsList.map(q => {
+      const transformed = withId(q);
+      if (transformed.quiz) transformed.quizId = transformed.quiz;
+      return transformed;
+    });
+
+    const submissionsList = await prisma.assignmentSubmission.findMany({
+      where: { employeeId },
+      include: {
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            instructions: true,
+            maxScore: true,
+            trainingId: true,
+            subSectionId: true
+          }
+        }
+      },
+      orderBy: { submittedAt: 'desc' }
+    });
+
+    const assignmentSubmissions = submissionsList.map(s => {
+      const transformed = withId(s);
+      if (transformed.assignment) transformed.assignmentId = transformed.assignment;
+      return transformed;
+    });
+
     const totalAssigned = assignments.length;
     const completedAssignments = assignments.filter(a => a.status === 'Completed' || (a.progressPercentage || 0) === 100).length;
     const overdueAssignments = assignments.filter(a => a.status === 'Overdue' || (new Date(a.deadline) < now && a.status !== 'Completed')).length;
@@ -714,7 +900,6 @@ const getMyReport = async (req, res, next) => {
       ? Math.max(...quizAttempts.map(q => q.percentage || 0))
       : null;
 
-    // 6. Format Training Assignment Transcript Items
     const transcript = assignments.map(a => {
       const t = a.trainingId;
       const isOverdue = a.status === 'Overdue' || (new Date(a.deadline) < now && a.status !== 'Completed');
@@ -724,7 +909,6 @@ const getMyReport = async (req, res, next) => {
       else if (isOverdue) displayStatus = 'Overdue';
       else if (a.status === 'In Progress' || (a.progressPercentage || 0) > 0) displayStatus = 'In Progress';
 
-      // Find highest score for quiz in this training
       const trainingQuizAttempts = quizAttempts.filter(q => q.quizId && t && q.quizId.trainingId && q.quizId.trainingId.toString() === t._id.toString());
       let quizScoreDisplay = 'N/A';
       if (trainingQuizAttempts.length > 0) {
@@ -732,7 +916,6 @@ const getMyReport = async (req, res, next) => {
         quizScoreDisplay = `${bestScore}%`;
       }
 
-      // Find assignment submission status for this training
       const trainingSubmissions = assignmentSubmissions.filter(s => s.assignmentId && t && s.assignmentId.trainingId && s.assignmentId.trainingId.toString() === t._id.toString());
       let assignmentStatusDisplay = 'N/A';
       if (trainingSubmissions.length > 0) {
@@ -758,7 +941,6 @@ const getMyReport = async (req, res, next) => {
       };
     });
 
-    // 7. Format Detailed Quiz Attempts (Enriching answer text for new and historical attempts)
     const formattedQuizAttempts = quizAttempts.map(att => {
       const quizObj = att.quizId;
       const questionsList = quizObj ? quizObj.questions : [];
@@ -835,7 +1017,6 @@ const getMyReport = async (req, res, next) => {
       };
     });
 
-    // 8. Format Assignment Submissions
     const formattedAssignmentSubmissions = assignmentSubmissions.map(sub => ({
       _id: sub._id,
       assignmentId: sub.assignmentId?._id,

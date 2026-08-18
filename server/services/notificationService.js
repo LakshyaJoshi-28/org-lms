@@ -1,20 +1,27 @@
-const Notification = require('../models/Notification');
-const User = require('../models/User');
+const { prisma, withId } = require('../config/prismaClient');
 
 /**
  * Send notification to a specific user (Employee or Instructor)
  */
 const sendUserNotification = async (recipientId, organizationId, role, type, title, message, relatedEntity = null) => {
   try {
-    return await Notification.create({
-      recipientId,
-      organizationId,
-      role,
-      type,
-      title,
-      message,
-      relatedEntity
+    const recId = recipientId ? String(recipientId.id || recipientId._id || recipientId) : null;
+    const orgId = String(organizationId.id || organizationId._id || organizationId);
+
+    const notification = await prisma.notification.create({
+      data: {
+        recipientId: recId,
+        organizationId: orgId,
+        role,
+        type,
+        title,
+        message,
+        relatedEntityType: relatedEntity?.entityType ? String(relatedEntity.entityType) : null,
+        relatedEntityId: relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null
+      }
     });
+
+    return withId(notification);
   } catch (error) {
     console.error('Failed to create notification:', error);
   }
@@ -25,23 +32,24 @@ const sendUserNotification = async (recipientId, organizationId, role, type, tit
  */
 const sendAdminNotification = async (organizationId, type, title, message, relatedEntity = null) => {
   try {
-    const admins = await User.find({ organizationId, role: 'Admin' });
-    const notifications = [];
+    const orgId = String(organizationId.id || organizationId._id || organizationId);
+    const admins = await prisma.user.findMany({
+      where: { organizationId: orgId, role: 'Admin' }
+    });
 
-    for (const admin of admins) {
-      notifications.push({
-        recipientId: admin._id,
-        organizationId,
-        role: 'Admin',
-        type,
-        title,
-        message,
-        relatedEntity
+    if (admins.length > 0) {
+      await prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          recipientId: admin.id,
+          organizationId: orgId,
+          role: 'Admin',
+          type,
+          title,
+          message,
+          relatedEntityType: relatedEntity?.entityType ? String(relatedEntity.entityType) : null,
+          relatedEntityId: relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null
+        }))
       });
-    }
-
-    if (notifications.length > 0) {
-      await Notification.insertMany(notifications);
     }
   } catch (error) {
     console.error('Failed to send admin notification:', error);

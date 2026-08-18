@@ -1,18 +1,21 @@
-const TrainingAssignment = require('../models/TrainingAssignment');
-const AutoAssignmentRule = require('../models/AutoAssignmentRule');
-const Training = require('../models/Training');
-const User = require('../models/User');
+const { prisma, withId } = require('../config/prismaClient');
+const ApiError = require('../utils/apiError');
 
 /**
  * Automatically assign mandatory trainings to a newly registered/configured employee
  */
 const autoAssignMandatoryTrainings = async (employeeId, organizationId) => {
   try {
-    const mandatoryTrainings = await Training.find({
-      organizationId,
-      isMandatory: true,
-      isPublished: true,
-      status: 'published'
+    const empId = String(employeeId);
+    const orgId = String(organizationId);
+
+    const mandatoryTrainings = await prisma.training.findMany({
+      where: {
+        organizationId: orgId,
+        isMandatory: true,
+        isPublished: true,
+        status: 'published'
+      }
     });
 
     const now = new Date();
@@ -22,19 +25,21 @@ const autoAssignMandatoryTrainings = async (employeeId, organizationId) => {
       const deadline = new Date(now.getTime() + (training.durationDays || 30) * 24 * 60 * 60 * 1000);
 
       try {
-        const assignment = await TrainingAssignment.create({
-          employeeId,
-          trainingId: training._id,
-          assignedBy: null,
-          organizationId,
-          assignmentType: 'mandatory',
-          assignedDate: now,
-          deadline,
-          status: 'Assigned'
+        const assignment = await prisma.trainingAssignment.create({
+          data: {
+            employeeId: empId,
+            trainingId: training.id,
+            assignedBy: null,
+            organizationId: orgId,
+            assignmentType: 'mandatory',
+            assignedDate: now,
+            deadline,
+            status: 'Assigned'
+          }
         });
-        assignmentsCreated.push(assignment);
+        assignmentsCreated.push(withId(assignment));
       } catch (err) {
-        if (err.code !== 11000) throw err;
+        if (err.code !== 'P2002' && err.code !== 11000) throw err;
       }
     }
 
@@ -52,11 +57,17 @@ const autoAssignDeptRoleTrainings = async (employeeId, organizationId, departmen
   try {
     if (!departmentId) return [];
 
-    const matchedTrainings = await Training.find({
-      organizationId,
-      departmentId,
-      isPublished: true,
-      status: 'published'
+    const empId = String(employeeId);
+    const orgId = String(organizationId);
+    const depId = String(departmentId);
+
+    const matchedTrainings = await prisma.training.findMany({
+      where: {
+        organizationId: orgId,
+        departmentId: depId,
+        isPublished: true,
+        status: 'published'
+      }
     });
 
     const now = new Date();
@@ -66,19 +77,21 @@ const autoAssignDeptRoleTrainings = async (employeeId, organizationId, departmen
       const deadline = new Date(now.getTime() + (training.durationDays || 30) * 24 * 60 * 60 * 1000);
 
       try {
-        const assignment = await TrainingAssignment.create({
-          employeeId,
-          trainingId: training._id,
-          assignedBy: null,
-          organizationId,
-          assignmentType: 'dept_role',
-          assignedDate: now,
-          deadline,
-          status: 'Assigned'
+        const assignment = await prisma.trainingAssignment.create({
+          data: {
+            employeeId: empId,
+            trainingId: training.id,
+            assignedBy: null,
+            organizationId: orgId,
+            assignmentType: 'dept_role',
+            assignedDate: now,
+            deadline,
+            status: 'Assigned'
+          }
         });
-        assignmentsCreated.push(assignment);
+        assignmentsCreated.push(withId(assignment));
       } catch (err) {
-        if (err.code !== 11000) throw err;
+        if (err.code !== 'P2002' && err.code !== 11000) throw err;
       }
     }
 
@@ -94,9 +107,14 @@ const autoAssignDeptRoleTrainings = async (employeeId, organizationId, departmen
  */
 const autoAssignRulesToNewEmployee = async (employeeId, organizationId) => {
   try {
-    const activeRules = await AutoAssignmentRule.find({
-      organizationId,
-      status: 'active'
+    const empId = String(employeeId);
+    const orgId = String(organizationId);
+
+    const activeRules = await prisma.autoAssignmentRule.findMany({
+      where: {
+        organizationId: orgId,
+        status: 'active'
+      }
     });
 
     const now = new Date();
@@ -107,19 +125,21 @@ const autoAssignRulesToNewEmployee = async (employeeId, organizationId) => {
       const deadline = new Date(now.getTime() + deadlineDays * 24 * 60 * 60 * 1000);
 
       try {
-        const assignment = await TrainingAssignment.create({
-          employeeId,
-          trainingId: rule.trainingId,
-          assignedBy: rule.createdBy,
-          organizationId,
-          assignmentType: 'auto',
-          assignedDate: now,
-          deadline,
-          status: 'Assigned'
+        const assignment = await prisma.trainingAssignment.create({
+          data: {
+            employeeId: empId,
+            trainingId: rule.trainingId,
+            assignedBy: rule.createdBy,
+            organizationId: orgId,
+            assignmentType: 'auto',
+            assignedDate: now,
+            deadline,
+            status: 'Assigned'
+          }
         });
-        assignmentsCreated.push(assignment);
+        assignmentsCreated.push(withId(assignment));
       } catch (err) {
-        if (err.code !== 11000) throw err;
+        if (err.code !== 'P2002' && err.code !== 11000) throw err;
       }
     }
 
@@ -134,40 +154,57 @@ const autoAssignRulesToNewEmployee = async (employeeId, organizationId) => {
  * Admin creates an Auto Assignment Rule (compulsory for ALL existing & future employees)
  */
 const createAutoAssignmentRule = async (adminId, organizationId, trainingId, customDeadlineDays = 30) => {
-  const training = await Training.findOne({
-    _id: trainingId,
-    organizationId,
-    isPublished: true,
-    status: 'published'
+  const admId = String(adminId);
+  const orgId = String(organizationId);
+  const trgId = String(trainingId);
+
+  const training = await prisma.training.findFirst({
+    where: {
+      id: trgId,
+      organizationId: orgId,
+      isPublished: true,
+      status: 'published'
+    }
   });
 
   if (!training) {
     throw new Error('Published training course not found in your organization');
   }
 
-  // Check if active rule already exists for this training
-  let rule = await AutoAssignmentRule.findOne({ organizationId, trainingId });
+  // Check if rule exists
+  let rule = await prisma.autoAssignmentRule.findFirst({
+    where: { organizationId: orgId, trainingId: trgId }
+  });
+
   if (rule && rule.status === 'active') {
     throw new Error('An active auto-assignment rule already exists for this training');
   }
 
   if (rule) {
-    rule.status = 'active';
-    rule.createdBy = adminId;
-    rule.customDeadlineDays = Number(customDeadlineDays) || 30;
-    await rule.save();
+    rule = await prisma.autoAssignmentRule.update({
+      where: { id: rule.id },
+      data: {
+        status: 'active',
+        createdBy: admId,
+        customDeadlineDays: Number(customDeadlineDays) || 30
+      }
+    });
   } else {
-    rule = await AutoAssignmentRule.create({
-      organizationId,
-      trainingId,
-      createdBy: adminId,
-      status: 'active',
-      customDeadlineDays: Number(customDeadlineDays) || 30
+    rule = await prisma.autoAssignmentRule.create({
+      data: {
+        organizationId: orgId,
+        trainingId: trgId,
+        createdBy: admId,
+        status: 'active',
+        customDeadlineDays: Number(customDeadlineDays) || 30
+      }
     });
   }
 
   // Immediately assign training to ALL existing active employees in the organization
-  const employees = await User.find({ organizationId, role: 'Employee' });
+  const employees = await prisma.user.findMany({
+    where: { organizationId: orgId, role: 'Employee' }
+  });
   const now = new Date();
   const deadlineDays = Number(customDeadlineDays) || 30;
   const deadline = new Date(now.getTime() + deadlineDays * 24 * 60 * 60 * 1000);
@@ -175,55 +212,74 @@ const createAutoAssignmentRule = async (adminId, organizationId, trainingId, cus
   let assignedCount = 0;
   for (const emp of employees) {
     try {
-      await TrainingAssignment.create({
-        employeeId: emp._id,
-        trainingId: training._id,
-        assignedBy: adminId,
-        organizationId,
-        assignmentType: 'auto',
-        assignedDate: now,
-        deadline,
-        status: 'Assigned'
+      await prisma.trainingAssignment.create({
+        data: {
+          employeeId: emp.id,
+          trainingId: training.id,
+          assignedBy: admId,
+          organizationId: orgId,
+          assignmentType: 'auto',
+          assignedDate: now,
+          deadline,
+          status: 'Assigned'
+        }
       });
       assignedCount++;
     } catch (err) {
-      if (err.code !== 11000) throw err;
+      if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
   }
 
-  return { rule, assignedCount, totalEmployees: employees.length };
+  return { rule: withId(rule), assignedCount, totalEmployees: employees.length };
 };
 
 /**
- * Deactivate an Auto Assignment Rule (does not delete existing employee assignments)
+ * Deactivate an Auto Assignment Rule
  */
 const deactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => {
-  const rule = await AutoAssignmentRule.findOne({ _id: ruleId, organizationId });
+  const orgId = String(organizationId);
+  const rId = String(ruleId);
+
+  const rule = await prisma.autoAssignmentRule.findFirst({
+    where: { id: rId, organizationId: orgId }
+  });
   if (!rule) {
-    throw new Error('Auto assignment rule not found');
+    throw new ApiError(404, 'Auto assignment rule not found');
   }
 
-  rule.status = 'inactive';
-  await rule.save();
+  const updatedRule = await prisma.autoAssignmentRule.update({
+    where: { id: rule.id },
+    data: { status: 'inactive' }
+  });
 
-  return rule;
+  return withId(updatedRule);
 };
 
 /**
- * Reactivate an Auto Assignment Rule (does not create duplicate assignments for existing employees)
+ * Reactivate an Auto Assignment Rule
  */
 const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => {
-  const rule = await AutoAssignmentRule.findOne({ _id: ruleId, organizationId });
+  const admId = String(adminId);
+  const orgId = String(organizationId);
+  const rId = String(ruleId);
+
+  const rule = await prisma.autoAssignmentRule.findFirst({
+    where: { id: rId, organizationId: orgId }
+  });
   if (!rule) {
-    throw new Error('Auto assignment rule not found');
+    throw new ApiError(404, 'Auto assignment rule not found');
   }
 
-  rule.status = 'active';
-  rule.createdBy = adminId;
-  await rule.save();
+  const updatedRule = await prisma.autoAssignmentRule.update({
+    where: { id: rule.id },
+    data: {
+      status: 'active'
+    }
+  });
 
-  // Safely assign ONLY to existing eligible employees who currently have NO assignment for this training
-  const employees = await User.find({ organizationId, role: 'Employee' });
+  const employees = await prisma.user.findMany({
+    where: { organizationId: orgId, role: 'Employee' }
+  });
   const now = new Date();
   const deadlineDays = Number(rule.customDeadlineDays) || 30;
   const deadline = new Date(now.getTime() + deadlineDays * 24 * 60 * 60 * 1000);
@@ -231,46 +287,79 @@ const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => 
   let newAssignmentsCount = 0;
   for (const emp of employees) {
     try {
-      await TrainingAssignment.create({
-        employeeId: emp._id,
-        trainingId: rule.trainingId,
-        assignedBy: adminId,
-        organizationId,
-        assignmentType: 'auto',
-        assignedDate: now,
-        deadline,
-        status: 'Assigned'
+      await prisma.trainingAssignment.create({
+        data: {
+          employeeId: emp.id,
+          trainingId: rule.trainingId,
+          assignedBy: admId,
+          organizationId: orgId,
+          assignmentType: 'auto',
+          assignedDate: now,
+          deadline,
+          status: 'Assigned'
+        }
       });
       newAssignmentsCount++;
     } catch (err) {
-      if (err.code !== 11000) throw err;
+      if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
   }
 
-  return { rule, newAssignmentsCount };
+  return { rule: withId(updatedRule), newAssignmentsCount };
 };
 
 /**
  * Get all Auto Assignment Rules for organization
  */
 const getAutoAssignmentRules = async (organizationId) => {
-  const rules = await AutoAssignmentRule.find({ organizationId })
-    .populate({
-      path: 'trainingId',
-      select: 'title categoryId durationDays thumbnailUrl status',
-      populate: { path: 'categoryId', select: 'name' }
-    })
-    .populate('createdBy', 'name email')
-    .sort({ createdAt: -1 });
+  const orgId = String(organizationId);
+
+  const rules = await prisma.autoAssignmentRule.findMany({
+    where: { organizationId: orgId },
+    include: {
+      training: {
+        select: {
+          id: true,
+          title: true,
+          categoryId: true,
+          durationDays: true,
+          thumbnailUrl: true,
+          status: true,
+          category: {
+            select: { id: true, name: true }
+          }
+        }
+      },
+      creator: {
+        select: { id: true, name: true, email: true }
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
 
   const rulesWithStats = await Promise.all(
     rules.map(async (r) => {
-      const coverageCount = await TrainingAssignment.countDocuments({
-        organizationId,
-        trainingId: r.trainingId?._id
+      const coverageCount = await prisma.trainingAssignment.count({
+        where: {
+          organizationId: orgId,
+          trainingId: r.trainingId
+        }
       });
+
+      // Structure object for backward compatibility with Mongoose model shapes
+      const transformed = withId(r);
+      if (transformed.training) {
+        transformed.trainingId = transformed.training;
+        if (transformed.training.category) {
+          transformed.trainingId.categoryId = transformed.training.category;
+        }
+      }
+      if (transformed.creator) {
+        transformed.createdBy = transformed.creator;
+      }
+
       return {
-        ...r.toObject(),
+        ...transformed,
         coverageCount
       };
     })
@@ -283,23 +372,30 @@ const getAutoAssignmentRules = async (organizationId) => {
  * Admin assigns training to all employees matching Department + Job Role
  */
 const assignTrainingByDeptAndRole = async (adminId, organizationId, departmentId, jobRole, trainingId, customDeadlineDate = null) => {
-  const training = await Training.findOne({
-    _id: trainingId,
-    organizationId,
-    isPublished: true,
-    status: 'published'
+  const admId = String(adminId);
+  const orgId = String(organizationId);
+  const depId = String(departmentId);
+  const trgId = String(trainingId);
+
+  const training = await prisma.training.findFirst({
+    where: {
+      id: trgId,
+      organizationId: orgId,
+      isPublished: true,
+      status: 'published'
+    }
   });
 
   if (!training) {
     throw new Error('Published training course not found in your organization');
   }
 
-  const query = { organizationId, role: 'Employee', departmentId };
+  const whereClause = { organizationId: orgId, role: 'Employee', departmentId: depId };
   if (jobRole && jobRole !== 'ALL_ROLES') {
-    query.jobRole = jobRole;
+    whereClause.jobRole = jobRole;
   }
 
-  const employees = await User.find(query);
+  const employees = await prisma.user.findMany({ where: whereClause });
 
   if (employees.length === 0) {
     throw new Error('No active employees match the selected department and job role criteria');
@@ -318,20 +414,22 @@ const assignTrainingByDeptAndRole = async (adminId, organizationId, departmentId
 
   for (const emp of employees) {
     try {
-      const assignment = await TrainingAssignment.create({
-        employeeId: emp._id,
-        trainingId: training._id,
-        assignedBy: adminId,
-        organizationId,
-        assignmentType: 'dept_role',
-        assignedDate: now,
-        deadline,
-        status: 'Assigned'
+      const assignment = await prisma.trainingAssignment.create({
+        data: {
+          employeeId: emp.id,
+          trainingId: training.id,
+          assignedBy: admId,
+          organizationId: orgId,
+          assignmentType: 'dept_role',
+          assignedDate: now,
+          deadline,
+          status: 'Assigned'
+        }
       });
-      results.push(assignment);
+      results.push(withId(assignment));
       newAssignmentsCount++;
     } catch (err) {
-      if (err.code !== 11000) throw err;
+      if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
   }
 
@@ -346,21 +444,30 @@ const assignTrainingToMultipleEmployees = async (adminId, organizationId, employ
     throw new Error('At least one employee must be selected');
   }
 
-  const training = await Training.findOne({
-    _id: trainingId,
-    organizationId,
-    isPublished: true,
-    status: 'published'
+  const admId = String(adminId);
+  const orgId = String(organizationId);
+  const trgId = String(trainingId);
+  const empIds = employeeIds.map(id => String(id));
+
+  const training = await prisma.training.findFirst({
+    where: {
+      id: trgId,
+      organizationId: orgId,
+      isPublished: true,
+      status: 'published'
+    }
   });
 
   if (!training) {
     throw new Error('Published training course not found in your organization');
   }
 
-  const employees = await User.find({
-    _id: { $in: employeeIds },
-    organizationId,
-    role: 'Employee'
+  const employees = await prisma.user.findMany({
+    where: {
+      id: { in: empIds },
+      organizationId: orgId,
+      role: 'Employee'
+    }
   });
 
   if (employees.length === 0) {
@@ -380,20 +487,22 @@ const assignTrainingToMultipleEmployees = async (adminId, organizationId, employ
 
   for (const emp of employees) {
     try {
-      const assignment = await TrainingAssignment.create({
-        employeeId: emp._id,
-        trainingId: training._id,
-        assignedBy: adminId,
-        organizationId,
-        assignmentType: 'specific',
-        assignedDate: now,
-        deadline,
-        status: 'Assigned'
+      const assignment = await prisma.trainingAssignment.create({
+        data: {
+          employeeId: emp.id,
+          trainingId: training.id,
+          assignedBy: admId,
+          organizationId: orgId,
+          assignmentType: 'specific',
+          assignedDate: now,
+          deadline,
+          status: 'Assigned'
+        }
       });
-      results.push(assignment);
+      results.push(withId(assignment));
       newAssignmentsCount++;
     } catch (err) {
-      if (err.code !== 11000) throw err;
+      if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
   }
 

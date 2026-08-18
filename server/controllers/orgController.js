@@ -1,10 +1,23 @@
-const Department = require('../models/Department');
-const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const { prisma, withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const { autoAssignMandatoryTrainings, autoAssignDeptRoleTrainings } = require('../services/trainingAssignmentService');
 const { sendUserNotification, sendAdminNotification } = require('../services/notificationService');
 const { logAuditAction } = require('../services/auditLogService');
+
+const formatUserResponse = (user) => {
+  if (!user) return null;
+  const userObj = withId(user);
+  delete userObj.password;
+  if (userObj.department) {
+    userObj.departmentId = withId(userObj.department);
+  }
+  if (userObj.organization) {
+    userObj.organizationId = withId(userObj.organization);
+  }
+  return userObj;
+};
 
 /**
  * @desc    Create a new Department
@@ -14,30 +27,35 @@ const { logAuditAction } = require('../services/auditLogService');
 const createDepartment = async (req, res, next) => {
   try {
     const { name, description, jobRoles } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
     if (!name) {
       throw new ApiError(400, 'Department name is required');
     }
 
-    const existingDep = await Department.findOne({
-      name: name.trim(),
-      organizationId: req.user.organizationId
+    const existingDep = await prisma.department.findFirst({
+      where: {
+        name: name.trim(),
+        organizationId: orgId
+      }
     });
 
     if (existingDep) {
       throw new ApiError(400, 'Department with this name already exists in your organization');
     }
 
-    const department = await Department.create({
-      name,
-      description,
-      jobRoles: jobRoles || [],
-      organizationId: req.user.organizationId
+    const department = await prisma.department.create({
+      data: {
+        name: name.trim(),
+        description: description || null,
+        jobRoles: Array.isArray(jobRoles) ? jobRoles : [],
+        organizationId: orgId
+      }
     });
 
-    await logAuditAction(req.user, 'CREATE_DEPARTMENT', 'Department', department._id, `Created department ${department.name}`);
+    await logAuditAction(req.user, 'CREATE_DEPARTMENT', 'Department', department.id, `Created department ${department.name}`);
 
-    res.status(201).json(new ApiResponse(201, { department }, 'Department created successfully'));
+    res.status(201).json(new ApiResponse(201, { department: withId(department) }, 'Department created successfully'));
   } catch (error) {
     next(error);
   }
@@ -50,12 +68,17 @@ const createDepartment = async (req, res, next) => {
  */
 const getDepartments = async (req, res, next) => {
   try {
-    const departments = await Department.find({
-      organizationId: req.user.organizationId,
-      status: 'active'
-    }).sort({ name: 1 });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    res.status(200).json(new ApiResponse(200, { departments }, 'Departments retrieved successfully'));
+    const departments = await prisma.department.findMany({
+      where: {
+        organizationId: orgId,
+        status: 'active'
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    res.status(200).json(new ApiResponse(200, { departments: withId(departments) }, 'Departments retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -69,26 +92,34 @@ const getDepartments = async (req, res, next) => {
 const updateDepartment = async (req, res, next) => {
   try {
     const { name, description, jobRoles, status } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const depId = String(req.params.id);
 
-    const department = await Department.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const department = await prisma.department.findFirst({
+      where: {
+        id: depId,
+        organizationId: orgId
+      }
     });
 
     if (!department) {
       throw new ApiError(404, 'Department not found');
     }
 
-    if (name) department.name = name;
-    if (description !== undefined) department.description = description;
-    if (jobRoles) department.jobRoles = jobRoles;
-    if (status) department.status = status;
+    const updateData = {};
+    if (name) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description;
+    if (jobRoles) updateData.jobRoles = Array.isArray(jobRoles) ? jobRoles : [];
+    if (status) updateData.status = status;
 
-    await department.save();
+    const updatedDepartment = await prisma.department.update({
+      where: { id: department.id },
+      data: updateData
+    });
 
-    await logAuditAction(req.user, 'UPDATE_DEPARTMENT', 'Department', department._id, `Updated department ${department.name}`);
+    await logAuditAction(req.user, 'UPDATE_DEPARTMENT', 'Department', updatedDepartment.id, `Updated department ${updatedDepartment.name}`);
 
-    res.status(200).json(new ApiResponse(200, { department }, 'Department updated successfully'));
+    res.status(200).json(new ApiResponse(200, { department: withId(updatedDepartment) }, 'Department updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -101,19 +132,26 @@ const updateDepartment = async (req, res, next) => {
  */
 const deleteDepartment = async (req, res, next) => {
   try {
-    const department = await Department.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const depId = String(req.params.id);
+
+    const department = await prisma.department.findFirst({
+      where: {
+        id: depId,
+        organizationId: orgId
+      }
     });
 
     if (!department) {
       throw new ApiError(404, 'Department not found');
     }
 
-    department.status = 'deactivated';
-    await department.save();
+    const deactivatedDepartment = await prisma.department.update({
+      where: { id: department.id },
+      data: { status: 'deactivated' }
+    });
 
-    await logAuditAction(req.user, 'DEACTIVATE_DEPARTMENT', 'Department', department._id, `Deactivated department ${department.name}`);
+    await logAuditAction(req.user, 'DEACTIVATE_DEPARTMENT', 'Department', deactivatedDepartment.id, `Deactivated department ${deactivatedDepartment.name}`);
 
     res.status(200).json(new ApiResponse(200, {}, 'Department deactivated successfully'));
   } catch (error) {
@@ -129,37 +167,51 @@ const deleteDepartment = async (req, res, next) => {
 const createInstructor = async (req, res, next) => {
   try {
     const { name, email, password, departmentId } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
     if (!name || !email || !password) {
       throw new ApiError(400, 'Please provide name, email, and password');
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await prisma.user.findFirst({
+      where: { email: email.toLowerCase().trim() }
+    });
     if (existingUser) {
       throw new ApiError(400, 'User with this email already exists');
     }
 
     if (departmentId) {
-      const dep = await Department.findOne({ _id: departmentId, organizationId: req.user.organizationId });
+      const depId = String(departmentId);
+      const dep = await prisma.department.findFirst({
+        where: { id: depId, organizationId: orgId }
+      });
       if (!dep) {
         throw new ApiError(404, 'Selected department does not exist in your organization');
       }
     }
 
-    const instructor = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password,
-      role: 'Instructor',
-      organizationId: req.user.organizationId,
-      departmentId: departmentId || null,
-      isProfileComplete: true
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const profilePicture = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name.trim())}`;
+
+    const instructor = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        role: 'Instructor',
+        organizationId: orgId,
+        departmentId: departmentId ? String(departmentId) : null,
+        isProfileComplete: true,
+        profilePicture
+      },
+      include: {
+        department: { select: { id: true, name: true } }
+      }
     });
 
-    await logAuditAction(req.user, 'CREATE_INSTRUCTOR', 'User', instructor._id, `Created instructor ${instructor.name} (${instructor.email})`);
+    await logAuditAction(req.user, 'CREATE_INSTRUCTOR', 'User', instructor.id, `Created instructor ${instructor.name} (${instructor.email})`);
 
-    const userObj = instructor.toObject();
-    delete userObj.password;
+    const userObj = formatUserResponse(instructor);
 
     res.status(201).json(new ApiResponse(201, { instructor: userObj }, 'Instructor account created successfully'));
   } catch (error) {
@@ -174,15 +226,31 @@ const createInstructor = async (req, res, next) => {
  */
 const getInstructors = async (req, res, next) => {
   try {
-    const instructors = await User.find({
-      organizationId: req.user.organizationId,
-      role: 'Instructor'
-    })
-      .select('-password')
-      .populate('departmentId', 'name')
-      .sort({ name: 1 });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    res.status(200).json(new ApiResponse(200, { instructors }, 'Instructors retrieved successfully'));
+    const instructors = await prisma.user.findMany({
+      where: {
+        organizationId: orgId,
+        role: 'Instructor'
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        profilePicture: true,
+        departmentId: true,
+        organizationId: true,
+        createdAt: true,
+        department: { select: { id: true, name: true } }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    const formattedInstructors = instructors.map(formatUserResponse);
+
+    res.status(200).json(new ApiResponse(200, { instructors: formattedInstructors }, 'Instructors retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -196,29 +264,37 @@ const getInstructors = async (req, res, next) => {
 const createAdmin = async (req, res, next) => {
   try {
     const { name, email, password } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
     if (!name || !email || !password) {
       throw new ApiError(400, 'Please provide name, email, and password');
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await prisma.user.findFirst({
+      where: { email: email.toLowerCase().trim() }
+    });
     if (existingUser) {
       throw new ApiError(400, 'User with this email already exists');
     }
 
-    const admin = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password,
-      role: 'Admin',
-      organizationId: req.user.organizationId,
-      isProfileComplete: true
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const profilePicture = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name.trim())}`;
+
+    const admin = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        role: 'Admin',
+        organizationId: orgId,
+        isProfileComplete: true,
+        profilePicture
+      }
     });
 
-    await logAuditAction(req.user, 'CREATE_ADMIN', 'User', admin._id, `Created admin ${admin.name} (${admin.email})`);
+    await logAuditAction(req.user, 'CREATE_ADMIN', 'User', admin.id, `Created admin ${admin.name} (${admin.email})`);
 
-    const userObj = admin.toObject();
-    delete userObj.password;
+    const userObj = formatUserResponse(admin);
 
     res.status(201).json(new ApiResponse(201, { admin: userObj }, 'Organization Admin created successfully'));
   } catch (error) {
@@ -233,15 +309,33 @@ const createAdmin = async (req, res, next) => {
  */
 const getEmployees = async (req, res, next) => {
   try {
-    const employees = await User.find({
-      organizationId: req.user.organizationId,
-      role: 'Employee'
-    })
-      .select('-password')
-      .populate('departmentId', 'name jobRoles')
-      .sort({ createdAt: -1 });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    res.status(200).json(new ApiResponse(200, { employees }, 'Employees retrieved successfully'));
+    const employees = await prisma.user.findMany({
+      where: {
+        organizationId: orgId,
+        role: 'Employee'
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        jobRole: true,
+        isProfileComplete: true,
+        profilePicture: true,
+        departmentId: true,
+        organizationId: true,
+        createdAt: true,
+        department: { select: { id: true, name: true, jobRoles: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const formattedEmployees = employees.map(formatUserResponse);
+
+    res.status(200).json(new ApiResponse(200, { employees: formattedEmployees }, 'Employees retrieved successfully'));
   } catch (error) {
     next(error);
   }
@@ -255,36 +349,56 @@ const getEmployees = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
   try {
     const { departmentId, jobRole } = req.body;
+    const userId = String(req.user.id || req.user._id);
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    const user = await User.findById(req.user._id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    const updateData = {};
 
     if (departmentId) {
-      const dep = await Department.findOne({ _id: departmentId, organizationId: req.user.organizationId });
+      const depId = String(departmentId);
+      const dep = await prisma.department.findFirst({
+        where: { id: depId, organizationId: orgId }
+      });
       if (!dep) {
         throw new ApiError(404, 'Selected department does not exist');
       }
-      user.departmentId = departmentId;
+      updateData.departmentId = depId;
     }
 
     if (jobRole) {
-      user.jobRole = jobRole;
+      updateData.jobRole = jobRole.trim();
     }
 
-    if (user.departmentId && user.jobRole) {
-      user.isProfileComplete = true;
-      // Auto-assign mandatory and dept+role trainings
-      await autoAssignMandatoryTrainings(user._id, user.organizationId);
-      await autoAssignDeptRoleTrainings(user._id, user.organizationId, user.departmentId, user.jobRole);
+    const effectiveDepId = updateData.departmentId || user.departmentId;
+    const effectiveJobRole = updateData.jobRole || user.jobRole;
+
+    if (effectiveDepId && effectiveJobRole) {
+      updateData.isProfileComplete = true;
     }
 
-    await user.save();
+    const updatedUserRecord = await prisma.user.update({
+      where: { id: user.id },
+      data: updateData
+    });
 
-    const updatedUser = await User.findById(user._id)
-      .select('-password')
-      .populate('departmentId', 'name jobRoles')
-      .populate('organizationId', 'name code');
+    if (updatedUserRecord.departmentId && updatedUserRecord.jobRole) {
+      await autoAssignMandatoryTrainings(updatedUserRecord.id, updatedUserRecord.organizationId);
+      await autoAssignDeptRoleTrainings(updatedUserRecord.id, updatedUserRecord.organizationId, updatedUserRecord.departmentId, updatedUserRecord.jobRole);
+    }
 
-    res.status(200).json(new ApiResponse(200, { user: updatedUser }, 'Profile updated successfully'));
+    const finalUser = await prisma.user.findUnique({
+      where: { id: updatedUserRecord.id },
+      include: {
+        department: { select: { id: true, name: true, jobRoles: true } },
+        organization: { select: { id: true, name: true, code: true } }
+      }
+    });
+
+    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(finalUser) }, 'Profile updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -298,14 +412,18 @@ const updateProfile = async (req, res, next) => {
 const updateUserStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const targetUserId = String(req.params.id);
 
     if (!status || !['active', 'deactivated'].includes(status)) {
       throw new ApiError(400, 'Status is required and must be either "active" or "deactivated"');
     }
 
-    const targetUser = await User.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const targetUser = await prisma.user.findFirst({
+      where: {
+        id: targetUserId,
+        organizationId: orgId
+      }
     });
 
     if (!targetUser) {
@@ -318,12 +436,14 @@ const updateUserStatus = async (req, res, next) => {
 
     if (targetUser.status === status) {
       return res.status(200).json(
-        new ApiResponse(200, { user: targetUser }, `User is already ${status}`)
+        new ApiResponse(200, { user: formatUserResponse(targetUser) }, `User is already ${status}`)
       );
     }
 
-    targetUser.status = status;
-    await targetUser.save();
+    const updatedUser = await prisma.user.update({
+      where: { id: targetUser.id },
+      data: { status }
+    });
 
     const isDeactivating = status === 'deactivated';
     const actionName = isDeactivating ? 'DEACTIVATE_USER' : 'ACTIVATE_USER';
@@ -331,24 +451,24 @@ const updateUserStatus = async (req, res, next) => {
 
     // Send Notification to affected user
     await sendUserNotification(
-      targetUser._id,
-      req.user.organizationId,
-      targetUser.role,
+      updatedUser.id,
+      orgId,
+      updatedUser.role,
       actionName,
       isDeactivating ? 'Account Deactivated' : 'Account Reactivated',
       isDeactivating
         ? 'Your account has been deactivated by an administrator. Access to the system is currently blocked.'
         : 'Your account has been reactivated. You may now log in and access the system normally.',
-      { entityType: 'User', entityId: targetUser._id }
+      { entityType: 'User', entityId: updatedUser.id }
     );
 
     // Send Aggregated Notification to Organization Admins
     await sendAdminNotification(
-      req.user.organizationId,
+      orgId,
       actionName,
       `User ${isDeactivating ? 'Deactivated' : 'Reactivated'}`,
-      `${targetUser.role} "${targetUser.name}" (${targetUser.email}) was ${actionMessage} by Admin ${req.user.name}`,
-      { entityType: 'User', entityId: targetUser._id }
+      `${updatedUser.role} "${updatedUser.name}" (${updatedUser.email}) was ${actionMessage} by Admin ${req.user.name}`,
+      { entityType: 'User', entityId: updatedUser.id }
     );
 
     // Audit Log
@@ -356,15 +476,12 @@ const updateUserStatus = async (req, res, next) => {
       req.user,
       actionName,
       'User',
-      targetUser._id,
-      `${isDeactivating ? 'Deactivated' : 'Reactivated'} ${targetUser.role} user ${targetUser.name} (${targetUser.email})`
+      updatedUser.id,
+      `${isDeactivating ? 'Deactivated' : 'Reactivated'} ${updatedUser.role} user ${updatedUser.name} (${updatedUser.email})`
     );
 
-    const userObj = targetUser.toObject();
-    delete userObj.password;
-
     res.status(200).json(
-      new ApiResponse(200, { user: userObj }, `User ${actionMessage} successfully`)
+      new ApiResponse(200, { user: formatUserResponse(updatedUser) }, `User ${actionMessage} successfully`)
     );
   } catch (error) {
     next(error);

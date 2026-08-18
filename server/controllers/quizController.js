@@ -1,9 +1,43 @@
-const Quiz = require('../models/Quiz');
-const QuizAttempt = require('../models/QuizAttempt');
-const Training = require('../models/Training');
+const { prisma, withId } = require('../config/prismaClient');
 const { updateOverallProgress } = require('../services/progressService');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
+
+/**
+ * Helper to fetch a populated quiz record matching Mongoose structure
+ */
+const getPopulatedQuiz = async (quizId) => {
+  const qId = String(quizId);
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: qId },
+    include: {
+      questions: {
+        orderBy: { createdAt: 'asc' }
+      }
+    }
+  });
+
+  if (!quiz) return null;
+  return withId(quiz);
+};
+
+/**
+ * Helper to fetch a populated quiz attempt record matching Mongoose structure
+ */
+const getPopulatedQuizAttempt = async (attemptId) => {
+  const aId = String(attemptId);
+  const attempt = await prisma.quizAttempt.findUnique({
+    where: { id: aId },
+    include: {
+      answers: {
+        orderBy: { questionIndex: 'asc' }
+      }
+    }
+  });
+
+  if (!attempt) return null;
+  return withId(attempt);
+};
 
 /**
  * @desc    Create Quiz for a SubSection
@@ -13,52 +47,70 @@ const ApiResponse = require('../utils/apiResponse');
 const createQuiz = async (req, res, next) => {
   try {
     const { title, trainingId, sectionId, subSectionId, questions, timeLimitMinutes, passingScorePercent } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const instructorId = String(req.user.id || req.user._id);
 
     if (!title || !trainingId || !questions || !questions.length) {
       throw new ApiError(400, 'Please provide title, trainingId, and questions');
     }
 
-    const training = await Training.findOne({ _id: trainingId, organizationId: req.user.organizationId });
+    const trgId = String(trainingId);
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) {
       throw new ApiError(404, 'Training not found');
     }
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== instructorId) {
       throw new ApiError(403, 'Not authorized to add quiz to this training');
     }
 
-    let targetSubSectionId = subSectionId;
+    let targetSubSectionId = subSectionId ? String(subSectionId) : null;
     if (!targetSubSectionId && sectionId) {
-      const section = training.sections.id(sectionId);
-      if (section && section.subSections.length > 0) {
-        targetSubSectionId = section.subSections[0]._id;
+      const secId = String(sectionId);
+      const firstSub = await prisma.trainingSubSection.findFirst({
+        where: { sectionId: secId },
+        orderBy: { order: 'asc' }
+      });
+      if (firstSub) {
+        targetSubSectionId = firstSub.id;
       }
     }
 
-    const quiz = await Quiz.create({
-      title,
-      trainingId,
-      subSectionId: targetSubSectionId || training._id,
-      questions,
-      timeLimitMinutes: timeLimitMinutes || 15,
-      passingScorePercent: passingScorePercent || 70,
-      createdBy: req.user._id,
-      organizationId: req.user.organizationId
-    });
-
-    if (sectionId && targetSubSectionId) {
-      const section = training.sections.id(sectionId);
-      if (section) {
-        const subSection = section.subSections.id(targetSubSectionId);
-        if (subSection) {
-          subSection.hasQuiz = true;
-          subSection.quizId = quiz._id;
-          await training.save();
+    const quiz = await prisma.quiz.create({
+      data: {
+        title: title.trim(),
+        trainingId: training.id,
+        subSectionId: targetSubSectionId || training.id,
+        timeLimitMinutes: Number(timeLimitMinutes) || 15,
+        passingScorePercent: Number(passingScorePercent) || 70,
+        createdBy: instructorId,
+        organizationId: orgId,
+        questions: {
+          create: questions.map(q => ({
+            questionText: q.questionText,
+            options: Array.isArray(q.options) ? q.options : [],
+            correctAnswerIndex: Number(q.correctAnswerIndex) || 0,
+            score: Number(q.score) || 1
+          }))
         }
       }
+    });
+
+    if (targetSubSectionId) {
+      await prisma.trainingSubSection.update({
+        where: { id: targetSubSectionId },
+        data: {
+          hasQuiz: true,
+          quizId: quiz.id
+        }
+      });
     }
 
-    res.status(201).json(new ApiResponse(201, { quiz }, 'Quiz created successfully'));
+    const populatedQuiz = await getPopulatedQuiz(quiz.id);
+
+    res.status(201).json(new ApiResponse(201, { quiz: populatedQuiz }, 'Quiz created successfully'));
   } catch (error) {
     next(error);
   }
@@ -71,19 +123,32 @@ const createQuiz = async (req, res, next) => {
  */
 const getQuizById = async (req, res, next) => {
   try {
-    let quiz = await Quiz.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const paramId = String(req.params.id);
+
+    let quiz = await prisma.quiz.findFirst({
+      where: { id: paramId, organizationId: orgId },
+      include: { questions: { orderBy: { createdAt: 'asc' } } }
+    });
+
     if (!quiz) {
-      quiz = await Quiz.findOne({ subSectionId: req.params.id, organizationId: req.user.organizationId });
+      quiz = await prisma.quiz.findFirst({
+        where: { subSectionId: paramId, organizationId: orgId },
+        include: { questions: { orderBy: { createdAt: 'asc' } } }
+      });
     }
     if (!quiz) {
-      quiz = await Quiz.findOne({ trainingId: req.params.id, organizationId: req.user.organizationId });
+      quiz = await prisma.quiz.findFirst({
+        where: { trainingId: paramId, organizationId: orgId },
+        include: { questions: { orderBy: { createdAt: 'asc' } } }
+      });
     }
 
     if (!quiz) {
       throw new ApiError(404, 'Quiz not found');
     }
 
-    const quizObj = quiz.toObject();
+    const quizObj = withId(quiz);
 
     // Mask correct answers if employee is attempting the quiz
     if (req.user.role === 'Employee') {
@@ -107,13 +172,22 @@ const getQuizById = async (req, res, next) => {
 const startQuiz = async (req, res, next) => {
   try {
     const { trainingAssignmentId } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const paramId = String(req.params.id);
 
-    let quiz = await Quiz.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    let quiz = await prisma.quiz.findFirst({
+      where: { id: paramId, organizationId: orgId }
+    });
     if (!quiz) {
-      quiz = await Quiz.findOne({ subSectionId: req.params.id, organizationId: req.user.organizationId });
+      quiz = await prisma.quiz.findFirst({
+        where: { subSectionId: paramId, organizationId: orgId }
+      });
     }
     if (!quiz) {
-      quiz = await Quiz.findOne({ trainingId: req.params.id, organizationId: req.user.organizationId });
+      quiz = await prisma.quiz.findFirst({
+        where: { trainingId: paramId, organizationId: orgId }
+      });
     }
 
     if (!quiz) {
@@ -121,10 +195,13 @@ const startQuiz = async (req, res, next) => {
     }
 
     // Search for active in_progress attempt
-    let attempt = await QuizAttempt.findOne({
-      quizId: quiz._id,
-      employeeId: req.user._id,
-      status: 'in_progress'
+    let attempt = await prisma.quizAttempt.findFirst({
+      where: {
+        quizId: quiz.id,
+        employeeId: userId,
+        status: 'in_progress'
+      },
+      include: { answers: true }
     });
 
     const now = Date.now();
@@ -139,7 +216,7 @@ const startQuiz = async (req, res, next) => {
         new ApiResponse(
           200,
           {
-            attempt,
+            attempt: withId(attempt),
             startTime: attempt.startTime,
             timeLimitMinutes: quiz.timeLimitMinutes,
             remainingSeconds
@@ -150,26 +227,31 @@ const startQuiz = async (req, res, next) => {
     }
 
     // Create new in_progress attempt
-    const previousAttemptsCount = await QuizAttempt.countDocuments({
-      quizId: quiz._id,
-      employeeId: req.user._id,
-      status: 'completed'
+    const previousAttemptsCount = await prisma.quizAttempt.count({
+      where: {
+        quizId: quiz.id,
+        employeeId: userId,
+        status: 'completed'
+      }
     });
 
-    attempt = await QuizAttempt.create({
-      quizId: quiz._id,
-      trainingAssignmentId: trainingAssignmentId || null,
-      employeeId: req.user._id,
-      status: 'in_progress',
-      startTime: new Date(now),
-      attemptNumber: previousAttemptsCount + 1
+    attempt = await prisma.quizAttempt.create({
+      data: {
+        quizId: quiz.id,
+        trainingAssignmentId: trainingAssignmentId ? String(trainingAssignmentId) : null,
+        employeeId: userId,
+        status: 'in_progress',
+        startTime: new Date(now),
+        attemptNumber: previousAttemptsCount + 1
+      },
+      include: { answers: true }
     });
 
     res.status(201).json(
       new ApiResponse(
         201,
         {
-          attempt,
+          attempt: withId(attempt),
           startTime: attempt.startTime,
           timeLimitMinutes: quiz.timeLimitMinutes,
           remainingSeconds: Math.floor(limitMs / 1000)
@@ -189,25 +271,52 @@ const startQuiz = async (req, res, next) => {
  */
 const updateQuiz = async (req, res, next) => {
   try {
-    const quiz = await Quiz.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const qId = String(req.params.id);
+
+    const quiz = await prisma.quiz.findFirst({
+      where: { id: qId, organizationId: orgId }
+    });
     if (!quiz) {
       throw new ApiError(404, 'Quiz not found');
     }
 
-    if (req.user.role === 'Instructor' && quiz.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && quiz.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized to update this quiz');
     }
 
     const { title, questions, timeLimitMinutes, passingScorePercent } = req.body;
 
-    if (title) quiz.title = title;
-    if (questions) quiz.questions = questions;
-    if (timeLimitMinutes) quiz.timeLimitMinutes = timeLimitMinutes;
-    if (passingScorePercent) quiz.passingScorePercent = passingScorePercent;
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (timeLimitMinutes) updateData.timeLimitMinutes = Number(timeLimitMinutes);
+    if (passingScorePercent) updateData.passingScorePercent = Number(passingScorePercent);
 
-    await quiz.save();
+    await prisma.quiz.update({
+      where: { id: quiz.id },
+      data: updateData
+    });
 
-    res.status(200).json(new ApiResponse(200, { quiz }, 'Quiz updated successfully'));
+    if (questions && Array.isArray(questions)) {
+      await prisma.quizQuestion.deleteMany({
+        where: { quizId: quiz.id }
+      });
+
+      await prisma.quizQuestion.createMany({
+        data: questions.map(q => ({
+          quizId: quiz.id,
+          questionText: q.questionText,
+          options: Array.isArray(q.options) ? q.options : [],
+          correctAnswerIndex: Number(q.correctAnswerIndex) || 0,
+          score: Number(q.score) || 1
+        }))
+      });
+    }
+
+    const updatedQuiz = await getPopulatedQuiz(quiz.id);
+
+    res.status(200).json(new ApiResponse(200, { quiz: updatedQuiz }, 'Quiz updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -220,48 +329,67 @@ const updateQuiz = async (req, res, next) => {
  */
 const submitQuiz = async (req, res, next) => {
   try {
-    const { userAnswers, trainingAssignmentId, attemptId } = req.body; // userAnswers: [{ questionIndex, selectedOptionIndex }]
+    const { userAnswers, trainingAssignmentId, attemptId } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const paramId = String(req.params.id);
 
     if (!userAnswers || !Array.isArray(userAnswers)) {
       throw new ApiError(400, 'Please provide userAnswers array');
     }
 
-    let quiz = await Quiz.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    let quiz = await prisma.quiz.findFirst({
+      where: { id: paramId, organizationId: orgId },
+      include: { questions: { orderBy: { createdAt: 'asc' } } }
+    });
     if (!quiz) {
-      quiz = await Quiz.findOne({ subSectionId: req.params.id, organizationId: req.user.organizationId });
+      quiz = await prisma.quiz.findFirst({
+        where: { subSectionId: paramId, organizationId: orgId },
+        include: { questions: { orderBy: { createdAt: 'asc' } } }
+      });
     }
     if (!quiz) {
-      quiz = await Quiz.findOne({ trainingId: req.params.id, organizationId: req.user.organizationId });
+      quiz = await prisma.quiz.findFirst({
+        where: { trainingId: paramId, organizationId: orgId },
+        include: { questions: { orderBy: { createdAt: 'asc' } } }
+      });
     }
 
     if (!quiz) {
       throw new ApiError(404, 'Quiz not found');
     }
 
-    // Check for existing attempt (by attemptId or active in_progress attempt)
+    // Check for existing attempt
     let attempt;
     if (attemptId) {
-      attempt = await QuizAttempt.findOne({ _id: attemptId, employeeId: req.user._id });
+      attempt = await prisma.quizAttempt.findFirst({
+        where: { id: String(attemptId), employeeId: userId },
+        include: { answers: true }
+      });
     }
     if (!attempt) {
-      attempt = await QuizAttempt.findOne({
-        quizId: quiz._id,
-        employeeId: req.user._id,
-        status: 'in_progress'
+      attempt = await prisma.quizAttempt.findFirst({
+        where: {
+          quizId: quiz.id,
+          employeeId: userId,
+          status: 'in_progress'
+        },
+        include: { answers: true }
       });
     }
 
     // Idempotency check: if attempt is already completed, return existing result without error
     if (attempt && attempt.status === 'completed') {
+      const populatedAttempt = await getPopulatedQuizAttempt(attempt.id);
       return res.status(200).json(
         new ApiResponse(
           200,
           {
-            attempt,
+            attempt: populatedAttempt,
             passingScorePercent: quiz.passingScorePercent,
             percentage: attempt.percentage,
             passed: attempt.passed,
-            evaluatedAnswers: attempt.answers
+            evaluatedAnswers: populatedAttempt.answers
           },
           attempt.passed ? 'Congratulations! You passed the quiz.' : `Quiz failed (${attempt.percentage}%). Required score: ${quiz.passingScorePercent}%.`
         )
@@ -270,7 +398,7 @@ const submitQuiz = async (req, res, next) => {
 
     let totalScore = 0;
     let maxScore = 0;
-    const evaluatedAnswers = [];
+    const evaluatedAnswersData = [];
 
     quiz.questions.forEach((q, idx) => {
       const qScore = q.score || 1;
@@ -292,7 +420,7 @@ const submitQuiz = async (req, res, next) => {
         totalScore += qScore;
       }
 
-      evaluatedAnswers.push({
+      evaluatedAnswersData.push({
         questionIndex: idx,
         questionText: q.questionText || `Question ${idx + 1}`,
         selectedOptionIndex: hasSelected ? selectedOpt : null,
@@ -308,56 +436,78 @@ const submitQuiz = async (req, res, next) => {
     const passed = percentage >= quiz.passingScorePercent;
 
     if (attempt) {
-      attempt.status = 'completed';
-      attempt.endTime = new Date();
-      attempt.answers = evaluatedAnswers;
-      attempt.totalScore = totalScore;
-      attempt.maxScore = maxScore;
-      attempt.percentage = percentage;
-      attempt.passed = passed;
-      await attempt.save();
-    } else {
-      const previousAttemptsCount = await QuizAttempt.countDocuments({
-        quizId: quiz._id,
-        employeeId: req.user._id,
-        status: 'completed'
+      await prisma.quizAttemptAnswer.deleteMany({
+        where: { quizAttemptId: attempt.id }
       });
 
-      attempt = await QuizAttempt.create({
-        quizId: quiz._id,
-        trainingAssignmentId: trainingAssignmentId || null,
-        employeeId: req.user._id,
-        status: 'completed',
-        startTime: new Date(),
-        endTime: new Date(),
-        answers: evaluatedAnswers,
-        totalScore,
-        maxScore,
-        percentage,
-        passed,
-        attemptNumber: previousAttemptsCount + 1
+      attempt = await prisma.quizAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: 'completed',
+          endTime: new Date(),
+          submittedAt: new Date(),
+          totalScore,
+          maxScore,
+          percentage,
+          passed,
+          answers: {
+            create: evaluatedAnswersData
+          }
+        }
+      });
+    } else {
+      const previousAttemptsCount = await prisma.quizAttempt.count({
+        where: {
+          quizId: quiz.id,
+          employeeId: userId,
+          status: 'completed'
+        }
+      });
+
+      attempt = await prisma.quizAttempt.create({
+        data: {
+          quizId: quiz.id,
+          trainingAssignmentId: trainingAssignmentId ? String(trainingAssignmentId) : null,
+          employeeId: userId,
+          status: 'completed',
+          startTime: new Date(),
+          endTime: new Date(),
+          submittedAt: new Date(),
+          totalScore,
+          maxScore,
+          percentage,
+          passed,
+          attemptNumber: previousAttemptsCount + 1,
+          answers: {
+            create: evaluatedAnswersData
+          }
+        }
       });
     }
 
-    let targetAssignmentId = trainingAssignmentId;
+    let targetAssignmentId = trainingAssignmentId ? String(trainingAssignmentId) : null;
     if (!targetAssignmentId && quiz.trainingId) {
-      const foundTa = await TrainingAssignment.findOne({ trainingId: quiz.trainingId, employeeId: req.user._id });
-      if (foundTa) targetAssignmentId = foundTa._id;
+      const foundTa = await prisma.trainingAssignment.findFirst({
+        where: { trainingId: quiz.trainingId, employeeId: userId }
+      });
+      if (foundTa) targetAssignmentId = foundTa.id;
     }
 
     if (targetAssignmentId && passed) {
-      await updateOverallProgress(targetAssignmentId, req.user._id);
+      await updateOverallProgress(targetAssignmentId, userId);
     }
+
+    const populatedAttempt = await getPopulatedQuizAttempt(attempt.id);
 
     res.status(200).json(
       new ApiResponse(
         200,
         {
-          attempt,
+          attempt: populatedAttempt,
           passingScorePercent: quiz.passingScorePercent,
           percentage,
           passed,
-          evaluatedAnswers
+          evaluatedAnswers: populatedAttempt.answers
         },
         passed ? 'Congratulations! You passed the quiz.' : `Quiz failed (${percentage}%). Required score: ${quiz.passingScorePercent}%. Please retake.`
       )
@@ -374,19 +524,33 @@ const submitQuiz = async (req, res, next) => {
  */
 const getQuizAttempts = async (req, res, next) => {
   try {
-    let quiz = await Quiz.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const paramId = String(req.params.id);
+
+    let quiz = await prisma.quiz.findFirst({
+      where: { id: paramId, organizationId: orgId }
+    });
     if (!quiz) {
-      quiz = await Quiz.findOne({ subSectionId: req.params.id, organizationId: req.user.organizationId });
+      quiz = await prisma.quiz.findFirst({
+        where: { subSectionId: paramId, organizationId: orgId }
+      });
     }
 
-    const quizId = quiz ? quiz._id : req.params.id;
+    const quizId = quiz ? quiz.id : paramId;
 
-    let query = { quizId };
+    const whereClause = { quizId };
     if (req.user.role === 'Employee') {
-      query.employeeId = req.user._id;
+      whereClause.employeeId = userId;
     }
 
-    const attempts = await QuizAttempt.find(query).sort({ createdAt: -1 });
+    const attemptsList = await prisma.quizAttempt.findMany({
+      where: whereClause,
+      select: { id: true },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const attempts = await Promise.all(attemptsList.map(a => getPopulatedQuizAttempt(a.id)));
 
     res.status(200).json(new ApiResponse(200, { attempts }, 'Quiz attempts retrieved successfully'));
   } catch (error) {

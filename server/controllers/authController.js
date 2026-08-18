@@ -1,6 +1,5 @@
-const User = require('../models/User');
-const Organization = require('../models/Organization');
-const Department = require('../models/Department');
+const bcrypt = require('bcryptjs');
+const { prisma, withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 const generateTokenAndSetCookie = require('../utils/generateToken');
@@ -11,6 +10,23 @@ const {
 } = require('../services/trainingAssignmentService');
 const { logAuditAction } = require('../services/auditLogService');
 const { getCloudinary } = require('../config/cloudinary');
+
+const getDefaultDiceBearAvatar = (name) => {
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || 'User')}`;
+};
+
+const formatUserResponse = (user) => {
+  if (!user) return null;
+  const userObj = withId(user);
+  delete userObj.password;
+  if (userObj.organization) {
+    userObj.organizationId = withId(userObj.organization);
+  }
+  if (userObj.department) {
+    userObj.departmentId = withId(userObj.department);
+  }
+  return userObj;
+};
 
 /**
  * @desc    Initial Setup for Organization + Admin
@@ -25,34 +41,58 @@ const setupOrganization = async (req, res, next) => {
       throw new ApiError(400, 'Please provide all required fields (orgName, adminName, adminEmail, adminPassword)');
     }
 
-    const existingUser = await User.findOne({ email: adminEmail.toLowerCase() });
+    const existingUser = await prisma.user.findFirst({
+      where: { email: adminEmail.toLowerCase() }
+    });
     if (existingUser) {
       throw new ApiError(400, 'User with this email already exists');
     }
 
-    const organization = await Organization.create({
-      name: orgName,
-      code: orgCode
+    // Auto generate code if not provided
+    let finalCode = orgCode ? orgCode.toUpperCase().trim() : null;
+    if (!finalCode && orgName) {
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const cleanName = orgName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
+      finalCode = `${cleanName}-${randomSuffix}`;
+    }
+
+    const existingOrg = await prisma.organization.findUnique({
+      where: { code: finalCode }
+    });
+    if (existingOrg) {
+      throw new ApiError(400, 'Organization code already exists. Please choose a different organization code.');
+    }
+
+    const organization = await prisma.organization.create({
+      data: {
+        name: orgName.trim(),
+        code: finalCode
+      }
     });
 
-    const admin = await User.create({
-      name: adminName,
-      email: adminEmail.toLowerCase(),
-      password: adminPassword,
-      role: 'Admin',
-      organizationId: organization._id,
-      isProfileComplete: true
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const profilePicture = getDefaultDiceBearAvatar(adminName);
+
+    const admin = await prisma.user.create({
+      data: {
+        name: adminName.trim(),
+        email: adminEmail.toLowerCase().trim(),
+        password: hashedPassword,
+        role: 'Admin',
+        organizationId: organization.id,
+        isProfileComplete: true,
+        profilePicture
+      }
     });
 
-    generateTokenAndSetCookie(res, admin._id, admin.role, admin.organizationId);
+    generateTokenAndSetCookie(res, admin.id, admin.role, admin.organizationId);
 
-    const userObj = admin.toObject();
-    delete userObj.password;
+    const userObj = formatUserResponse(admin);
 
     res.status(201).json(
       new ApiResponse(
         201,
-        { user: userObj, organization },
+        { user: userObj, organization: withId(organization) },
         'Organization and Organization Admin setup completed successfully'
       )
     );
@@ -74,38 +114,47 @@ const registerEmployee = async (req, res, next) => {
       throw new ApiError(400, 'Please provide name, email, password, and organization code');
     }
 
-    const organization = await Organization.findOne({ code: orgCode.toUpperCase() });
+    const organization = await prisma.organization.findUnique({
+      where: { code: orgCode.toUpperCase().trim() }
+    });
     if (!organization) {
       throw new ApiError(404, 'Organization not found with the provided code');
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const existingUser = await prisma.user.findFirst({
+      where: { email: email.toLowerCase().trim() }
+    });
     if (existingUser) {
       throw new ApiError(400, 'User with this email already exists');
     }
 
-    const employee = await User.create({
-      name,
-      email: email.toLowerCase(),
-      password,
-      role: 'Employee',
-      organizationId: organization._id,
-      isProfileComplete: false
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const profilePicture = getDefaultDiceBearAvatar(name);
+
+    const employee = await prisma.user.create({
+      data: {
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        password: hashedPassword,
+        role: 'Employee',
+        organizationId: organization.id,
+        isProfileComplete: false,
+        profilePicture
+      }
     });
 
     // Auto-assign mandatory trainings & active auto-assignment rules
-    await autoAssignMandatoryTrainings(employee._id, organization._id);
-    await autoAssignRulesToNewEmployee(employee._id, organization._id);
+    await autoAssignMandatoryTrainings(employee.id, organization.id);
+    await autoAssignRulesToNewEmployee(employee.id, organization.id);
 
-    generateTokenAndSetCookie(res, employee._id, employee.role, employee.organizationId);
+    generateTokenAndSetCookie(res, employee.id, employee.role, employee.organizationId);
 
-    const userObj = employee.toObject();
-    delete userObj.password;
+    const userObj = formatUserResponse(employee);
 
     res.status(201).json(
       new ApiResponse(
         201,
-        { user: userObj, organization },
+        { user: userObj, organization: withId(organization) },
         'Employee registered successfully'
       )
     );
@@ -127,9 +176,21 @@ const login = async (req, res, next) => {
       throw new ApiError(400, 'Please provide email and password');
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password').populate('organizationId', 'name code');
+    const user = await prisma.user.findFirst({
+      where: { email: email.toLowerCase().trim() },
+      include: {
+        organization: {
+          select: { id: true, name: true, code: true }
+        }
+      }
+    });
 
-    if (!user || !(await user.matchPassword(password))) {
+    if (!user) {
+      throw new ApiError(401, 'Invalid email or password');
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       throw new ApiError(401, 'Invalid email or password');
     }
 
@@ -137,10 +198,9 @@ const login = async (req, res, next) => {
       throw new ApiError(403, 'Your account has been deactivated. Please contact your administrator.');
     }
 
-    generateTokenAndSetCookie(res, user._id, user.role, user.organizationId);
+    generateTokenAndSetCookie(res, user.id, user.role, user.organizationId);
 
-    const userObj = user.toObject();
-    delete userObj.password;
+    const userObj = formatUserResponse(user);
 
     res.status(200).json(
       new ApiResponse(
@@ -179,11 +239,18 @@ const logout = async (req, res, next) => {
  */
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate('organizationId', 'name code')
-      .populate('departmentId', 'name jobRoles');
+    const userId = String(req.user.id || req.user._id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        organization: { select: { id: true, name: true, code: true } },
+        department: { select: { id: true, name: true, jobRoles: true } }
+      }
+    });
 
-    res.status(200).json(new ApiResponse(200, { user }, 'Current user profile retrieved'));
+    const userObj = formatUserResponse(user);
+
+    res.status(200).json(new ApiResponse(200, { user: userObj }, 'Current user profile retrieved'));
   } catch (error) {
     next(error);
   }
@@ -197,52 +264,72 @@ const getMe = async (req, res, next) => {
 const updateMyProfile = async (req, res, next) => {
   try {
     const { name, departmentId, jobRole } = req.body;
+    const userId = String(req.user.id || req.user._id);
 
-    const user = await User.findById(req.user._id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
 
     if (!user) {
       throw new ApiError(404, 'User not found');
     }
 
+    const updateData = {};
+
     if (name) {
       if (!name.trim()) {
         throw new ApiError(400, 'Name cannot be empty');
       }
-      user.name = name.trim();
+      updateData.name = name.trim();
       if (!user.isCustomAvatar) {
-        user.profilePicture = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`;
+        updateData.profilePicture = getDefaultDiceBearAvatar(updateData.name);
       }
     }
 
     if (departmentId) {
-      const dep = await Department.findOne({ _id: departmentId, organizationId: user.organizationId });
+      const depId = String(departmentId);
+      const dep = await prisma.department.findFirst({
+        where: { id: depId, organizationId: user.organizationId }
+      });
       if (!dep) {
         throw new ApiError(404, 'Selected department does not exist in your organization');
       }
-      user.departmentId = departmentId;
+      updateData.departmentId = depId;
     }
 
     if (jobRole) {
-      user.jobRole = jobRole.trim();
+      updateData.jobRole = jobRole.trim();
     }
 
-    if (user.role === 'Employee' && user.departmentId && user.jobRole) {
-      user.isProfileComplete = true;
-      await autoAssignMandatoryTrainings(user._id, user.organizationId);
-      await autoAssignDeptRoleTrainings(user._id, user.organizationId, user.departmentId, user.jobRole);
-      await autoAssignRulesToNewEmployee(user._id, user.organizationId);
+    const effectiveDepId = updateData.departmentId || user.departmentId;
+    const effectiveJobRole = updateData.jobRole || user.jobRole;
+
+    if (user.role === 'Employee' && effectiveDepId && effectiveJobRole) {
+      updateData.isProfileComplete = true;
     }
 
-    await user.save();
+    const updatedUserRecord = await prisma.user.update({
+      where: { id: user.id },
+      data: updateData
+    });
 
-    await logAuditAction(req.user, 'UPDATE_PROFILE', 'User', user._id, `Profile updated for ${user.role} ${user.name}`);
+    if (user.role === 'Employee' && updatedUserRecord.isProfileComplete) {
+      await autoAssignMandatoryTrainings(updatedUserRecord.id, updatedUserRecord.organizationId);
+      await autoAssignDeptRoleTrainings(updatedUserRecord.id, updatedUserRecord.organizationId, updatedUserRecord.departmentId, updatedUserRecord.jobRole);
+      await autoAssignRulesToNewEmployee(updatedUserRecord.id, updatedUserRecord.organizationId);
+    }
 
-    const updatedUser = await User.findById(user._id)
-      .select('-password')
-      .populate('organizationId', 'name code')
-      .populate('departmentId', 'name jobRoles');
+    await logAuditAction(req.user, 'UPDATE_PROFILE', 'User', updatedUserRecord.id, `Profile updated for ${updatedUserRecord.role} ${updatedUserRecord.name}`);
 
-    res.status(200).json(new ApiResponse(200, { user: updatedUser }, 'Profile updated successfully'));
+    const finalUser = await prisma.user.findUnique({
+      where: { id: updatedUserRecord.id },
+      include: {
+        organization: { select: { id: true, name: true, code: true } },
+        department: { select: { id: true, name: true, jobRoles: true } }
+      }
+    });
+
+    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(finalUser) }, 'Profile updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -265,21 +352,27 @@ const changePassword = async (req, res, next) => {
       throw new ApiError(400, 'New password must be at least 6 characters long');
     }
 
-    const user = await User.findById(req.user._id).select('+password');
+    const userId = String(req.user.id || req.user._id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
 
     if (!user) {
       throw new ApiError(404, 'User not found');
     }
 
-    const isMatch = await user.matchPassword(currentPassword);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       throw new ApiError(400, 'Current password is incorrect');
     }
 
-    user.password = newPassword;
-    await user.save();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
 
-    await logAuditAction(req.user, 'CHANGE_PASSWORD', 'User', user._id, `Password changed for user ${user.name}`);
+    await logAuditAction(req.user, 'CHANGE_PASSWORD', 'User', user.id, `Password changed for user ${user.name}`);
 
     res.status(200).json(new ApiResponse(200, {}, 'Password changed successfully'));
   } catch (error) {
@@ -298,7 +391,10 @@ const updateProfilePicture = async (req, res, next) => {
       throw new ApiError(400, 'Please select an image file to upload as profile picture');
     }
 
-    const user = await User.findById(req.user._id);
+    const userId = String(req.user.id || req.user._id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
     if (!user) {
       throw new ApiError(404, 'User not found');
     }
@@ -327,20 +423,26 @@ const updateProfilePicture = async (req, res, next) => {
       uploadStream.end(req.file.buffer);
     });
 
-    user.profilePicture = uploadResult.secure_url;
-    user.profilePicturePublicId = uploadResult.public_id;
-    user.isCustomAvatar = true;
+    const updatedUserRecord = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        profilePicture: uploadResult.secure_url,
+        profilePicturePublicId: uploadResult.public_id,
+        isCustomAvatar: true
+      }
+    });
 
-    await user.save();
+    await logAuditAction(req.user, 'UPDATE_PROFILE_PICTURE', 'User', user.id, `Updated profile picture for ${user.role} ${user.name}`);
 
-    await logAuditAction(req.user, 'UPDATE_PROFILE_PICTURE', 'User', user._id, `Updated profile picture for ${user.role} ${user.name}`);
+    const finalUser = await prisma.user.findUnique({
+      where: { id: updatedUserRecord.id },
+      include: {
+        organization: { select: { id: true, name: true, code: true } },
+        department: { select: { id: true, name: true, jobRoles: true } }
+      }
+    });
 
-    const updatedUser = await User.findById(user._id)
-      .select('-password')
-      .populate('organizationId', 'name code')
-      .populate('departmentId', 'name jobRoles');
-
-    res.status(200).json(new ApiResponse(200, { user: updatedUser }, 'Profile picture updated successfully'));
+    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(finalUser) }, 'Profile picture updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -353,7 +455,10 @@ const updateProfilePicture = async (req, res, next) => {
  */
 const resetProfilePicture = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id);
+    const userId = String(req.user.id || req.user._id);
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
     if (!user) {
       throw new ApiError(404, 'User not found');
     }
@@ -367,20 +472,26 @@ const resetProfilePicture = async (req, res, next) => {
       }
     }
 
-    user.profilePicturePublicId = null;
-    user.isCustomAvatar = false;
-    user.profilePicture = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}`;
+    const updatedUserRecord = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        profilePicturePublicId: null,
+        isCustomAvatar: false,
+        profilePicture: getDefaultDiceBearAvatar(user.name)
+      }
+    });
 
-    await user.save();
+    await logAuditAction(req.user, 'RESET_PROFILE_PICTURE', 'User', user.id, `Reset profile picture to default for ${user.name}`);
 
-    await logAuditAction(req.user, 'RESET_PROFILE_PICTURE', 'User', user._id, `Reset profile picture to default for ${user.name}`);
+    const finalUser = await prisma.user.findUnique({
+      where: { id: updatedUserRecord.id },
+      include: {
+        organization: { select: { id: true, name: true, code: true } },
+        department: { select: { id: true, name: true, jobRoles: true } }
+      }
+    });
 
-    const updatedUser = await User.findById(user._id)
-      .select('-password')
-      .populate('organizationId', 'name code')
-      .populate('departmentId', 'name jobRoles');
-
-    res.status(200).json(new ApiResponse(200, { user: updatedUser }, 'Profile picture reset to default avatar successfully'));
+    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(finalUser) }, 'Profile picture reset to default avatar successfully'));
   } catch (error) {
     next(error);
   }

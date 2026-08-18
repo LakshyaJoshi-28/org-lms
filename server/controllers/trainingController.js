@@ -1,11 +1,78 @@
-const mongoose = require('mongoose');
-const Training = require('../models/Training');
-const TrainingCategory = require('../models/TrainingCategory');
-const Department = require('../models/Department');
-const Quiz = require('../models/Quiz');
-const Assignment = require('../models/Assignment');
+const { prisma, withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
+
+/**
+ * Helper to fetch a populated training record matching the Mongoose structure expected by frontend
+ */
+const getPopulatedTraining = async (trainingId) => {
+  const trgId = String(trainingId);
+  const training = await prisma.training.findUnique({
+    where: { id: trgId },
+    include: {
+      category: { select: { id: true, name: true } },
+      department: { select: { id: true, name: true, jobRoles: true } },
+      instructor: { select: { id: true, name: true, email: true } },
+      sections: {
+        orderBy: { order: 'asc' },
+        include: {
+          subSections: {
+            orderBy: { order: 'asc' },
+            include: {
+              pdfResources: true,
+              assignment: true
+            }
+          }
+        }
+      },
+      quizzes: {
+        include: { questions: true }
+      },
+      assignments: true
+    }
+  });
+
+  if (!training) return null;
+
+  const transformed = withId(training);
+  if (transformed.category) transformed.categoryId = transformed.category;
+  if (transformed.department) transformed.departmentId = transformed.department;
+  if (transformed.instructor) transformed.createdBy = transformed.instructor;
+
+  if (transformed.sections && Array.isArray(transformed.sections)) {
+    transformed.sections = transformed.sections.map(sec => {
+      if (sec.subSections && Array.isArray(sec.subSections)) {
+        sec.subSections = sec.subSections.map(sub => {
+          sub.pdfResources = withId(sub.pdfResources || []);
+          const matchingQuiz = training.quizzes?.find(q => q.subSectionId === sub.id);
+          if (matchingQuiz || sub.hasQuiz || sub.quizId) {
+            sub.hasQuiz = true;
+            sub.quizId = matchingQuiz ? withId(matchingQuiz) : sub.quizId;
+          } else {
+            sub.hasQuiz = false;
+          }
+
+          const matchingAssignment = training.assignments?.find(a => a.subSectionId === sub.id);
+          if (matchingAssignment || sub.hasAssignment || sub.assignmentId || sub.assignment) {
+            sub.hasAssignment = true;
+            sub.assignmentId = matchingAssignment ? withId(matchingAssignment) : (sub.assignment ? withId(sub.assignment) : sub.assignmentId);
+          } else {
+            sub.hasAssignment = false;
+          }
+          return sub;
+        });
+      }
+      return sec;
+    });
+  }
+
+  const mainAssignment = training.assignments?.find(a => !a.subSectionId);
+  if (mainAssignment) {
+    transformed.assignmentId = withId(mainAssignment);
+  }
+
+  return transformed;
+};
 
 /**
  * @desc    Save/Update Full Course Structure (Sections, Lectures, Quiz, Assignment, Resources, Draft/Published Status)
@@ -35,157 +102,180 @@ const saveFullCourse = async (req, res, next) => {
 
     const isPublished = status === 'published';
     const isMandatory = req.user.role === 'Admin' ? Boolean(req.body.isMandatory) : false;
-    const orgId = req.user.organizationId;
-    const instructorId = req.user._id;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const instructorId = String(req.user.id || req.user._id);
 
     let training;
 
     if (trainingId) {
-      training = await Training.findOne({ _id: trainingId, organizationId: orgId });
+      const trgId = String(trainingId);
+      training = await prisma.training.findFirst({
+        where: { id: trgId, organizationId: orgId }
+      });
       if (!training) throw new ApiError(404, 'Training not found');
-      if (req.user.role === 'Instructor' && training.createdBy.toString() !== instructorId.toString()) {
+      if (req.user.role === 'Instructor' && training.createdBy !== instructorId) {
         throw new ApiError(403, 'Not authorized to update this training');
       }
 
-      training.title = title;
-      training.description = description || title;
-      training.categoryId = categoryId;
-      if (thumbnailUrl !== undefined) training.thumbnailUrl = thumbnailUrl;
-      if (thumbnailPublicId !== undefined) training.thumbnailPublicId = thumbnailPublicId;
-      training.benefits = benefits || [];
-      training.durationDays = Number(durationDays) || 30;
-      training.status = status || 'draft';
-      training.isPublished = isPublished;
-      if (req.user.role === 'Admin' && isMandatory !== undefined) training.isMandatory = isMandatory;
+      training = await prisma.training.update({
+        where: { id: training.id },
+        data: {
+          title: title.trim(),
+          description: (description || title).trim(),
+          categoryId: String(categoryId),
+          thumbnailUrl: thumbnailUrl !== undefined ? thumbnailUrl : training.thumbnailUrl,
+          thumbnailPublicId: thumbnailPublicId !== undefined ? thumbnailPublicId : training.thumbnailPublicId,
+          benefits: Array.isArray(benefits) ? benefits : [],
+          durationDays: Number(durationDays) || 30,
+          status: status || 'draft',
+          isPublished,
+          isMandatory: req.user.role === 'Admin' && isMandatory !== undefined ? isMandatory : training.isMandatory
+        }
+      });
+
+      // Delete existing sections & associated quizzes/assignments to rebuild cleanly
+      const oldSections = await prisma.trainingSection.findMany({
+        where: { trainingId: training.id },
+        select: { id: true }
+      });
+      const oldSecIds = oldSections.map(s => s.id);
+      if (oldSecIds.length > 0) {
+        await prisma.trainingSection.deleteMany({
+          where: { id: { in: oldSecIds } }
+        });
+      }
     } else {
-      training = new Training({
-        title,
-        description: description || title,
-        categoryId,
-        createdBy: instructorId,
-        organizationId: orgId,
-        thumbnailUrl: thumbnailUrl || '',
-        thumbnailPublicId: thumbnailPublicId || '',
-        benefits: benefits || [],
-        durationDays: Number(durationDays) || 30,
-        status: status || 'draft',
-        isPublished,
-        isMandatory,
-        sections: []
+      training = await prisma.training.create({
+        data: {
+          title: title.trim(),
+          description: (description || title).trim(),
+          categoryId: String(categoryId),
+          createdBy: instructorId,
+          organizationId: orgId,
+          thumbnailUrl: thumbnailUrl || '',
+          thumbnailPublicId: thumbnailPublicId || '',
+          benefits: Array.isArray(benefits) ? benefits : [],
+          durationDays: Number(durationDays) || 30,
+          status: status || 'draft',
+          isPublished,
+          isMandatory
+        }
       });
     }
 
-    // Process Sections & SubSections (Lectures)
-    const formattedSections = [];
-
+    // Rebuild Sections & SubSections
     if (sections && Array.isArray(sections)) {
       for (let i = 0; i < sections.length; i++) {
         const sec = sections[i];
-        const secId = new mongoose.Types.ObjectId();
-        const subSections = [];
+
+        const createdSec = await prisma.trainingSection.create({
+          data: {
+            trainingId: training.id,
+            title: sec.title || `Section ${i + 1}`,
+            description: sec.description || '',
+            order: i + 1
+          }
+        });
 
         const lecturesList = sec.lectures && sec.lectures.length > 0 ? sec.lectures : [{ title: `${sec.title} Lecture 1`, description: sec.description || '' }];
 
         for (let j = 0; j < lecturesList.length; j++) {
           const lec = lecturesList[j];
-          const subSecId = new mongoose.Types.ObjectId();
 
-          let quizId = null;
-          let hasQuiz = false;
+          const createdSubSec = await prisma.trainingSubSection.create({
+            data: {
+              sectionId: createdSec.id,
+              title: lec.title || `Lecture ${j + 1}`,
+              description: lec.description || '',
+              order: j + 1,
+              videoUrl: lec.videoUrl || '',
+              videoPublicId: lec.videoPublicId || '',
+              videoDuration: Number(lec.videoDuration) || 0,
+              hasQuiz: false,
+              hasAssignment: false
+            }
+          });
 
-          // If a quiz is linked to this section
+          // Create quiz if linked to this section lecture 0
           if (sec.quiz && sec.quiz.questions && sec.quiz.questions.length > 0 && j === 0) {
-            const newQuiz = await Quiz.create({
-              title: sec.quiz.title || `${sec.title} Quiz`,
-              trainingId: training._id,
-              subSectionId: subSecId,
-              questions: sec.quiz.questions.map(q => ({
-                questionText: q.questionText,
-                options: q.options || [],
-                correctAnswerIndex: Number(q.correctAnswerIndex) || 0,
-                score: 1
-              })),
-              timeLimitMinutes: Number(sec.quiz.timeLimitMinutes) || 15,
-              passingScorePercent: Number(sec.quiz.passingScorePercent) || 70,
-              createdBy: instructorId,
-              organizationId: orgId
+            const newQuiz = await prisma.quiz.create({
+              data: {
+                title: sec.quiz.title || `${sec.title} Quiz`,
+                trainingId: training.id,
+                subSectionId: createdSubSec.id,
+                timeLimitMinutes: Number(sec.quiz.timeLimitMinutes) || 15,
+                passingScorePercent: Number(sec.quiz.passingScorePercent) || 70,
+                createdBy: instructorId,
+                organizationId: orgId,
+                questions: {
+                  create: sec.quiz.questions.map(q => ({
+                    questionText: q.questionText,
+                    options: Array.isArray(q.options) ? q.options : [],
+                    correctAnswerIndex: Number(q.correctAnswerIndex) || 0
+                  }))
+                }
+              }
             });
-            quizId = newQuiz._id;
-            hasQuiz = true;
+
+            await prisma.trainingSubSection.update({
+              where: { id: createdSubSec.id },
+              data: {
+                hasQuiz: true,
+                quizId: newQuiz.id
+              }
+            });
           }
 
-          subSections.push({
-            _id: subSecId,
-            title: lec.title || `Lecture ${j + 1}`,
-            description: lec.description || '',
-            order: j + 1,
-            videoUrl: lec.videoUrl || '',
-            videoPublicId: lec.videoPublicId || '',
-            videoDuration: Number(lec.videoDuration) || 0,
-            pdfResources: resources && resources.length > 0 && j === 0 ? resources.map(r => ({
-              title: r.title || r.name || 'Resource PDF',
-              fileUrl: r.fileUrl || r.url || '',
-              filePublicId: r.filePublicId || ''
-            })) : [],
-            hasQuiz,
-            quizId,
-            hasAssignment: false,
-            assignmentId: null
-          });
+          // Create PDF resources if attached to lecture 0
+          if (resources && resources.length > 0 && j === 0) {
+            for (const r of resources) {
+              await prisma.pdfResource.create({
+                data: {
+                  subSectionId: createdSubSec.id,
+                  title: r.title || r.name || 'Resource PDF',
+                  fileUrl: r.fileUrl || r.url || '',
+                  filePublicId: r.filePublicId || ''
+                }
+              });
+            }
+          }
         }
-
-        formattedSections.push({
-          _id: secId,
-          title: sec.title || `Section ${i + 1}`,
-          description: sec.description || '',
-          order: i + 1,
-          subSections
-        });
       }
     }
 
-    // Process Assignment (if provided) — attach to the LAST subsection of the LAST section
+    // Attach Assignment to the last subSection of the last section if provided
     if (assignment && assignment.instructions) {
-      let lastSubSec = null;
-      for (let i = formattedSections.length - 1; i >= 0; i--) {
-        const s = formattedSections[i];
-        if (s.subSections && s.subSections.length > 0) {
-          lastSubSec = s.subSections[s.subSections.length - 1];
-          break;
-        }
-      }
+      const allSubSections = await prisma.trainingSubSection.findMany({
+        where: { section: { trainingId: training.id } },
+        orderBy: [{ section: { order: 'desc' } }, { order: 'desc' }]
+      });
 
-      if (lastSubSec) {
-        const newAssignment = await Assignment.create({
-          title: assignment.title || `${title} Assignment`,
-          instructions: assignment.instructions,
-          trainingId: training._id,
-          subSectionId: lastSubSec._id,
-          maxScore: 100,
-          createdBy: instructorId,
-          organizationId: orgId
+      if (allSubSections.length > 0) {
+        const lastSubSec = allSubSections[0];
+
+        const newAssignment = await prisma.assignment.create({
+          data: {
+            title: assignment.title || `${title} Assignment`,
+            instructions: assignment.instructions,
+            trainingId: training.id,
+            subSectionId: lastSubSec.id,
+            maxScore: 100,
+            createdBy: instructorId,
+            organizationId: orgId
+          }
         });
 
-        lastSubSec.hasAssignment = true;
-        lastSubSec.assignmentId = newAssignment._id;
+        await prisma.trainingSubSection.update({
+          where: { id: lastSubSec.id },
+          data: {
+            hasAssignment: true,
+            assignmentId: newAssignment.id
+          }
+        });
       }
     }
 
-    training.sections = formattedSections;
-    await training.save();
-
-    const populatedTraining = await Training.findById(training._id)
-      .populate('categoryId', 'name')
-      .populate('departmentId', 'name')
-      .populate('createdBy', 'name email')
-      .populate({
-        path: 'sections.subSections.quizId',
-        model: 'Quiz'
-      })
-      .populate({
-        path: 'sections.subSections.assignmentId',
-        model: 'Assignment'
-      });
+    const populatedTraining = await getPopulatedTraining(training.id);
 
     res.status(200).json(
       new ApiResponse(200, { training: populatedTraining }, `Training ${trainingId ? 'updated' : 'created'} successfully as ${training.status}`)
@@ -203,42 +293,49 @@ const saveFullCourse = async (req, res, next) => {
 const createTraining = async (req, res, next) => {
   try {
     const { title, description, categoryId, departmentId, durationDays, isMandatory, thumbnailUrl, thumbnailPublicId, benefits } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const instructorId = String(req.user.id || req.user._id);
 
     if (!title || !description || !categoryId) {
       throw new ApiError(400, 'Please provide title, description, and categoryId');
     }
 
-    const category = await TrainingCategory.findOne({ _id: categoryId, organizationId: req.user.organizationId });
+    const catId = String(categoryId);
+    const category = await prisma.trainingCategory.findFirst({
+      where: { id: catId, organizationId: orgId }
+    });
     if (!category) {
       throw new ApiError(404, 'Training category not found');
     }
 
+    let depId = null;
     if (departmentId) {
-      const department = await Department.findOne({ _id: departmentId, organizationId: req.user.organizationId });
+      depId = String(departmentId);
+      const department = await prisma.department.findFirst({
+        where: { id: depId, organizationId: orgId }
+      });
       if (!department) {
         throw new ApiError(404, 'Department not found');
       }
     }
 
-    const training = await Training.create({
-      title,
-      description,
-      benefits: benefits || [],
-      categoryId,
-      departmentId: departmentId || null,
-      createdBy: req.user._id,
-      organizationId: req.user.organizationId,
-      durationDays: Number(durationDays) || 30,
-      isMandatory: req.user.role === 'Admin' ? Boolean(isMandatory) : false,
-      thumbnailUrl,
-      thumbnailPublicId,
-      sections: []
+    const training = await prisma.training.create({
+      data: {
+        title: title.trim(),
+        description: description.trim(),
+        benefits: Array.isArray(benefits) ? benefits : [],
+        categoryId: catId,
+        departmentId: depId,
+        createdBy: instructorId,
+        organizationId: orgId,
+        durationDays: Number(durationDays) || 30,
+        isMandatory: req.user.role === 'Admin' ? Boolean(isMandatory) : false,
+        thumbnailUrl: thumbnailUrl || null,
+        thumbnailPublicId: thumbnailPublicId || null
+      }
     });
 
-    const populatedTraining = await Training.findById(training._id)
-      .populate('categoryId', 'name')
-      .populate('departmentId', 'name')
-      .populate('createdBy', 'name email');
+    const populatedTraining = await getPopulatedTraining(training.id);
 
     res.status(201).json(new ApiResponse(201, { training: populatedTraining }, 'Training created successfully'));
   } catch (error) {
@@ -253,27 +350,38 @@ const createTraining = async (req, res, next) => {
  */
 const getTrainings = async (req, res, next) => {
   try {
-    let query = { organizationId: req.user.organizationId, status: { $ne: 'archived' } };
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+
+    const whereClause = {
+      organizationId: orgId,
+      status: { not: 'archived' }
+    };
 
     if (req.user.role === 'Instructor') {
-      query.createdBy = req.user._id;
+      whereClause.createdBy = userId;
     } else if (req.user.role === 'Employee') {
-      query.isPublished = true;
+      whereClause.isPublished = true;
     }
 
-    const trainings = await Training.find(query)
-      .populate('categoryId', 'name')
-      .populate('departmentId', 'name')
-      .populate('createdBy', 'name email')
-      .populate({
-        path: 'sections.subSections.quizId',
-        model: 'Quiz'
-      })
-      .populate({
-        path: 'sections.subSections.assignmentId',
-        model: 'Assignment'
-      })
-      .sort({ createdAt: -1 });
+    const trainingsList = await prisma.training.findMany({
+      where: whereClause,
+      include: {
+        category: { select: { id: true, name: true } },
+        department: { select: { id: true, name: true } },
+        instructor: { select: { id: true, name: true, email: true } },
+        sections: { select: { id: true, title: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const trainings = trainingsList.map(t => {
+      const transformed = withId(t);
+      if (transformed.category) transformed.categoryId = transformed.category;
+      if (transformed.department) transformed.departmentId = transformed.department;
+      if (transformed.instructor) transformed.createdBy = transformed.instructor;
+      return transformed;
+    });
 
     res.status(200).json(new ApiResponse(200, { trainings }, 'Trainings retrieved successfully'));
   } catch (error) {
@@ -288,28 +396,17 @@ const getTrainings = async (req, res, next) => {
  */
 const getTrainingById = async (req, res, next) => {
   try {
-    const training = await Training.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
-    })
-      .populate('categoryId', 'name')
-      .populate('departmentId', 'name jobRoles')
-      .populate('createdBy', 'name email')
-      .populate({
-        path: 'sections.subSections.quizId',
-        model: 'Quiz'
-      })
-      .populate({
-        path: 'sections.subSections.assignmentId',
-        model: 'Assignment'
-      });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
 
-    if (!training) {
+    const training = await getPopulatedTraining(trgId);
+
+    if (!training || String(training.organizationId) !== orgId) {
       throw new ApiError(404, 'Training not found');
     }
 
-    // Permission check for instructors
-    if (req.user.role === 'Instructor' && training.createdBy._id.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && String(training.createdBy.id || training.createdBy._id || training.createdBy) !== userId) {
       throw new ApiError(403, 'You do not have permission to access this training');
     }
 
@@ -326,42 +423,46 @@ const getTrainingById = async (req, res, next) => {
  */
 const updateTraining = async (req, res, next) => {
   try {
-    const training = await Training.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+
+    const existing = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
     });
 
-    if (!training) {
+    if (!existing) {
       throw new ApiError(404, 'Training not found');
     }
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && existing.createdBy !== userId) {
       throw new ApiError(403, 'You are not authorized to update this training');
     }
 
     const { title, description, benefits, categoryId, departmentId, durationDays, isMandatory, isPublished, status, thumbnailUrl, thumbnailPublicId } = req.body;
 
-    if (title) training.title = title;
-    if (description) training.description = description;
-    if (benefits) training.benefits = benefits;
-    if (categoryId) training.categoryId = categoryId;
-    if (departmentId !== undefined) training.departmentId = departmentId || null;
-    if (durationDays) training.durationDays = Number(durationDays);
-    if (thumbnailUrl !== undefined) training.thumbnailUrl = thumbnailUrl;
-    if (thumbnailPublicId !== undefined) training.thumbnailPublicId = thumbnailPublicId;
-    if (req.user.role === 'Admin' && isMandatory !== undefined) training.isMandatory = Boolean(isMandatory);
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (description) updateData.description = description.trim();
+    if (benefits) updateData.benefits = Array.isArray(benefits) ? benefits : [];
+    if (categoryId) updateData.categoryId = String(categoryId);
+    if (departmentId !== undefined) updateData.departmentId = departmentId ? String(departmentId) : null;
+    if (durationDays) updateData.durationDays = Number(durationDays);
+    if (thumbnailUrl !== undefined) updateData.thumbnailUrl = thumbnailUrl;
+    if (thumbnailPublicId !== undefined) updateData.thumbnailPublicId = thumbnailPublicId;
+    if (req.user.role === 'Admin' && isMandatory !== undefined) updateData.isMandatory = Boolean(isMandatory);
     if (isPublished !== undefined) {
-      training.isPublished = Boolean(isPublished);
-      training.status = training.isPublished ? 'published' : 'draft';
+      updateData.isPublished = Boolean(isPublished);
+      updateData.status = updateData.isPublished ? 'published' : 'draft';
     }
-    if (status) training.status = status;
+    if (status) updateData.status = status;
 
-    await training.save();
+    await prisma.training.update({
+      where: { id: existing.id },
+      data: updateData
+    });
 
-    const updatedTraining = await Training.findById(training._id)
-      .populate('categoryId', 'name')
-      .populate('departmentId', 'name')
-      .populate('createdBy', 'name email');
+    const updatedTraining = await getPopulatedTraining(existing.id);
 
     res.status(200).json(new ApiResponse(200, { training: updatedTraining }, 'Training updated successfully'));
   } catch (error) {
@@ -376,22 +477,29 @@ const updateTraining = async (req, res, next) => {
  */
 const deleteTraining = async (req, res, next) => {
   try {
-    const training = await Training.findOne({
-      _id: req.params.id,
-      organizationId: req.user.organizationId
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
     });
 
     if (!training) {
       throw new ApiError(404, 'Training not found');
     }
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== userId) {
       throw new ApiError(403, 'You are not authorized to delete this training');
     }
 
-    training.status = 'archived';
-    training.isPublished = false;
-    await training.save();
+    await prisma.training.update({
+      where: { id: training.id },
+      data: {
+        status: 'archived',
+        isPublished: false
+      }
+    });
 
     res.status(200).json(new ApiResponse(200, {}, 'Training archived successfully'));
   } catch (error) {
@@ -409,23 +517,35 @@ const addSection = async (req, res, next) => {
     const { title, description, order } = req.body;
     if (!title) throw new ApiError(400, 'Section title is required');
 
-    const training = await Training.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) throw new ApiError(404, 'Training not found');
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized');
     }
 
-    training.sections.push({
-      title,
-      description: description || '',
-      order: order || training.sections.length + 1,
-      subSections: []
+    const currentCount = await prisma.trainingSection.count({
+      where: { trainingId: training.id }
     });
 
-    await training.save();
+    await prisma.trainingSection.create({
+      data: {
+        trainingId: training.id,
+        title: title.trim(),
+        description: description || '',
+        order: order || currentCount + 1
+      }
+    });
 
-    res.status(201).json(new ApiResponse(201, { training }, 'Section added successfully'));
+    const updatedTraining = await getPopulatedTraining(training.id);
+
+    res.status(201).json(new ApiResponse(201, { training: updatedTraining }, 'Section added successfully'));
   } catch (error) {
     next(error);
   }
@@ -439,23 +559,38 @@ const addSection = async (req, res, next) => {
 const updateSection = async (req, res, next) => {
   try {
     const { title, description, order } = req.body;
-    const training = await Training.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+    const secId = String(req.params.sectionId);
+
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) throw new ApiError(404, 'Training not found');
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized');
     }
 
-    const section = training.sections.id(req.params.sectionId);
+    const section = await prisma.trainingSection.findFirst({
+      where: { id: secId, trainingId: training.id }
+    });
     if (!section) throw new ApiError(404, 'Section not found');
 
-    if (title) section.title = title;
-    if (description !== undefined) section.description = description;
-    if (order !== undefined) section.order = order;
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description;
+    if (order !== undefined) updateData.order = Number(order);
 
-    await training.save();
+    await prisma.trainingSection.update({
+      where: { id: section.id },
+      data: updateData
+    });
 
-    res.status(200).json(new ApiResponse(200, { training }, 'Section updated successfully'));
+    const updatedTraining = await getPopulatedTraining(training.id);
+
+    res.status(200).json(new ApiResponse(200, { training: updatedTraining }, 'Section updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -468,17 +603,27 @@ const updateSection = async (req, res, next) => {
  */
 const deleteSection = async (req, res, next) => {
   try {
-    const training = await Training.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+    const secId = String(req.params.sectionId);
+
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) throw new ApiError(404, 'Training not found');
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized');
     }
 
-    training.sections.pull({ _id: req.params.sectionId });
-    await training.save();
+    await prisma.trainingSection.deleteMany({
+      where: { id: secId, trainingId: training.id }
+    });
 
-    res.status(200).json(new ApiResponse(200, { training }, 'Section deleted successfully'));
+    const updatedTraining = await getPopulatedTraining(training.id);
+
+    res.status(200).json(new ApiResponse(200, { training: updatedTraining }, 'Section deleted successfully'));
   } catch (error) {
     next(error);
   }
@@ -494,31 +639,46 @@ const addSubSection = async (req, res, next) => {
     const { title, description, order, videoUrl, videoPublicId, videoDuration } = req.body;
     if (!title) throw new ApiError(400, 'SubSection title is required');
 
-    const training = await Training.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+    const secId = String(req.params.sectionId);
+
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) throw new ApiError(404, 'Training not found');
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized');
     }
 
-    const section = training.sections.id(req.params.sectionId);
+    const section = await prisma.trainingSection.findFirst({
+      where: { id: secId, trainingId: training.id }
+    });
     if (!section) throw new ApiError(404, 'Section not found');
 
-    section.subSections.push({
-      title,
-      description,
-      order: order || section.subSections.length + 1,
-      videoUrl: videoUrl || '',
-      videoPublicId: videoPublicId || '',
-      videoDuration: videoDuration || 0,
-      pdfResources: [],
-      hasQuiz: false,
-      hasAssignment: false
+    const currentCount = await prisma.trainingSubSection.count({
+      where: { sectionId: section.id }
     });
 
-    await training.save();
+    await prisma.trainingSubSection.create({
+      data: {
+        sectionId: section.id,
+        title: title.trim(),
+        description: description || '',
+        order: order || currentCount + 1,
+        videoUrl: videoUrl || '',
+        videoPublicId: videoPublicId || '',
+        videoDuration: Number(videoDuration) || 0,
+        hasQuiz: false,
+        hasAssignment: false
+      }
+    });
 
-    res.status(201).json(new ApiResponse(201, { training }, 'Sub-section added successfully'));
+    const updatedTraining = await getPopulatedTraining(training.id);
+
+    res.status(201).json(new ApiResponse(201, { training: updatedTraining }, 'Sub-section added successfully'));
   } catch (error) {
     next(error);
   }
@@ -532,34 +692,67 @@ const addSubSection = async (req, res, next) => {
 const updateSubSection = async (req, res, next) => {
   try {
     const { title, description, order, videoUrl, videoPublicId, videoDuration, pdfResources, hasQuiz, quizId, hasAssignment, assignmentId } = req.body;
-    const training = await Training.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+    const secId = String(req.params.sectionId);
+    const subSecId = String(req.params.subSectionId);
+
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) throw new ApiError(404, 'Training not found');
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized');
     }
 
-    const section = training.sections.id(req.params.sectionId);
+    const section = await prisma.trainingSection.findFirst({
+      where: { id: secId, trainingId: training.id }
+    });
     if (!section) throw new ApiError(404, 'Section not found');
 
-    const subSection = section.subSections.id(req.params.subSectionId);
+    const subSection = await prisma.trainingSubSection.findFirst({
+      where: { id: subSecId, sectionId: section.id }
+    });
     if (!subSection) throw new ApiError(404, 'Sub-section not found');
 
-    if (title) subSection.title = title;
-    if (description !== undefined) subSection.description = description;
-    if (order !== undefined) subSection.order = order;
-    if (videoUrl !== undefined) subSection.videoUrl = videoUrl;
-    if (videoPublicId !== undefined) subSection.videoPublicId = videoPublicId;
-    if (videoDuration !== undefined) subSection.videoDuration = videoDuration;
-    if (pdfResources !== undefined) subSection.pdfResources = pdfResources;
-    if (hasQuiz !== undefined) subSection.hasQuiz = hasQuiz;
-    if (quizId !== undefined) subSection.quizId = quizId;
-    if (hasAssignment !== undefined) subSection.hasAssignment = hasAssignment;
-    if (assignmentId !== undefined) subSection.assignmentId = assignmentId;
+    const updateData = {};
+    if (title) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description;
+    if (order !== undefined) updateData.order = Number(order);
+    if (videoUrl !== undefined) updateData.videoUrl = videoUrl;
+    if (videoPublicId !== undefined) updateData.videoPublicId = videoPublicId;
+    if (videoDuration !== undefined) updateData.videoDuration = Number(videoDuration);
+    if (hasQuiz !== undefined) updateData.hasQuiz = Boolean(hasQuiz);
+    if (quizId !== undefined) updateData.quizId = quizId ? String(quizId) : null;
+    if (hasAssignment !== undefined) updateData.hasAssignment = Boolean(hasAssignment);
+    if (assignmentId !== undefined) updateData.assignmentId = assignmentId ? String(assignmentId) : null;
 
-    await training.save();
+    await prisma.trainingSubSection.update({
+      where: { id: subSection.id },
+      data: updateData
+    });
 
-    res.status(200).json(new ApiResponse(200, { training }, 'Sub-section updated successfully'));
+    if (pdfResources !== undefined && Array.isArray(pdfResources)) {
+      await prisma.pdfResource.deleteMany({
+        where: { subSectionId: subSection.id }
+      });
+      for (const r of pdfResources) {
+        await prisma.pdfResource.create({
+          data: {
+            subSectionId: subSection.id,
+            title: r.title || r.name || 'Resource PDF',
+            fileUrl: r.fileUrl || r.url || '',
+            filePublicId: r.filePublicId || ''
+          }
+        });
+      }
+    }
+
+    const updatedTraining = await getPopulatedTraining(training.id);
+
+    res.status(200).json(new ApiResponse(200, { training: updatedTraining }, 'Sub-section updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -572,20 +765,33 @@ const updateSubSection = async (req, res, next) => {
  */
 const deleteSubSection = async (req, res, next) => {
   try {
-    const training = await Training.findOne({ _id: req.params.id, organizationId: req.user.organizationId });
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const trgId = String(req.params.id);
+    const secId = String(req.params.sectionId);
+    const subSecId = String(req.params.subSectionId);
+
+    const training = await prisma.training.findFirst({
+      where: { id: trgId, organizationId: orgId }
+    });
     if (!training) throw new ApiError(404, 'Training not found');
 
-    if (req.user.role === 'Instructor' && training.createdBy.toString() !== req.user._id.toString()) {
+    if (req.user.role === 'Instructor' && training.createdBy !== userId) {
       throw new ApiError(403, 'Not authorized');
     }
 
-    const section = training.sections.id(req.params.sectionId);
+    const section = await prisma.trainingSection.findFirst({
+      where: { id: secId, trainingId: training.id }
+    });
     if (!section) throw new ApiError(404, 'Section not found');
 
-    section.subSections.pull({ _id: req.params.subSectionId });
-    await training.save();
+    await prisma.trainingSubSection.deleteMany({
+      where: { id: subSecId, sectionId: section.id }
+    });
 
-    res.status(200).json(new ApiResponse(200, { training }, 'Sub-section deleted successfully'));
+    const updatedTraining = await getPopulatedTraining(training.id);
+
+    res.status(200).json(new ApiResponse(200, { training: updatedTraining }, 'Sub-section deleted successfully'));
   } catch (error) {
     next(error);
   }

@@ -1,6 +1,8 @@
 const ApiError = require('../utils/apiError');
 
 const errorHandler = (err, req, res, next) => {
+  console.error('API Error:', err);
+
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
 
@@ -28,6 +30,11 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'TokenExpiredError') {
     statusCode = 401;
     message = 'Authentication token expired, please login again';
+  }
+
+  if (['P1001', 'P1017', 'P2024'].includes(err.code)) {
+    statusCode = 503;
+    message = 'Database service is temporarily unavailable. Please retry in a moment.';
   }
 
   res.status(statusCode).json({
