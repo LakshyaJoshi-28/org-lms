@@ -845,6 +845,9 @@ const getMyReport = async (req, res, next) => {
             trainingId: true,
             subSectionId: true
           }
+        },
+        answers: {
+          orderBy: { questionIndex: 'asc' }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -853,6 +856,9 @@ const getMyReport = async (req, res, next) => {
     const quizAttempts = quizAttemptsList.map(q => {
       const transformed = withId(q);
       if (transformed.quiz) transformed.quizId = transformed.quiz;
+      if (Array.isArray(transformed.answers)) {
+        transformed.answers = withId(transformed.answers);
+      }
       return transformed;
     });
 
@@ -909,16 +915,28 @@ const getMyReport = async (req, res, next) => {
       else if (isOverdue) displayStatus = 'Overdue';
       else if (a.status === 'In Progress' || (a.progressPercentage || 0) > 0) displayStatus = 'In Progress';
 
-      const trainingQuizAttempts = quizAttempts.filter(q => q.quizId && t && q.quizId.trainingId && q.quizId.trainingId.toString() === t._id.toString());
+      const tId = t ? (t._id || t.id || t).toString() : null;
+
+      const trainingQuizAttempts = quizAttempts.filter(q => {
+        if (!q.quizId || !tId) return false;
+        const qTrgId = q.quizId.trainingId ? (q.quizId.trainingId._id || q.quizId.trainingId.id || q.quizId.trainingId).toString() : null;
+        return qTrgId === tId;
+      });
+
       let quizScoreDisplay = 'N/A';
       if (trainingQuizAttempts.length > 0) {
         const bestScore = Math.max(...trainingQuizAttempts.map(q => q.percentage || 0));
         quizScoreDisplay = `${bestScore}%`;
       }
 
-      const trainingSubmissions = assignmentSubmissions.filter(s => s.assignmentId && t && s.assignmentId.trainingId && s.assignmentId.trainingId.toString() === t._id.toString());
+      const trainingSubmissions = assignmentSubmissions.filter(s => {
+        if (!s.assignmentId || !tId) return false;
+        const sTrgId = s.assignmentId.trainingId ? (s.assignmentId.trainingId._id || s.assignmentId.trainingId.id || s.assignmentId.trainingId).toString() : null;
+        return sTrgId === tId;
+      });
+
       let assignmentStatusDisplay = 'N/A';
-      if (trainingSubmissions.length > 0) {
+      if (trainingSubmissions.length > 0 && trainingSubmissions[0]) {
         assignmentStatusDisplay = trainingSubmissions[0].status === 'reviewed' ? 'Reviewed' : 'Submitted';
       }
 
@@ -943,11 +961,11 @@ const getMyReport = async (req, res, next) => {
 
     const formattedQuizAttempts = quizAttempts.map(att => {
       const quizObj = att.quizId;
-      const questionsList = quizObj ? quizObj.questions : [];
+      const questionsList = (quizObj && Array.isArray(quizObj.questions)) ? quizObj.questions : [];
 
       const answers = (att.answers || []).map((ans, idx) => {
         const qIdx = ans.questionIndex !== undefined ? ans.questionIndex : idx;
-        const qInQuiz = questionsList[qIdx];
+        const qInQuiz = Array.isArray(questionsList) ? questionsList[qIdx] : null;
 
         const qText = ans.questionText || (qInQuiz ? qInQuiz.questionText : `Question ${idx + 1}`);
         const opts = (ans.options && ans.options.length > 0) ? ans.options : (qInQuiz ? qInQuiz.options : []);
@@ -1041,8 +1059,8 @@ const getMyReport = async (req, res, next) => {
             name: employee ? employee.name : req.user.name,
             email: employee ? employee.email : req.user.email,
             jobRole: employee?.jobRole || 'Employee',
-            department: employee?.departmentId?.name || 'Unassigned',
-            organization: employee?.organizationId?.name || 'Organization'
+            department: employee?.department?.name || employee?.departmentName || 'Unassigned',
+            organization: employee?.organization?.name || employee?.orgName || 'Organization'
           },
           overview: {
             totalAssignments: totalAssigned,

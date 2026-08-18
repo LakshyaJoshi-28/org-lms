@@ -12,6 +12,7 @@ const createPrismaClient = () => {
   });
 
   baseClient.$on('error', (e) => {
+    if (e.message && e.message.includes('kind: Closed')) return;
     console.error(`[Prisma Database Error] [${new Date().toISOString()}] ${e.message}`);
   });
 

@@ -83,7 +83,7 @@ export const MyReport = () => {
       body: [[
         emp.name || user?.name || 'N/A',
         emp.email || user?.email || 'N/A',
-        emp.department || 'General',
+        emp.department || user?.department?.name || 'Unassigned',
         emp.jobRole || 'Employee',
         emp.organization || 'Organization'
       ]],
