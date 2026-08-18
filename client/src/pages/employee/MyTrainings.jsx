@@ -97,6 +97,8 @@ export const MyTrainings = () => {
               badgeStyle = 'bg-indigo-600 text-white';
             }
 
+            const isLocked = a.isLocked || a.lockStatus?.isLocked || a.status === 'Locked';
+
             return (
               <div
                 key={a._id}
@@ -116,11 +118,15 @@ export const MyTrainings = () => {
                       {statusLabel}
                     </span>
 
-                    {t.isMandatory && (
+                    {isLocked ? (
+                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider shadow bg-rose-600 text-white flex items-center border border-rose-400/30">
+                        <Lock className="w-3 h-3 mr-1" /> LOCKED
+                      </span>
+                    ) : t.isMandatory ? (
                       <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white shadow">
                         Compulsory
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
                   <div className="p-5 space-y-3">
@@ -157,16 +163,16 @@ export const MyTrainings = () => {
 
                   <button
                     onClick={() => navigate(`/employee/player/${a._id}`)}
-                    disabled={a.lockStatus?.isLocked}
+                    disabled={isLocked}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all inline-flex items-center cursor-pointer ${
-                      a.lockStatus?.isLocked
-                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                      isLocked
+                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-300 dark:border-slate-700'
                         : a.status === 'Completed'
                         ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
                         : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-500/20'
                     }`}
                   >
-                    {a.lockStatus?.isLocked ? (
+                    {isLocked ? (
                       <>
                         <Lock className="w-3.5 h-3.5 mr-1.5" /> Locked
                       </>
