@@ -1,9 +1,10 @@
 const { prisma } = require('./prismaClient');
 
-const connectDB = async (maxRetries = 3, delayMs = 1500) => {
+const connectDB = async (maxRetries = 5, delayMs = 1500) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       await prisma.$connect();
+      await prisma.$queryRaw`SELECT 1`;
       console.log('PostgreSQL (Prisma / Neon) Connected successfully');
       return;
     } catch (error) {

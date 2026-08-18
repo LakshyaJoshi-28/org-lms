@@ -125,7 +125,7 @@ const getProgressByAssignment = async (req, res, next) => {
     const tAssignId = String(req.params.trainingAssignmentId);
     const userId = String(req.user.id || req.user._id);
 
-    const assignmentRecord = await prisma.trainingAssignment.findUnique({
+    let assignmentRecord = await prisma.trainingAssignment.findUnique({
       where: { id: tAssignId },
       include: {
         training: {
@@ -152,6 +152,36 @@ const getProgressByAssignment = async (req, res, next) => {
         employee: { select: { id: true, name: true, email: true } }
       }
     });
+
+    if (!assignmentRecord) {
+      assignmentRecord = await prisma.trainingAssignment.findFirst({
+        where: { trainingId: tAssignId, employeeId: userId },
+        include: {
+          training: {
+            include: {
+              category: { select: { id: true, name: true } },
+              sections: {
+                orderBy: { order: 'asc' },
+                include: {
+                  subSections: {
+                    orderBy: { order: 'asc' },
+                    include: {
+                      pdfResources: true,
+                      assignment: true
+                    }
+                  }
+                }
+              },
+              quizzes: {
+                include: { questions: true }
+              },
+              assignments: true
+            }
+          },
+          employee: { select: { id: true, name: true, email: true } }
+        }
+      });
+    }
 
     if (!assignmentRecord) {
       throw new ApiError(404, 'Training assignment not found');

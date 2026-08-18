@@ -22,6 +22,14 @@ const autoAssignMandatoryTrainings = async (employeeId, organizationId) => {
     const assignmentsCreated = [];
 
     for (const training of mandatoryTrainings) {
+      const existing = await prisma.trainingAssignment.findUnique({
+        where: { employeeId_trainingId: { employeeId: empId, trainingId: training.id } }
+      });
+      if (existing) {
+        assignmentsCreated.push(withId(existing));
+        continue;
+      }
+
       const deadline = new Date(now.getTime() + (training.durationDays || 30) * 24 * 60 * 60 * 1000);
 
       try {
@@ -74,6 +82,14 @@ const autoAssignDeptRoleTrainings = async (employeeId, organizationId, departmen
     const assignmentsCreated = [];
 
     for (const training of matchedTrainings) {
+      const existing = await prisma.trainingAssignment.findUnique({
+        where: { employeeId_trainingId: { employeeId: empId, trainingId: training.id } }
+      });
+      if (existing) {
+        assignmentsCreated.push(withId(existing));
+        continue;
+      }
+
       const deadline = new Date(now.getTime() + (training.durationDays || 30) * 24 * 60 * 60 * 1000);
 
       try {
@@ -121,6 +137,14 @@ const autoAssignRulesToNewEmployee = async (employeeId, organizationId) => {
     const assignmentsCreated = [];
 
     for (const rule of activeRules) {
+      const existing = await prisma.trainingAssignment.findUnique({
+        where: { employeeId_trainingId: { employeeId: empId, trainingId: rule.trainingId } }
+      });
+      if (existing) {
+        assignmentsCreated.push(withId(existing));
+        continue;
+      }
+
       const deadlineDays = rule.customDeadlineDays || 30;
       const deadline = new Date(now.getTime() + deadlineDays * 24 * 60 * 60 * 1000);
 
@@ -211,6 +235,11 @@ const createAutoAssignmentRule = async (adminId, organizationId, trainingId, cus
 
   let assignedCount = 0;
   for (const emp of employees) {
+    const existing = await prisma.trainingAssignment.findUnique({
+      where: { employeeId_trainingId: { employeeId: emp.id, trainingId: training.id } }
+    });
+    if (existing) continue;
+
     try {
       await prisma.trainingAssignment.create({
         data: {
@@ -286,6 +315,11 @@ const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => 
 
   let newAssignmentsCount = 0;
   for (const emp of employees) {
+    const existing = await prisma.trainingAssignment.findUnique({
+      where: { employeeId_trainingId: { employeeId: emp.id, trainingId: rule.trainingId } }
+    });
+    if (existing) continue;
+
     try {
       await prisma.trainingAssignment.create({
         data: {
@@ -321,18 +355,11 @@ const getAutoAssignmentRules = async (organizationId) => {
         select: {
           id: true,
           title: true,
-          categoryId: true,
-          durationDays: true,
-          thumbnailUrl: true,
           status: true,
-          category: {
-            select: { id: true, name: true }
-          }
+          category: { select: { id: true, name: true } }
         }
       },
-      creator: {
-        select: { id: true, name: true, email: true }
-      }
+      creator: { select: { id: true, name: true, email: true } }
     },
     orderBy: { createdAt: 'desc' }
   });
@@ -340,13 +367,9 @@ const getAutoAssignmentRules = async (organizationId) => {
   const rulesWithStats = await Promise.all(
     rules.map(async (r) => {
       const coverageCount = await prisma.trainingAssignment.count({
-        where: {
-          organizationId: orgId,
-          trainingId: r.trainingId
-        }
+        where: { organizationId: orgId, trainingId: r.trainingId }
       });
 
-      // Structure object for backward compatibility with Mongoose model shapes
       const transformed = withId(r);
       if (transformed.training) {
         transformed.trainingId = transformed.training;
@@ -398,7 +421,7 @@ const assignTrainingByDeptAndRole = async (adminId, organizationId, departmentId
   const employees = await prisma.user.findMany({ where: whereClause });
 
   if (employees.length === 0) {
-    throw new Error('No active employees match the selected department and job role criteria');
+    throw new Error('No employees match the specified Department and Job Role');
   }
 
   const now = new Date();
@@ -413,6 +436,14 @@ const assignTrainingByDeptAndRole = async (adminId, organizationId, departmentId
   let newAssignmentsCount = 0;
 
   for (const emp of employees) {
+    const existing = await prisma.trainingAssignment.findUnique({
+      where: { employeeId_trainingId: { employeeId: emp.id, trainingId: training.id } }
+    });
+    if (existing) {
+      results.push(withId(existing));
+      continue;
+    }
+
     try {
       const assignment = await prisma.trainingAssignment.create({
         data: {
@@ -486,6 +517,14 @@ const assignTrainingToMultipleEmployees = async (adminId, organizationId, employ
   let newAssignmentsCount = 0;
 
   for (const emp of employees) {
+    const existing = await prisma.trainingAssignment.findUnique({
+      where: { employeeId_trainingId: { employeeId: emp.id, trainingId: training.id } }
+    });
+    if (existing) {
+      results.push(withId(existing));
+      continue;
+    }
+
     try {
       const assignment = await prisma.trainingAssignment.create({
         data: {
