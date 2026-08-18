@@ -579,16 +579,35 @@ export const TrainingPlayer = () => {
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-      setDuration(videoRef.current.duration || 0);
+      const cur = videoRef.current.currentTime;
+      const dur = videoRef.current.duration || 0;
+      if (dur > 0 && (videoRef.current.ended || cur >= dur - 0.25)) {
+        setCurrentTime(dur);
+      } else {
+        setCurrentTime(cur);
+      }
+      setDuration(dur);
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    if (videoRef.current && videoRef.current.duration) {
+      setCurrentTime(videoRef.current.duration);
     }
   };
 
   const handleSeek = (e) => {
     const time = Number(e.target.value);
     if (videoRef.current) {
-      videoRef.current.currentTime = time;
-      setCurrentTime(time);
+      const dur = videoRef.current.duration || duration || 0;
+      if (dur > 0 && time >= dur - 0.25) {
+        videoRef.current.currentTime = dur;
+        setCurrentTime(dur);
+      } else {
+        videoRef.current.currentTime = time;
+        setCurrentTime(time);
+      }
     }
   };
 
@@ -801,7 +820,7 @@ export const TrainingPlayer = () => {
                         ref={videoRef}
                         src={formatMediaUrl(activeItem.videoUrl)}
                         onTimeUpdate={handleTimeUpdate}
-                        onEnded={() => setIsPlaying(false)}
+                        onEnded={handleVideoEnded}
                         onError={() => setVideoError(true)}
                         className="w-full h-full object-contain cursor-pointer"
                         onClick={togglePlay}
@@ -809,14 +828,31 @@ export const TrainingPlayer = () => {
 
                       {/* Video Overlay Controls Bar */}
                       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent space-y-2 opacity-90 transition-opacity">
-                        <input
-                          type="range"
-                          min={0}
-                          max={duration || 100}
-                          value={currentTime}
-                          onChange={handleSeek}
-                          className="w-full accent-blue-500 h-1 rounded-lg cursor-pointer"
-                        />
+                        <div className="relative w-full flex items-center group/timeline">
+                          <div className="w-full bg-slate-800/80 h-1.5 rounded-lg overflow-hidden relative">
+                            <div
+                              className="bg-blue-500 h-full rounded-lg transition-all duration-75"
+                              style={{
+                                width: `${
+                                  duration > 0
+                                    ? (currentTime >= duration || (videoRef.current && videoRef.current.ended)
+                                      ? 100
+                                      : Math.min(100, Math.round((currentTime / duration) * 100)))
+                                    : 0
+                                }%`
+                              }}
+                            />
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={duration || 100}
+                            step={0.1}
+                            value={currentTime}
+                            onChange={handleSeek}
+                            className="absolute inset-0 w-full opacity-0 cursor-pointer h-4"
+                          />
+                        </div>
 
                         <div className="flex items-center justify-between text-white text-xs">
                           <div className="flex items-center space-x-3">

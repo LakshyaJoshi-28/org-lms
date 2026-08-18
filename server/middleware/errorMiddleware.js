@@ -1,10 +1,12 @@
 const ApiError = require('../utils/apiError');
 
 const errorHandler = (err, req, res, next) => {
-  console.error('API Error:', err);
-
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal Server Error';
+
+  if (statusCode !== 401 && statusCode !== 403 && statusCode !== 404) {
+    console.error('API Error:', err);
+  }
 
   if (err.name === 'CastError') {
     statusCode = 400;

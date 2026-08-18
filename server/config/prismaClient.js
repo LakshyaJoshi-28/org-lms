@@ -11,13 +11,8 @@ const createPrismaClient = () => {
     ]
   });
 
-  baseClient.$on('error', (e) => {
-    if (e.message && e.message.includes('kind: Closed')) return;
-    console.error(`[Prisma Database Error] [${new Date().toISOString()}] ${e.message}`);
-  });
-
   baseClient.$on('warn', (e) => {
-    console.warn(`[Prisma Database Warning] [${new Date().toISOString()}] ${e.message}`);
+    if (e.message && e.message.includes('kind: Closed')) return;
   });
 
   const extendedClient = baseClient.$extends({
@@ -26,7 +21,7 @@ const createPrismaClient = () => {
         async $allOperations({ model, operation, args, query }) {
           let attempts = 0;
           const maxRetries = 3;
-          const retryDelays = [1000, 2000, 3000];
+          const retryDelays = [300, 800, 1500];
 
           while (true) {
             try {
@@ -34,15 +29,10 @@ const createPrismaClient = () => {
             } catch (error) {
               const isTransientDbError = ['P1001', 'P1017', 'P2024'].includes(error.code);
               if (isTransientDbError && attempts < maxRetries) {
-                const delay = retryDelays[attempts] || 2000;
+                const delay = retryDelays[attempts] || 500;
                 attempts++;
-                console.warn(`[Prisma Auto-Reconnect Attempt ${attempts}/${maxRetries}] Transient DB error (${error.code}) on ${model}.${operation}. Refreshing connection and retrying in ${delay}ms...`);
-                await baseClient.$connect().catch(() => {});
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
-              }
-              if (isTransientDbError) {
-                console.error(`[Prisma Auto-Reconnect Exhausted] ${model}.${operation} failed after ${maxRetries} retries: ${error.message}`);
               }
               throw error;
             }
