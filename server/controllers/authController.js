@@ -242,14 +242,27 @@ const getMe = async (req, res, next) => {
     const userId = String(req.user.id || req.user._id);
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        organizationId: true,
+        departmentId: true,
+        jobRole: true,
+        isProfileComplete: true,
+        profilePicture: true,
         organization: { select: { id: true, name: true, code: true } },
         department: { select: { id: true, name: true, jobRoles: true } }
       }
     });
 
-    const userObj = formatUserResponse(user);
+    if (!user) {
+      throw new ApiError(404, 'User not found');
+    }
 
+    const userObj = formatUserResponse(user);
     res.status(200).json(new ApiResponse(200, { user: userObj }, 'Current user profile retrieved'));
   } catch (error) {
     next(error);

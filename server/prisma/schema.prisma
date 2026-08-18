@@ -377,6 +377,7 @@ model TrainingAssignment {
   @@unique([employeeId, trainingId])
   @@index([organizationId, status])
   @@index([employeeId, organizationId])
+  @@index([organizationId, createdAt])
   @@map("training_assignments")
 }
 
@@ -452,6 +453,8 @@ model Notification {
 
   @@index([organizationId, recipientId, isRead])
   @@index([organizationId, role, isRead])
+  @@index([organizationId, createdAt])
+  @@index([recipientId, createdAt])
   @@map("notifications")
 }
 

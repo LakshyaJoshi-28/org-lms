@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { prisma, withId } = require('../config/prismaClient');
+const { withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 
 const protect = async (req, res, next) => {
@@ -16,31 +16,16 @@ const protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        organizationId: true,
-        departmentId: true,
-        jobRole: true,
-        isProfileComplete: true,
-        profilePicture: true
-      }
+    if (!decoded || !decoded.id) {
+      throw new ApiError(401, 'Invalid authentication token');
+    }
+
+    req.user = withId({
+      id: decoded.id,
+      role: decoded.role,
+      organizationId: decoded.organizationId
     });
 
-    if (!user) {
-      throw new ApiError(401, 'User no longer exists');
-    }
-
-    if (user.status === 'deactivated') {
-      throw new ApiError(403, 'Account has been deactivated');
-    }
-
-    req.user = withId(user);
     next();
   } catch (error) {
     next(error);

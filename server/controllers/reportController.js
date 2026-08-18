@@ -440,10 +440,6 @@ const getAdminDashboardReports = async (req, res, next) => {
       totalEmployees,
       totalInstructors,
       activeTrainingsCount,
-      completedAssignmentsCount,
-      inProgressAssignmentsCount,
-      overdueAssignmentsCount,
-      totalAssignmentsCount,
       departments,
       allEmployees,
       allAssignments,
@@ -452,15 +448,16 @@ const getAdminDashboardReports = async (req, res, next) => {
       prisma.user.count({ where: { organizationId: orgId, role: 'Employee' } }),
       prisma.user.count({ where: { organizationId: orgId, role: 'Instructor' } }),
       prisma.training.count({ where: { organizationId: orgId, isPublished: true, status: 'published' } }),
-      prisma.trainingAssignment.count({ where: { organizationId: orgId, status: 'Completed' } }),
-      prisma.trainingAssignment.count({ where: { organizationId: orgId, status: 'In Progress' } }),
-      prisma.trainingAssignment.count({ where: { organizationId: orgId, status: 'Overdue' } }),
-      prisma.trainingAssignment.count({ where: { organizationId: orgId } }),
       prisma.department.findMany({ where: { organizationId: orgId, status: 'active' }, orderBy: { name: 'asc' } }),
       prisma.user.findMany({ where: { organizationId: orgId, role: 'Employee' }, select: { id: true, departmentId: true } }),
       prisma.trainingAssignment.findMany({ where: { organizationId: orgId }, select: { id: true, employeeId: true, status: true, progressPercentage: true } }),
       prisma.auditLog.findMany({ where: { organizationId: orgId }, orderBy: { timestamp: 'desc' }, take: 10 })
     ]);
+
+    const totalAssignmentsCount = allAssignments.length;
+    const completedAssignmentsCount = allAssignments.filter(a => a.status === 'Completed').length;
+    const inProgressAssignmentsCount = allAssignments.filter(a => a.status === 'In Progress').length;
+    const overdueAssignmentsCount = allAssignments.filter(a => a.status === 'Overdue').length;
 
     // Map employees by department
     const empByDept = new Map();
@@ -550,10 +547,17 @@ const getEmployeeReport = async (req, res, next) => {
     const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
     const empParamId = String(req.params.employeeId);
 
-    const employeeRecord = await prisma.user.findFirst({
-      where: { id: empParamId, organizationId: orgId },
-      include: { department: { select: { id: true, name: true } } }
-    });
+    const [employeeRecord, assignmentsList] = await Promise.all([
+      prisma.user.findFirst({
+        where: { id: empParamId, organizationId: orgId },
+        include: { department: { select: { id: true, name: true } } }
+      }),
+      prisma.trainingAssignment.findMany({
+        where: { employeeId: empParamId, organizationId: orgId },
+        include: { training: { select: { id: true, title: true, categoryId: true, durationDays: true } } },
+        orderBy: { assignedDate: 'desc' }
+      })
+    ]);
 
     if (!employeeRecord) {
       throw new ApiError(404, 'Employee not found');
@@ -562,12 +566,6 @@ const getEmployeeReport = async (req, res, next) => {
     const employee = withId(employeeRecord);
     delete employee.password;
     if (employee.department) employee.departmentId = employee.department;
-
-    const assignmentsList = await prisma.trainingAssignment.findMany({
-      where: { employeeId: employeeRecord.id, organizationId: orgId },
-      include: { training: { select: { id: true, title: true, categoryId: true, durationDays: true } } },
-      orderBy: { assignedDate: 'desc' }
-    });
 
     const assignments = assignmentsList.map(a => {
       const transformed = withId(a);
@@ -790,39 +788,78 @@ const getMyReport = async (req, res, next) => {
     const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
     const now = new Date();
 
-    const employeeRecord = await prisma.user.findUnique({
-      where: { id: employeeId },
-      include: {
-        department: { select: { id: true, name: true } },
-        organization: { select: { id: true, name: true, code: true } }
-      }
-    });
+    const [employeeRecord, assignmentsList, quizAttemptsList, submissionsList] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: employeeId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          jobRole: true,
+          department: { select: { id: true, name: true } },
+          organization: { select: { id: true, name: true, code: true } }
+        }
+      }),
+      prisma.trainingAssignment.findMany({
+        where: {
+          employeeId,
+          organizationId: orgId
+        },
+        include: {
+          training: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              thumbnailUrl: true,
+              durationDays: true,
+              isMandatory: true,
+              createdBy: true,
+              categoryId: true,
+              category: { select: { id: true, name: true } },
+              instructor: { select: { id: true, name: true, email: true, profilePicture: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.quizAttempt.findMany({
+        where: { employeeId },
+        include: {
+          quiz: {
+            select: {
+              id: true,
+              title: true,
+              passingScorePercent: true,
+              trainingId: true,
+              subSectionId: true
+            }
+          },
+          answers: {
+            orderBy: { questionIndex: 'asc' }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.assignmentSubmission.findMany({
+        where: { employeeId },
+        include: {
+          assignment: {
+            select: {
+              id: true,
+              title: true,
+              instructions: true,
+              maxScore: true,
+              trainingId: true,
+              subSectionId: true
+            }
+          }
+        },
+        orderBy: { submittedAt: 'desc' }
+      })
+    ]);
 
     const employee = withId(employeeRecord);
-
-    const assignmentsList = await prisma.trainingAssignment.findMany({
-      where: {
-        employeeId,
-        organizationId: orgId
-      },
-      include: {
-        training: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            thumbnailUrl: true,
-            durationDays: true,
-            isMandatory: true,
-            createdBy: true,
-            categoryId: true,
-            category: { select: { id: true, name: true } },
-            instructor: { select: { id: true, name: true, email: true, profilePicture: true } }
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
 
     const assignments = assignmentsList.map(a => {
       const transformed = withId(a);
@@ -834,25 +871,6 @@ const getMyReport = async (req, res, next) => {
       return transformed;
     });
 
-    const quizAttemptsList = await prisma.quizAttempt.findMany({
-      where: { employeeId },
-      include: {
-        quiz: {
-          select: {
-            id: true,
-            title: true,
-            passingScorePercent: true,
-            trainingId: true,
-            subSectionId: true
-          }
-        },
-        answers: {
-          orderBy: { questionIndex: 'asc' }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
     const quizAttempts = quizAttemptsList.map(q => {
       const transformed = withId(q);
       if (transformed.quiz) transformed.quizId = transformed.quiz;
@@ -860,23 +878,6 @@ const getMyReport = async (req, res, next) => {
         transformed.answers = withId(transformed.answers);
       }
       return transformed;
-    });
-
-    const submissionsList = await prisma.assignmentSubmission.findMany({
-      where: { employeeId },
-      include: {
-        assignment: {
-          select: {
-            id: true,
-            title: true,
-            instructions: true,
-            maxScore: true,
-            trainingId: true,
-            subSectionId: true
-          }
-        }
-      },
-      orderBy: { submittedAt: 'desc' }
     });
 
     const assignmentSubmissions = submissionsList.map(s => {

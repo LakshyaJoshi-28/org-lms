@@ -8,6 +8,27 @@ const api = axios.create({
   }
 });
 
+// In-flight GET request deduplicator to prevent duplicate concurrent network calls
+const pendingGetRequests = new Map();
+const originalGet = api.get.bind(api);
+
+api.get = function (url, config = {}) {
+  const key = url + (config && config.params ? JSON.stringify(config.params) : '');
+  if (pendingGetRequests.has(key)) {
+    return pendingGetRequests.get(key).then(res => ({
+      ...res,
+      data: JSON.parse(JSON.stringify(res.data))
+    }));
+  }
+
+  const requestPromise = originalGet(url, config).finally(() => {
+    pendingGetRequests.delete(key);
+  });
+
+  pendingGetRequests.set(key, requestPromise);
+  return requestPromise;
+};
+
 // Auth APIs
 export const setupOrg = (data) => api.post('/auth/setup-org', data);
 export const registerEmployee = (data) => api.post('/auth/register-employee', data);
