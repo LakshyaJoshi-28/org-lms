@@ -1,4 +1,15 @@
 const { prisma, withId } = require('../config/prismaClient');
+const { emitToUser, emitToRoom } = require('../config/socket');
+
+const formatNotification = (n) => {
+  if (!n) return null;
+  const transformed = withId(n);
+  transformed.relatedEntity = {
+    entityType: n.relatedEntityType,
+    entityId: n.relatedEntityId
+  };
+  return transformed;
+};
 
 /**
  * Send notification to a specific user (Employee or Instructor)
@@ -21,7 +32,14 @@ const sendUserNotification = async (recipientId, organizationId, role, type, tit
       }
     });
 
-    return withId(notification);
+    const formatted = formatNotification(notification);
+
+    // Real-time emit to user room
+    if (recId) {
+      emitToUser(recId, 'new_notification', formatted);
+    }
+
+    return formatted;
   } catch (error) {
     console.error('Failed to create notification:', error);
   }
@@ -38,17 +56,41 @@ const sendAdminNotification = async (organizationId, type, title, message, relat
     });
 
     if (admins.length > 0) {
+      const records = admins.map((admin) => ({
+        recipientId: admin.id,
+        organizationId: orgId,
+        role: 'Admin',
+        type,
+        title,
+        message,
+        relatedEntityType: relatedEntity?.entityType ? String(relatedEntity.entityType) : null,
+        relatedEntityId: relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null
+      }));
+
       await prisma.notification.createMany({
-        data: admins.map((admin) => ({
-          recipientId: admin.id,
-          organizationId: orgId,
+        data: records
+      });
+
+      // Emit to each admin user and admin room
+      admins.forEach(admin => {
+        emitToUser(admin.id, 'new_notification', {
           role: 'Admin',
           type,
           title,
           message,
-          relatedEntityType: relatedEntity?.entityType ? String(relatedEntity.entityType) : null,
-          relatedEntityId: relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null
-        }))
+          organizationId: orgId,
+          createdAt: new Date().toISOString()
+        });
+      });
+
+      const adminRoom = `org_${orgId}_Admin`;
+      emitToRoom(adminRoom, 'new_notification', {
+        role: 'Admin',
+        type,
+        title,
+        message,
+        organizationId: orgId,
+        createdAt: new Date().toISOString()
       });
     }
   } catch (error) {
@@ -58,5 +100,6 @@ const sendAdminNotification = async (organizationId, type, title, message, relat
 
 module.exports = {
   sendUserNotification,
-  sendAdminNotification
+  sendAdminNotification,
+  formatNotification
 };

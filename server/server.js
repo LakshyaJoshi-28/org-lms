@@ -1,7 +1,9 @@
+const http = require('http');
 const dotenv = require('dotenv');
 dotenv.config();
 
 const connectDB = require('./config/db');
+const { initSocket } = require('./config/socket');
 
 const PORT = process.env.PORT || 5000;
 
@@ -14,7 +16,10 @@ connectDB()
     await ensureSuperAdminExists();
     const app = require('./app');
 
-    server = app.listen(PORT, () => {
+    server = http.createServer(app);
+    initSocket(server);
+
+    server.listen(PORT, () => {
       console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
     });
 

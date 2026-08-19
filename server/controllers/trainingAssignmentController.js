@@ -384,7 +384,11 @@ const getAllAssignments = async (req, res, next) => {
 
     if (req.user.role === 'Instructor') {
       const ownedTrainings = await prisma.training.findMany({
-        where: { createdBy: userId },
+        where: {
+          createdBy: userId,
+          organizationId: orgId,
+          status: { notIn: ['archived', 'deleted'] }
+        },
         select: { id: true }
       });
       const trainingIds = ownedTrainings.map(t => t.id);
@@ -478,6 +482,28 @@ const extendDeadline = async (req, res, next) => {
         status: newStatus
       }
     });
+
+    // Send notifications to Employee & Instructor
+    await sendUserNotification(
+      assignment.employeeId,
+      orgId,
+      'Employee',
+      'DEADLINE_EXTENDED',
+      'Deadline Extended',
+      `The deadline for ${assignment.training.title} has been extended.`,
+      { entityType: 'TrainingAssignment', entityId: assignment.id }
+    );
+    if (assignment.training.createdBy && assignment.training.createdBy !== userId) {
+      await sendUserNotification(
+        assignment.training.createdBy,
+        orgId,
+        'Instructor',
+        'DEADLINE_EXTENDED',
+        'Deadline Extended',
+        `Deadline extended for ${assignment.employee.name} on ${assignment.training.title}.`,
+        { entityType: 'TrainingAssignment', entityId: assignment.id }
+      );
+    }
 
     await sendUserNotification(
       assignment.employee.id,

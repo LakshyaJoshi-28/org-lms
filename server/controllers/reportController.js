@@ -616,7 +616,11 @@ const getInstructorDashboardReports = async (req, res, next) => {
     const now = new Date();
 
     const ownedTrainingsList = await prisma.training.findMany({
-      where: { createdBy: instructorId, organizationId: orgId },
+      where: {
+        createdBy: instructorId,
+        organizationId: orgId,
+        status: { notIn: ['archived', 'deleted'] }
+      },
       orderBy: { createdAt: 'desc' }
     });
     const ownedTrainings = withId(ownedTrainingsList);

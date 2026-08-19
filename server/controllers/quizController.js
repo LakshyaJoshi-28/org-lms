@@ -497,6 +497,30 @@ const submitQuiz = async (req, res, next) => {
       await updateOverallProgress(targetAssignmentId, userId);
     }
 
+    // Send quiz result notification to employee
+    const { sendUserNotification } = require('../services/notificationService');
+    if (passed) {
+      await sendUserNotification(
+        userId,
+        orgId,
+        'Employee',
+        'QUIZ_PASSED',
+        'Quiz Passed',
+        `Congratulations! You passed the quiz for ${quiz.title} with a score of ${percentage}%.`,
+        { entityType: 'Quiz', entityId: quiz.id }
+      );
+    } else {
+      await sendUserNotification(
+        userId,
+        orgId,
+        'Employee',
+        'QUIZ_FAILED',
+        'Quiz Failed',
+        `You did not pass the quiz for ${quiz.title}. Score: ${percentage}%.`,
+        { entityType: 'Quiz', entityId: quiz.id }
+      );
+    }
+
     const populatedAttempt = await getPopulatedQuizAttempt(attempt.id);
 
     res.status(200).json(

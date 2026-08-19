@@ -315,6 +315,25 @@ const submitAssignment = async (req, res, next) => {
       await updateOverallProgress(tAssignId, userId);
     }
 
+    // Send notifications to Instructor & Admin
+    const { sendUserNotification, sendAdminNotification } = require('../services/notificationService');
+    await sendUserNotification(
+      assignment.createdBy,
+      orgId,
+      'Instructor',
+      'ASSIGNMENT_SUBMITTED',
+      'Assignment Submitted',
+      `Employee ${req.user.name} submitted an assignment for ${assignment.title}.`,
+      { entityType: 'AssignmentSubmission', entityId: submission.id }
+    );
+    await sendAdminNotification(
+      orgId,
+      'ASSIGNMENT_SUBMITTED',
+      'Assignment Submission',
+      `Assignment submitted by ${req.user.name} for ${assignment.title}.`,
+      { entityType: 'AssignmentSubmission', entityId: submission.id }
+    );
+
     res.status(201).json(new ApiResponse(201, { submission: withId(submission) }, 'Assignment submitted successfully'));
   } catch (error) {
     next(error);
@@ -388,7 +407,8 @@ const getInstructorSubmissions = async (req, res, next) => {
     const ownedTrainings = await prisma.training.findMany({
       where: {
         createdBy: userId,
-        organizationId: orgId
+        organizationId: orgId,
+        status: { notIn: ['archived', 'deleted'] }
       },
       select: { id: true, title: true }
     });
@@ -522,6 +542,30 @@ const reviewSubmission = async (req, res, next) => {
     });
 
     const updatedSubmission = await getPopulatedSubmission(submission.id);
+
+    // Notify Employee
+    const { sendUserNotification } = require('../services/notificationService');
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    await sendUserNotification(
+      submission.employeeId,
+      orgId,
+      'Employee',
+      'ASSIGNMENT_REVIEWED',
+      'Assignment Reviewed',
+      `Your assignment for ${submission.assignment.title} has been reviewed by ${req.user.name}.`,
+      { entityType: 'AssignmentSubmission', entityId: submission.id }
+    );
+    if (feedback && feedback.trim()) {
+      await sendUserNotification(
+        submission.employeeId,
+        orgId,
+        'Employee',
+        'INSTRUCTOR_FEEDBACK',
+        'Instructor Feedback',
+        `Instructor ${req.user.name} provided feedback on your assignment.`,
+        { entityType: 'AssignmentSubmission', entityId: submission.id }
+      );
+    }
 
     res.status(200).json(new ApiResponse(200, { submission: updatedSubmission }, 'Submission evaluated & grade saved successfully'));
   } catch (error) {

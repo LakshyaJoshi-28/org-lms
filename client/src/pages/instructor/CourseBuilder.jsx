@@ -406,6 +406,8 @@ export const CourseBuilder = () => {
 
   // SUBMIT COURSE (SAVE AS DRAFT / PUBLISH)
   const handleFinalSubmit = async (targetStatus) => {
+    if (submitting) return;
+
     if (!title.trim() || !categoryId) {
       addToast('error', 'Basic details missing. Please complete Step 1.');
       setCurrentStep(1);

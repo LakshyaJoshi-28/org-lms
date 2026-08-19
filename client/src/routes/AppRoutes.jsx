@@ -36,6 +36,9 @@ import { MyReport } from '../pages/employee/MyReport';
 // Super Admin Pages
 import { SuperAdminDashboard } from '../pages/superAdmin/SuperAdminDashboard';
 
+// Common Pages
+import { NotificationsPage } from '../pages/common/NotificationsPage';
+
 const RootRedirect = () => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
@@ -73,6 +76,7 @@ export const AppRoutes = () => {
           <Route path="/admin/categories" element={<CategoriesManager />} />
           <Route path="/admin/assign" element={<AssignTraining />} />
           <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/notifications" element={<NotificationsPage />} />
           <Route path="/admin/audit-logs" element={<AuditLogs />} />
         </Route>
       </Route>
@@ -86,6 +90,7 @@ export const AppRoutes = () => {
           <Route path="/instructor/course-builder/:id" element={<CourseBuilder />} />
           <Route path="/instructor/submissions" element={<SubmissionsReviewer />} />
           <Route path="/instructor/deadlines" element={<DeadlineManager />} />
+          <Route path="/instructor/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
 
@@ -96,6 +101,7 @@ export const AppRoutes = () => {
           <Route path="/employee/my-trainings" element={<EmployeeTrainings />} />
           <Route path="/employee/feedback" element={<EmployeeFeedback />} />
           <Route path="/employee/player/:assignmentId" element={<TrainingPlayer />} />
+          <Route path="/employee/notifications" element={<NotificationsPage />} />
           <Route path="/employee/report" element={<MyReport />} />
         </Route>
       </Route>

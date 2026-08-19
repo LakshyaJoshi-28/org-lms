@@ -147,6 +147,16 @@ const registerEmployee = async (req, res, next) => {
     await autoAssignMandatoryTrainings(employee.id, organization.id);
     await autoAssignRulesToNewEmployee(employee.id, organization.id);
 
+    // Notify Org Admins
+    const { sendAdminNotification } = require('../services/notificationService');
+    await sendAdminNotification(
+      organization.id,
+      'NEW_EMPLOYEE_REGISTERED',
+      'New Employee Registered',
+      `A new employee, ${employee.name}, has registered in your organization.`,
+      { entityType: 'User', entityId: employee.id }
+    );
+
     generateTokenAndSetCookie(res, employee.id, employee.role, employee.organizationId, employee.name);
 
     const userObj = formatUserResponse(employee);

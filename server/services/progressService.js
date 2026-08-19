@@ -151,6 +151,8 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
     let newStatus = assignment.status;
     let completedDate = assignment.completedDate;
 
+    const isNewlyCompleted = newPercentage === 100 && allEverythingCompleted && assignment.status !== 'Completed';
+
     if (newPercentage === 100 && allEverythingCompleted) {
       newStatus = 'Completed';
       completedDate = completedDate || new Date();
@@ -170,6 +172,45 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
         completedDate
       }
     });
+
+    if (isNewlyCompleted) {
+      const { sendUserNotification, sendAdminNotification } = require('./notificationService');
+      const employee = await prisma.user.findUnique({
+        where: { id: empId },
+        select: { name: true }
+      });
+      const empName = employee?.name || 'Employee';
+
+      await sendUserNotification(
+        empId,
+        assignment.organizationId,
+        'Employee',
+        'TRAINING_COMPLETED',
+        'Training Completed',
+        `Congratulations! You have completed ${training.title}.`,
+        { entityType: 'Training', entityId: training.id }
+      );
+
+      if (training.createdBy) {
+        await sendUserNotification(
+          training.createdBy,
+          assignment.organizationId,
+          'Instructor',
+          'TRAINING_COMPLETED',
+          'Learner Training Completed',
+          `Learner ${empName} completed your training: ${training.title}.`,
+          { entityType: 'Training', entityId: training.id }
+        );
+      }
+
+      await sendAdminNotification(
+        assignment.organizationId,
+        'TRAINING_COMPLETED',
+        'Employee Training Completed',
+        `Employee ${empName} completed assigned training: ${training.title}.`,
+        { entityType: 'Training', entityId: training.id }
+      );
+    }
 
     return {
       progress: withId(progress),

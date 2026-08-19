@@ -43,7 +43,12 @@ const getPopulatedTraining = async (trainingId) => {
     transformed.sections = transformed.sections.map(sec => {
       if (sec.subSections && Array.isArray(sec.subSections)) {
         sec.subSections = sec.subSections.map(sub => {
-          sub.pdfResources = withId(sub.pdfResources || []);
+          sub.pdfResources = (sub.pdfResources || []).map(r => {
+            const transformedPdf = withId(r);
+            transformedPdf.fileUrl = r.pdfUrl || r.fileUrl || '';
+            transformedPdf.filePublicId = r.pdfPublicId || r.filePublicId || '';
+            return transformedPdf;
+          });
           const matchingQuiz = training.quizzes?.find(q => q.subSectionId === sub.id);
           if (matchingQuiz || sub.hasQuiz || sub.quizId) {
             sub.hasQuiz = true;
@@ -145,6 +150,23 @@ const saveFullCourse = async (req, res, next) => {
         });
       }
     } else {
+      // Backend idempotency check: prevent duplicate creation if identical title submitted within last 15 seconds
+      const recentDuplicate = await prisma.training.findFirst({
+        where: {
+          createdBy: instructorId,
+          organizationId: orgId,
+          title: title.trim(),
+          status: { notIn: ['archived', 'deleted'] },
+          createdAt: { gte: new Date(Date.now() - 15000) }
+        }
+      });
+      if (recentDuplicate) {
+        const populatedDuplicate = await getPopulatedTraining(recentDuplicate.id);
+        return res.status(200).json(
+          new ApiResponse(200, { training: populatedDuplicate }, 'Training already submitted')
+        );
+      }
+
       training = await prisma.training.create({
         data: {
           title: title.trim(),
@@ -232,9 +254,10 @@ const saveFullCourse = async (req, res, next) => {
               await prisma.pdfResource.create({
                 data: {
                   subSectionId: createdSubSec.id,
-                  title: r.title || r.name || 'Resource PDF',
-                  fileUrl: r.fileUrl || r.url || '',
-                  filePublicId: r.filePublicId || ''
+                  title: r.title || r.name || r.originalName || 'Resource PDF',
+                  pdfUrl: r.pdfUrl || r.fileUrl || r.url || '',
+                  pdfPublicId: r.pdfPublicId || r.filePublicId || r.publicId || '',
+                  originalName: r.originalName || r.name || r.title || 'Resource PDF'
                 }
               });
             }
@@ -276,6 +299,17 @@ const saveFullCourse = async (req, res, next) => {
     }
 
     const populatedTraining = await getPopulatedTraining(training.id);
+
+    if (!trainingId) {
+      const { sendAdminNotification } = require('../services/notificationService');
+      await sendAdminNotification(
+        orgId,
+        'NEW_TRAINING_CREATED',
+        'New Training Created',
+        `Instructor ${req.user.name || 'Instructor'} created a new training: ${title}.`,
+        { entityType: 'Training', entityId: training.id }
+      );
+    }
 
     res.status(200).json(
       new ApiResponse(200, { training: populatedTraining }, `Training ${trainingId ? 'updated' : 'created'} successfully as ${training.status}`)
@@ -336,6 +370,15 @@ const createTraining = async (req, res, next) => {
     });
 
     const populatedTraining = await getPopulatedTraining(training.id);
+
+    const { sendAdminNotification } = require('../services/notificationService');
+    await sendAdminNotification(
+      orgId,
+      'NEW_TRAINING_CREATED',
+      'New Training Created',
+      `Instructor ${req.user.name || 'Instructor'} created a new training: ${title}.`,
+      { entityType: 'Training', entityId: training.id }
+    );
 
     res.status(201).json(new ApiResponse(201, { training: populatedTraining }, 'Training created successfully'));
   } catch (error) {
@@ -742,9 +785,10 @@ const updateSubSection = async (req, res, next) => {
         await prisma.pdfResource.create({
           data: {
             subSectionId: subSection.id,
-            title: r.title || r.name || 'Resource PDF',
-            fileUrl: r.fileUrl || r.url || '',
-            filePublicId: r.filePublicId || ''
+            title: r.title || r.name || r.originalName || 'Resource PDF',
+            pdfUrl: r.pdfUrl || r.fileUrl || r.url || '',
+            pdfPublicId: r.pdfPublicId || r.filePublicId || r.publicId || '',
+            originalName: r.originalName || r.name || r.title || 'Resource PDF'
           }
         });
       }

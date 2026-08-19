@@ -104,8 +104,8 @@ export const Navbar = () => {
                     ) : (
                       notifications.map((n) => (
                         <div
-                          key={n._id}
-                          onClick={() => markAsRead(n._id)}
+                          key={n.id || n._id}
+                          onClick={() => markAsRead(n.id || n._id)}
                           className={`p-3.5 text-xs transition-colors cursor-pointer ${
                             !n.isRead ? 'bg-indigo-50 dark:bg-indigo-950/20 border-l-2 border-indigo-600 dark:border-indigo-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 opacity-80'
                           }`}
@@ -118,6 +118,21 @@ export const Navbar = () => {
                         </div>
                       ))
                     )}
+                  </div>
+
+                  <div className="p-2 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 text-center">
+                    <button
+                      onClick={() => {
+                        setShowNotifDropdown(false);
+                        const path = user?.role === 'Admin' ? '/admin/notifications' :
+                                     user?.role === 'Instructor' ? '/instructor/notifications' :
+                                     '/employee/notifications';
+                        window.location.href = path;
+                      }}
+                      className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer py-1"
+                    >
+                      View All Notifications
+                    </button>
                   </div>
                 </div>
               )}

@@ -20,17 +20,30 @@ const createPrismaClient = () => {
       $allModels: {
         async $allOperations({ model, operation, args, query }) {
           let attempts = 0;
-          const maxRetries = 3;
-          const retryDelays = [300, 800, 1500];
+          const maxRetries = 5;
+          const retryDelays = [500, 1000, 1500, 2500, 3500];
 
           while (true) {
             try {
               return await query(args);
             } catch (error) {
-              const isTransientDbError = ['P1001', 'P1017', 'P2024'].includes(error.code);
+              const errCode = error?.code || '';
+              const errMsg = error?.message || '';
+
+              const isTransientDbError =
+                ['P1000', 'P1001', 'P1002', 'P1008', 'P1017', 'P2024'].includes(errCode) ||
+                errMsg.includes("Can't reach database server") ||
+                errMsg.includes('kind: Closed') ||
+                errMsg.includes('Connection reset') ||
+                errMsg.includes('ECONNRESET') ||
+                errMsg.includes('ETIMEDOUT') ||
+                errMsg.includes('socket hang up') ||
+                errMsg.includes('EngineNotStarted');
+
               if (isTransientDbError && attempts < maxRetries) {
-                const delay = retryDelays[attempts] || 500;
+                const delay = retryDelays[attempts] || 1500;
                 attempts++;
+                console.warn(`[Neon DB Retry] Transient connection issue (${errCode || 'network'}) during ${model}.${operation}, attempt ${attempts}/${maxRetries}. Retrying in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
               }

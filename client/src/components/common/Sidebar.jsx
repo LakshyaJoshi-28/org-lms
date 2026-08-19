@@ -13,7 +13,8 @@ import {
   FileCheck2,
   Clock,
   GraduationCap,
-  MessageSquare
+  MessageSquare,
+  Bell
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -28,6 +29,7 @@ export const Sidebar = () => {
     { to: '/admin/categories', label: 'Training Categories', icon: FolderKanban },
     { to: '/admin/assign', label: 'Assign Training Engine', icon: UserPlus },
     { to: '/admin/reports', label: 'Org Reports & Analytics', icon: BarChart3 },
+    { to: '/admin/notifications', label: 'Notifications', icon: Bell },
     { to: '/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert }
   ];
 
@@ -35,12 +37,14 @@ export const Sidebar = () => {
     { to: '/instructor', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/instructor/trainings', label: 'My Trainings & Syllabus', icon: BookOpen },
     { to: '/instructor/submissions', label: 'Assignment Submissions', icon: FileCheck2 },
-    { to: '/instructor/deadlines', label: 'Overdue & Lock Controls', icon: Clock }
+    { to: '/instructor/deadlines', label: 'Overdue & Lock Controls', icon: Clock },
+    { to: '/instructor/notifications', label: 'Notifications', icon: Bell }
   ];
 
   const employeeLinks = [
     { to: '/employee', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/employee/my-trainings', label: 'My Assigned Trainings', icon: GraduationCap },
+    { to: '/employee/notifications', label: 'Notifications', icon: Bell },
     { to: '/employee/feedback', label: 'Feedback', icon: MessageSquare },
     { to: '/employee/report', label: 'Personal Report & Stats', icon: BarChart3 }
   ];

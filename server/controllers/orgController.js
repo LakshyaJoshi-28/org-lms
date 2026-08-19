@@ -211,6 +211,15 @@ const createInstructor = async (req, res, next) => {
 
     await logAuditAction(req.user, 'CREATE_INSTRUCTOR', 'User', instructor.id, `Created instructor ${instructor.name} (${instructor.email})`);
 
+    const { sendAdminNotification } = require('../services/notificationService');
+    await sendAdminNotification(
+      orgId,
+      'INSTRUCTOR_ADDED',
+      'Instructor Added',
+      `A new instructor, ${instructor.name}, has been added to your organization.`,
+      { entityType: 'User', entityId: instructor.id }
+    );
+
     const userObj = formatUserResponse(instructor);
 
     res.status(201).json(new ApiResponse(201, { instructor: userObj }, 'Instructor account created successfully'));
