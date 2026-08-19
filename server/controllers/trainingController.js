@@ -248,8 +248,8 @@ const saveFullCourse = async (req, res, next) => {
             });
           }
 
-          // Create PDF resources if attached to lecture 0
-          if (resources && resources.length > 0 && j === 0) {
+          // Create PDF resources if attached to section 0 lecture 0
+          if (resources && resources.length > 0 && i === 0 && j === 0) {
             for (const r of resources) {
               await prisma.pdfResource.create({
                 data: {

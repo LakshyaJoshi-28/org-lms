@@ -91,7 +91,12 @@ const getPopulatedAssignment = async (assignmentId) => {
         if (Array.isArray(transformedSec.subSections)) {
           transformedSec.subSections = transformedSec.subSections.map(sub => {
             const transformedSub = withId(sub);
-            transformedSub.pdfResources = withId(sub.pdfResources || []);
+            transformedSub.pdfResources = (sub.pdfResources || []).map(r => {
+              const transformedPdf = withId(r);
+              transformedPdf.fileUrl = r.pdfUrl || r.fileUrl || '';
+              transformedPdf.filePublicId = r.pdfPublicId || r.filePublicId || '';
+              return transformedPdf;
+            });
 
             const matchingQuiz = assignment.training.quizzes?.find(q => q.subSectionId === sub.id);
             if (matchingQuiz || sub.hasQuiz || sub.quizId) {

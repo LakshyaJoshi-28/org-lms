@@ -198,7 +198,12 @@ const getProgressByAssignment = async (req, res, next) => {
           if (Array.isArray(transformedSec.subSections)) {
             transformedSec.subSections = transformedSec.subSections.map(sub => {
               const transformedSub = withId(sub);
-              transformedSub.pdfResources = withId(sub.pdfResources || []);
+              transformedSub.pdfResources = (sub.pdfResources || []).map(r => {
+                const transformedPdf = withId(r);
+                transformedPdf.fileUrl = r.pdfUrl || r.fileUrl || '';
+                transformedPdf.filePublicId = r.pdfPublicId || r.filePublicId || '';
+                return transformedPdf;
+              });
 
               // Check matching quiz
               const matchingQuiz = assignmentRecord.training.quizzes?.find(q => q.subSectionId === sub.id);

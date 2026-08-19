@@ -206,15 +206,25 @@ export const TrainingPlayer = () => {
     return items;
   };
 
-  // Collect all PDF resources across the course for the sidebar
+  // Collect all PDF resources across the course for the sidebar (deduplicated by URL)
   const extractAllCourseResources = (payload) => {
     if (!payload?.assignment?.trainingId?.sections) return [];
     const resources = [];
+    const seenUrls = new Set();
+
     payload.assignment.trainingId.sections.forEach(sec => {
       sec.subSections?.forEach(sub => {
         if (sub.pdfResources && sub.pdfResources.length > 0) {
           sub.pdfResources.forEach(res => {
-            resources.push({ ...res, lessonTitle: sub.title });
+            const url = res.fileUrl || res.pdfUrl || res.url;
+            if (url && !seenUrls.has(url)) {
+              seenUrls.add(url);
+              resources.push({
+                ...res,
+                fileUrl: url,
+                lessonTitle: sub.title
+              });
+            }
           });
         }
       });
@@ -1494,9 +1504,9 @@ export const TrainingPlayer = () => {
                       <p className="text-[10px] text-slate-400 truncate">{res.lessonTitle}</p>
                     </div>
                     <a
-                      href={res.fileUrl}
+                      href={formatMediaUrl(res.fileUrl || res.pdfUrl || res.url)}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-500/20 cursor-pointer inline-flex items-center text-[11px] flex-shrink-0"
                     >
                       <Download className="w-3 h-3 mr-1" /> Download
