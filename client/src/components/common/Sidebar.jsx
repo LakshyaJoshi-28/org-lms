@@ -45,7 +45,12 @@ export const Sidebar = () => {
     { to: '/employee/report', label: 'Personal Report & Stats', icon: BarChart3 }
   ];
 
+  const superAdminLinks = [
+    { to: '/super-admin', label: 'Organizations Console', icon: Building2, end: true }
+  ];
+
   const links =
+    user.role === 'SuperAdmin' ? superAdminLinks :
     user.role === 'Admin' ? adminLinks :
     user.role === 'Instructor' ? instructorLinks :
     employeeLinks;

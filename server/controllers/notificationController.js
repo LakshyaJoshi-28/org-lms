@@ -19,7 +19,13 @@ const formatNotification = (n) => {
  */
 const getNotifications = async (req, res, next) => {
   try {
-    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    if (req.user.role === 'SuperAdmin' || !req.user.organizationId) {
+      return res.status(200).json(
+        new ApiResponse(200, { notifications: [], unreadCount: 0 }, 'SuperAdmin has no notifications')
+      );
+    }
+
+    const orgId = String(req.user.organizationId?.id || req.user.organizationId?._id || req.user.organizationId);
     const userId = String(req.user.id || req.user._id);
 
     const whereClause = { organizationId: orgId };
@@ -65,7 +71,11 @@ const getNotifications = async (req, res, next) => {
  */
 const markAsRead = async (req, res, next) => {
   try {
-    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    if (req.user.role === 'SuperAdmin' || !req.user.organizationId) {
+      return res.status(200).json(new ApiResponse(200, { notification: null }, 'SuperAdmin notification updated'));
+    }
+
+    const orgId = String(req.user.organizationId?.id || req.user.organizationId?._id || req.user.organizationId);
     const notifId = String(req.params.id);
 
     const notification = await prisma.notification.findFirst({
@@ -97,7 +107,11 @@ const markAsRead = async (req, res, next) => {
  */
 const markAllAsRead = async (req, res, next) => {
   try {
-    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    if (req.user.role === 'SuperAdmin' || !req.user.organizationId) {
+      return res.status(200).json(new ApiResponse(200, {}, 'SuperAdmin notifications updated'));
+    }
+
+    const orgId = String(req.user.organizationId?.id || req.user.organizationId?._id || req.user.organizationId);
     const userId = String(req.user.id || req.user._id);
 
     const whereClause = { organizationId: orgId, isRead: false };

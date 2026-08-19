@@ -13,13 +13,14 @@ const {
   resetProfilePicture
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const { authorizeRoles } = require('../middleware/roleMiddleware');
 
-router.post('/setup-org', setupOrganization);
 router.post('/register-employee', registerEmployee);
 router.post('/login', login);
 router.post('/logout', logout);
 
 router.use(protect);
+router.post('/setup-org', authorizeRoles('SuperAdmin'), setupOrganization);
 router.get('/me', getMe);
 router.put('/profile', updateMyProfile);
 router.put('/change-password', changePassword);

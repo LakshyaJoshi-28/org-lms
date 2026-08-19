@@ -16,6 +16,7 @@ const progressRoutes = require('./routes/progressRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/org', orgRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/trainings', trainingRoutes);

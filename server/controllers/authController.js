@@ -85,7 +85,7 @@ const setupOrganization = async (req, res, next) => {
       }
     });
 
-    generateTokenAndSetCookie(res, admin.id, admin.role, admin.organizationId);
+    generateTokenAndSetCookie(res, admin.id, admin.role, admin.organizationId, admin.name);
 
     const userObj = formatUserResponse(admin);
 
@@ -147,7 +147,7 @@ const registerEmployee = async (req, res, next) => {
     await autoAssignMandatoryTrainings(employee.id, organization.id);
     await autoAssignRulesToNewEmployee(employee.id, organization.id);
 
-    generateTokenAndSetCookie(res, employee.id, employee.role, employee.organizationId);
+    generateTokenAndSetCookie(res, employee.id, employee.role, employee.organizationId, employee.name);
 
     const userObj = formatUserResponse(employee);
 
@@ -180,7 +180,7 @@ const login = async (req, res, next) => {
       where: { email: email.toLowerCase().trim() },
       include: {
         organization: {
-          select: { id: true, name: true, code: true }
+          select: { id: true, name: true, code: true, status: true }
         }
       }
     });
@@ -198,7 +198,11 @@ const login = async (req, res, next) => {
       throw new ApiError(403, 'Your account has been deactivated. Please contact your administrator.');
     }
 
-    generateTokenAndSetCookie(res, user.id, user.role, user.organizationId);
+    if (user.role !== 'SuperAdmin' && user.organization && String(user.organization.status || 'ACTIVE').toUpperCase() === 'INACTIVE') {
+      throw new ApiError(403, 'Your organization has been deactivated by the Super Admin. Please contact your administrator.');
+    }
+
+    generateTokenAndSetCookie(res, user.id, user.role, user.organizationId, user.name);
 
     const userObj = formatUserResponse(user);
 

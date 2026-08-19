@@ -20,7 +20,8 @@ export const Login = () => {
       const u = await login({ email, password });
       addToast('success', `Welcome back, ${u.name}!`);
 
-      if (u.role === 'Admin') navigate('/admin');
+      if (u.role === 'SuperAdmin') navigate('/super-admin');
+      else if (u.role === 'Admin') navigate('/admin');
       else if (u.role === 'Instructor') navigate('/instructor');
       else navigate('/employee');
     } catch (err) {
@@ -86,18 +87,11 @@ export const Login = () => {
         </button>
       </form>
 
-      <div className="pt-5 border-t border-slate-800/80 space-y-2.5 text-center text-xs">
+      <div className="pt-5 border-t border-slate-800/80 text-center text-xs">
         <p className="text-slate-400">
           New employee?{' '}
           <Link to="/register-employee" className="text-blue-400 hover:text-blue-300 font-bold underline transition-colors">
             Register Employee Account
-          </Link>
-        </p>
-
-        <p className="text-slate-400">
-          First time organization setup?{' '}
-          <Link to="/setup-org" className="text-indigo-400 hover:text-indigo-300 font-bold underline inline-flex items-center transition-colors">
-            <Shield className="w-3.5 h-3.5 mr-1 text-indigo-400" /> Initial Setup Org Admin
           </Link>
         </p>
       </div>

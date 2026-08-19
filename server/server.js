@@ -9,7 +9,9 @@ let server;
 
 // Load dotenv, connect to database first, and only then load app & listen on port 5000
 connectDB()
-  .then(() => {
+  .then(async () => {
+    const ensureSuperAdminExists = require('./utils/seedSuperAdmin');
+    await ensureSuperAdminExists();
     const app = require('./app');
 
     server = app.listen(PORT, () => {

@@ -33,9 +33,13 @@ import { TrainingPlayer } from '../pages/employee/TrainingPlayer';
 import { EmployeeFeedback } from '../pages/employee/EmployeeFeedback';
 import { MyReport } from '../pages/employee/MyReport';
 
+// Super Admin Pages
+import { SuperAdminDashboard } from '../pages/superAdmin/SuperAdminDashboard';
+
 const RootRedirect = () => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'SuperAdmin') return <Navigate to="/super-admin" replace />;
   if (user.role === 'Admin') return <Navigate to="/admin" replace />;
   if (user.role === 'Instructor') return <Navigate to="/instructor" replace />;
   return <Navigate to="/employee" replace />;
@@ -51,7 +55,13 @@ export const AppRoutes = () => {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/register-employee" element={<EmployeeRegister />} />
-        <Route path="/setup-org" element={<OrgSetup />} />
+      </Route>
+
+      {/* Protected Super Admin Routes */}
+      <Route element={<ProtectedRoute allowedRoles={['SuperAdmin']} />}>
+        <Route element={<MainLayout />}>
+          <Route path="/super-admin" element={<SuperAdminDashboard />} />
+        </Route>
       </Route>
 
       {/* Protected Admin Routes */}

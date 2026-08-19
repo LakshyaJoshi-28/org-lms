@@ -17,6 +17,7 @@ export const Navbar = () => {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
   const roleColors = {
+    SuperAdmin: 'bg-rose-500/10 text-rose-600 border-rose-500/20 dark:bg-rose-500/20 dark:text-rose-300',
     Admin: 'bg-purple-500/10 text-purple-400 border-purple-500/20 dark:bg-purple-500/20 dark:text-purple-300',
     Instructor: 'bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-300',
     Employee: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-300'
@@ -59,67 +60,69 @@ export const Navbar = () => {
           </span>
 
           {/* Notifications Bell */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowNotifDropdown(!showNotifDropdown);
-                setShowUserDropdown(false);
-              }}
-              className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus:outline-none"
-            >
-              <Bell className="w-5 h-5" />
-              {unreadCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-indigo-600 text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/50">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
+          {user?.role !== 'SuperAdmin' && (
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowNotifDropdown(!showNotifDropdown);
+                  setShowUserDropdown(false);
+                }}
+                className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus:outline-none"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-indigo-600 text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/50">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
-            {/* Notifications Dropdown Panel */}
-            {showNotifDropdown && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 glass-panel bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden z-50 animate-fade-in">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/40">
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">Notifications</h4>
-                  </div>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={markAllRead}
-                      className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium flex items-center transition-colors"
-                    >
-                      <CheckCheck className="w-3.5 h-3.5 mr-1" />
-                      Mark all read
-                    </button>
-                  )}
-                </div>
-
-                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50">
-                  {notifications.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
-                      No notifications available
+              {/* Notifications Dropdown Panel */}
+              {showNotifDropdown && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 glass-panel bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/60 overflow-hidden z-50 animate-fade-in">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-950/40">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">Notifications</h4>
                     </div>
-                  ) : (
-                    notifications.map((n) => (
-                      <div
-                        key={n._id}
-                        onClick={() => markAsRead(n._id)}
-                        className={`p-3.5 text-xs transition-colors cursor-pointer ${
-                          !n.isRead ? 'bg-indigo-50 dark:bg-indigo-950/20 border-l-2 border-indigo-600 dark:border-indigo-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 opacity-80'
-                        }`}
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllRead}
+                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium flex items-center transition-colors"
                       >
-                        <h5 className="font-semibold text-slate-900 dark:text-slate-200 mb-0.5">{n.title}</h5>
-                        <p className="text-slate-600 dark:text-slate-300 mb-1">{n.message}</p>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                          {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <CheckCheck className="w-3.5 h-3.5 mr-1" />
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/50">
+                    {notifications.length === 0 ? (
+                      <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                        No notifications available
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n._id}
+                          onClick={() => markAsRead(n._id)}
+                          className={`p-3.5 text-xs transition-colors cursor-pointer ${
+                            !n.isRead ? 'bg-indigo-50 dark:bg-indigo-950/20 border-l-2 border-indigo-600 dark:border-indigo-500' : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 opacity-80'
+                          }`}
+                        >
+                          <h5 className="font-semibold text-slate-900 dark:text-slate-200 mb-0.5">{n.title}</h5>
+                          <p className="text-slate-600 dark:text-slate-300 mb-1">{n.message}</p>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                            {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* User Profile Menu Dropdown */}
           <div className="relative">

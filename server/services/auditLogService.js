@@ -9,10 +9,21 @@ const logAuditAction = async (user, action, targetType = null, targetId = null, 
 
     if (!userId || !organizationId) return;
 
+    let userName = user.name;
+    if (!userName) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: String(userId) },
+        select: { name: true }
+      });
+      userName = dbUser?.name;
+    }
+
+    if (!userName) return;
+
     await prisma.auditLog.create({
       data: {
         userId: String(userId),
-        userName: user.name,
+        userName: String(userName),
         userRole: user.role,
         organizationId: String(organizationId),
         action,

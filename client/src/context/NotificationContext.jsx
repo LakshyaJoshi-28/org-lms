@@ -11,7 +11,11 @@ export const NotificationProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const loadNotifications = async () => {
-    if (!user) return;
+    if (!user || user.role === 'SuperAdmin') {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     try {
       const res = await fetchNotificationsApi();
       if (res.data && res.data.data) {
@@ -24,7 +28,7 @@ export const NotificationProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && user.role !== 'SuperAdmin') {
       loadNotifications();
     } else {
       setNotifications([]);
