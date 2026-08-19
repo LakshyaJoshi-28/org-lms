@@ -137,9 +137,11 @@ export const CourseBuilder = () => {
                 }
 
                 return {
+                  id: sec._id || sec.id,
                   title: sec.title || '',
                   description: sec.description || '',
                   lectures: sec.subSections ? sec.subSections.map(sub => ({
+                    id: sub._id || sub.id,
                     title: sub.title || '',
                     description: sub.description || '',
                     videoUrl: sub.videoUrl || '',
@@ -435,9 +437,17 @@ export const CourseBuilder = () => {
           };
         }
         return {
+          id: sec.id || sec._id,
           title: sec.title,
           description: sec.description,
-          lectures: sec.lectures,
+          lectures: sec.lectures ? sec.lectures.map(lec => ({
+            id: lec.id || lec._id,
+            title: lec.title,
+            description: lec.description,
+            videoUrl: lec.videoUrl,
+            videoPublicId: lec.videoPublicId,
+            videoDuration: lec.videoDuration
+          })) : [],
           quiz: secQuiz
         };
       });
@@ -1166,7 +1176,7 @@ export const CourseBuilder = () => {
                 className="inline-flex items-center px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-500/25 cursor-pointer"
               >
                 <Send className="w-4 h-4 mr-1.5" />
-                {submitting ? 'Publishing...' : 'Publish Training'}
+                {submitting ? 'Saving Changes...' : (isEditMode ? 'Save Changes' : 'Publish Training')}
               </button>
             </>
           )}

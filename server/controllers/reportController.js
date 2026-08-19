@@ -643,7 +643,7 @@ const getInstructorDashboardReports = async (req, res, next) => {
       return transformed;
     });
 
-    const totalEnrolled = new Set(assignments.map(a => a.employeeId?._id?.toString()).filter(Boolean)).size;
+    const totalEnrolled = assignments.length;
 
     const instructorAssignmentsList = await prisma.assignment.findMany({
       where: {
