@@ -186,11 +186,27 @@ const login = async (req, res, next) => {
       throw new ApiError(400, 'Please provide email and password');
     }
 
-    const user = await prisma.user.findFirst({
-      where: { email: email.toLowerCase().trim() },
-      include: {
+    const cleanEmail = email.toLowerCase().trim();
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        password: true,
+        role: true,
+        status: true,
+        organizationId: true,
+        departmentId: true,
+        jobRole: true,
+        isProfileComplete: true,
+        profilePicture: true,
         organization: {
           select: { id: true, name: true, code: true, status: true }
+        },
+        department: {
+          select: { id: true, name: true, jobRoles: true }
         }
       }
     });

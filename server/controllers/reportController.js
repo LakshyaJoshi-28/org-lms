@@ -829,7 +829,13 @@ const getMyReport = async (req, res, next) => {
       }),
       prisma.quizAttempt.findMany({
         where: { employeeId },
-        include: {
+        select: {
+          id: true,
+          score: true,
+          maxScore: true,
+          percentage: true,
+          passed: true,
+          createdAt: true,
           quiz: {
             select: {
               id: true,
@@ -838,21 +844,22 @@ const getMyReport = async (req, res, next) => {
               trainingId: true,
               subSectionId: true
             }
-          },
-          answers: {
-            orderBy: { questionIndex: 'asc' }
           }
         },
         orderBy: { createdAt: 'desc' }
       }),
       prisma.assignmentSubmission.findMany({
         where: { employeeId },
-        include: {
+        select: {
+          id: true,
+          status: true,
+          score: true,
+          submittedAt: true,
+          createdAt: true,
           assignment: {
             select: {
               id: true,
               title: true,
-              instructions: true,
               maxScore: true,
               trainingId: true,
               subSectionId: true
@@ -878,9 +885,6 @@ const getMyReport = async (req, res, next) => {
     const quizAttempts = quizAttemptsList.map(q => {
       const transformed = withId(q);
       if (transformed.quiz) transformed.quizId = transformed.quiz;
-      if (Array.isArray(transformed.answers)) {
-        transformed.answers = withId(transformed.answers);
-      }
       return transformed;
     });
 
@@ -890,10 +894,12 @@ const getMyReport = async (req, res, next) => {
       return transformed;
     });
 
+    const isOverdue = a => a.status === 'Overdue' || (new Date(a.deadline) < now && a.status !== 'Completed');
+
     const totalAssigned = assignments.length;
     const completedAssignments = assignments.filter(a => a.status === 'Completed' || (a.progressPercentage || 0) === 100).length;
-    const overdueAssignments = assignments.filter(a => a.status === 'Overdue' || (new Date(a.deadline) < now && a.status !== 'Completed')).length;
-    const inProgressAssignments = assignments.filter(a => (a.status === 'In Progress' || (a.progressPercentage || 0) > 0) && a.status !== 'Completed' && !overdueAssignments).length;
+    const overdueAssignments = assignments.filter(isOverdue).length;
+    const inProgressAssignments = assignments.filter(a => (a.status === 'In Progress' || (a.progressPercentage || 0) > 0) && a.status !== 'Completed' && !isOverdue(a)).length;
     const notStartedAssignments = Math.max(0, totalAssigned - completedAssignments - inProgressAssignments - overdueAssignments);
 
     const overallProgress = totalAssigned > 0
