@@ -350,13 +350,11 @@ const getMyAssignments = async (req, res, next) => {
       orderBy: { assignedDate: 'desc' }
     });
 
+    const overdueIdsToUpdate = [];
     const assignments = assignmentsList.map(a => {
       if (a.status !== 'Completed' && a.status !== 'Locked' && new Date(a.deadline) < now && a.status !== 'Overdue') {
         a.status = 'Overdue';
-        prisma.trainingAssignment.update({
-          where: { id: a.id },
-          data: { status: 'Overdue', overdueCount: { increment: 1 } }
-        }).catch(err => console.error('Error updating overdue status:', err));
+        overdueIdsToUpdate.push(a.id);
       }
 
       const transformed = withId(a);
@@ -368,6 +366,13 @@ const getMyAssignments = async (req, res, next) => {
       }
       return transformed;
     });
+
+    if (overdueIdsToUpdate.length > 0) {
+      prisma.trainingAssignment.updateMany({
+        where: { id: { in: overdueIdsToUpdate } },
+        data: { status: 'Overdue' }
+      }).catch(err => console.error('Error updating overdue status:', err));
+    }
 
     res.status(200).json(new ApiResponse(200, { assignments }, 'Employee assignments retrieved successfully'));
   } catch (error) {

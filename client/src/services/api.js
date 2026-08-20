@@ -16,12 +16,52 @@ const api = axios.create({
   }
 });
 
-// In-flight GET request deduplicator to prevent duplicate concurrent network calls
+// In-flight GET request deduplicator and short-lived client-side response cache
 const pendingGetRequests = new Map();
+const responseCache = new Map();
+const DEFAULT_TTL = 4000; // 4 seconds memory TTL
+
+export const clearApiCache = () => {
+  responseCache.clear();
+};
+
 const originalGet = api.get.bind(api);
+const originalPost = api.post.bind(api);
+const originalPut = api.put.bind(api);
+const originalDelete = api.delete.bind(api);
+
+api.post = function (url, data, config) {
+  clearApiCache();
+  return originalPost(url, data, config);
+};
+
+api.put = function (url, data, config) {
+  clearApiCache();
+  return originalPut(url, data, config);
+};
+
+api.delete = function (url, config) {
+  clearApiCache();
+  return originalDelete(url, config);
+};
 
 api.get = function (url, config = {}) {
+  const bypassCache = config && config.skipCache;
   const key = url + (config && config.params ? JSON.stringify(config.params) : '');
+
+  const now = Date.now();
+  if (!bypassCache && responseCache.has(key)) {
+    const cached = responseCache.get(key);
+    if (now - cached.timestamp < DEFAULT_TTL) {
+      return Promise.resolve({
+        ...cached.response,
+        data: JSON.parse(JSON.stringify(cached.response.data))
+      });
+    } else {
+      responseCache.delete(key);
+    }
+  }
+
   if (pendingGetRequests.has(key)) {
     return pendingGetRequests.get(key).then(res => ({
       ...res,
@@ -29,7 +69,15 @@ api.get = function (url, config = {}) {
     }));
   }
 
-  const requestPromise = originalGet(url, config).finally(() => {
+  const requestPromise = originalGet(url, config).then(res => {
+    if (!bypassCache && res.status >= 200 && res.status < 300) {
+      responseCache.set(key, {
+        timestamp: Date.now(),
+        response: res
+      });
+    }
+    return res;
+  }).finally(() => {
     pendingGetRequests.delete(key);
   });
 

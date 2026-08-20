@@ -348,45 +348,50 @@ const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => 
 const getAutoAssignmentRules = async (organizationId) => {
   const orgId = String(organizationId);
 
-  const rules = await prisma.autoAssignmentRule.findMany({
-    where: { organizationId: orgId },
-    include: {
-      training: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          category: { select: { id: true, name: true } }
-        }
+  const [rules, coverageCounts] = await Promise.all([
+    prisma.autoAssignmentRule.findMany({
+      where: { organizationId: orgId },
+      include: {
+        training: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            category: { select: { id: true, name: true } }
+          }
+        },
+        creator: { select: { id: true, name: true, email: true } }
       },
-      creator: { select: { id: true, name: true, email: true } }
-    },
-    orderBy: { createdAt: 'desc' }
-  });
-
-  const rulesWithStats = await Promise.all(
-    rules.map(async (r) => {
-      const coverageCount = await prisma.trainingAssignment.count({
-        where: { organizationId: orgId, trainingId: r.trainingId }
-      });
-
-      const transformed = withId(r);
-      if (transformed.training) {
-        transformed.trainingId = transformed.training;
-        if (transformed.training.category) {
-          transformed.trainingId.categoryId = transformed.training.category;
-        }
-      }
-      if (transformed.creator) {
-        transformed.createdBy = transformed.creator;
-      }
-
-      return {
-        ...transformed,
-        coverageCount
-      };
+      orderBy: { createdAt: 'desc' }
+    }),
+    prisma.trainingAssignment.groupBy({
+      by: ['trainingId'],
+      where: { organizationId: orgId },
+      _count: { trainingId: true }
     })
-  );
+  ]);
+
+  const countMap = new Map(coverageCounts.map(c => [c.trainingId, c._count.trainingId]));
+
+  const rulesWithStats = rules.map((r) => {
+    const coverageCount = countMap.get(r.trainingId) || 0;
+
+    const transformed = withId(r);
+    if (transformed.training) {
+      transformed.trainingId = transformed.training;
+      if (transformed.training.category) {
+        transformed.trainingId.categoryId = transformed.training.category;
+      }
+    }
+    if (transformed.creator) {
+      transformed.createdBy = transformed.creator;
+    }
+
+    return {
+      ...transformed,
+      coverageCount
+    };
+  });
 
   return rulesWithStats;
 };

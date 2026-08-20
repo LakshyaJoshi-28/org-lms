@@ -18,6 +18,8 @@ const reportRoutes = require('./routes/reportRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 
+const { invalidateServerCache } = require('./middleware/cacheMiddleware');
+
 const app = express();
 
 app.set('trust proxy', 1);
@@ -30,6 +32,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(invalidateServerCache);
 
 // Serve uploads directory statically for local media storage fallback
 app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
