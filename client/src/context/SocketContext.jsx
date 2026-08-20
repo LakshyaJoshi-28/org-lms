@@ -17,10 +17,12 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    // Connect to backend Socket.IO server via Vite proxy or direct origin
-    const socketUrl = window.location.origin.includes('localhost:5173')
-      ? 'http://localhost:5000'
-      : window.location.origin;
+    // Connect to backend Socket.IO server using VITE_API_URL or fallback logic
+    const socketUrl = import.meta.env.VITE_API_URL || (
+      window.location.origin.includes('localhost:5173')
+        ? 'http://localhost:5000'
+        : window.location.origin
+    );
 
     const newSocket = io(socketUrl, {
       withCredentials: true,
