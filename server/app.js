@@ -18,7 +18,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 
-const { invalidateServerCache } = require('./middleware/cacheMiddleware');
+const { cacheMiddleware, invalidateServerCache } = require('./middleware/cacheMiddleware');
 
 const app = express();
 

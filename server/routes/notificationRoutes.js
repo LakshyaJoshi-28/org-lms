@@ -6,10 +6,11 @@ const {
   markAllAsRead
 } = require('../controllers/notificationController');
 const { protect } = require('../middleware/authMiddleware');
+const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 
 router.use(protect);
 
-router.get('/', getNotifications);
+router.get('/', cacheMiddleware(), getNotifications);
 router.put('/read-all', markAllAsRead);
 router.put('/:id/read', markAsRead);
 

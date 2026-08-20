@@ -620,7 +620,19 @@ const getTrainings = async (req, res, next) => {
 
     const trainingsList = await prisma.training.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        categoryId: true,
+        departmentId: true,
+        createdBy: true,
+        organizationId: true,
+        durationDays: true,
+        isMandatory: true,
+        isPublished: true,
+        status: true,
+        thumbnailUrl: true,
+        createdAt: true,
         category: { select: { id: true, name: true } },
         department: { select: { id: true, name: true } },
         instructor: { select: { id: true, name: true, email: true } },

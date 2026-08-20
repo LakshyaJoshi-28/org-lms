@@ -9,13 +9,14 @@ const {
 } = require('../controllers/reportController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
+const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 
 router.use(protect);
 
-router.get('/full-org-report', authorizeRoles('Admin'), getFullOrgReport);
-router.get('/admin-dashboard', authorizeRoles('Admin'), getAdminDashboardReports);
-router.get('/instructor-dashboard', authorizeRoles('Instructor'), getInstructorDashboardReports);
-router.get('/employee/:employeeId', authorizeRoles('Admin', 'Instructor'), getEmployeeReport);
-router.get('/my-report', authorizeRoles('Employee'), getMyReport);
+router.get('/full-org-report', authorizeRoles('Admin'), cacheMiddleware(), getFullOrgReport);
+router.get('/admin-dashboard', authorizeRoles('Admin'), cacheMiddleware(), getAdminDashboardReports);
+router.get('/instructor-dashboard', authorizeRoles('Instructor'), cacheMiddleware(), getInstructorDashboardReports);
+router.get('/employee/:employeeId', authorizeRoles('Admin', 'Instructor'), cacheMiddleware(), getEmployeeReport);
+router.get('/my-report', authorizeRoles('Employee'), cacheMiddleware(), getMyReport);
 
 module.exports = router;

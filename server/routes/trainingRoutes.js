@@ -16,17 +16,18 @@ const {
 } = require('../controllers/trainingController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
+const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 
 router.use(protect);
 
 router.post('/save-full-course', authorizeRoles('Instructor', 'Admin'), saveFullCourse);
 
 router.route('/')
-  .get(getTrainings)
+  .get(cacheMiddleware(), getTrainings)
   .post(authorizeRoles('Instructor', 'Admin'), createTraining);
 
 router.route('/:id')
-  .get(getTrainingById)
+  .get(cacheMiddleware(), getTrainingById)
   .put(authorizeRoles('Instructor', 'Admin'), updateTraining)
   .delete(authorizeRoles('Instructor', 'Admin'), deleteTraining);
 

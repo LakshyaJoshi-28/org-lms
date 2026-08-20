@@ -14,12 +14,13 @@ const {
 } = require('../controllers/orgController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
+const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 
 router.use(protect);
 
 // Department Routes
 router.route('/departments')
-  .get(getDepartments)
+  .get(cacheMiddleware(), getDepartments)
   .post(authorizeRoles('Admin'), createDepartment);
 
 router.route('/departments/:id')
@@ -28,11 +29,11 @@ router.route('/departments/:id')
 
 // User Management Routes
 router.route('/instructors')
-  .get(authorizeRoles('Admin'), getInstructors)
+  .get(authorizeRoles('Admin'), cacheMiddleware(), getInstructors)
   .post(authorizeRoles('Admin'), createInstructor);
 
 router.post('/admins', authorizeRoles('Admin'), createAdmin);
-router.get('/employees', authorizeRoles('Admin'), getEmployees);
+router.get('/employees', authorizeRoles('Admin'), cacheMiddleware(), getEmployees);
 router.put('/profile', updateProfile);
 
 // User Activation / Deactivation Route

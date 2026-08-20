@@ -448,10 +448,10 @@ const getAdminDashboardReports = async (req, res, next) => {
       prisma.user.count({ where: { organizationId: orgId, role: 'Employee' } }),
       prisma.user.count({ where: { organizationId: orgId, role: 'Instructor' } }),
       prisma.training.count({ where: { organizationId: orgId, isPublished: true, status: 'published' } }),
-      prisma.department.findMany({ where: { organizationId: orgId, status: 'active' }, orderBy: { name: 'asc' } }),
+      prisma.department.findMany({ where: { organizationId: orgId, status: 'active' }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
       prisma.user.findMany({ where: { organizationId: orgId, role: 'Employee' }, select: { id: true, departmentId: true } }),
       prisma.trainingAssignment.findMany({ where: { organizationId: orgId }, select: { id: true, employeeId: true, status: true, progressPercentage: true } }),
-      prisma.auditLog.findMany({ where: { organizationId: orgId }, orderBy: { timestamp: 'desc' }, take: 10 })
+      prisma.auditLog.findMany({ where: { organizationId: orgId }, select: { id: true, action: true, details: true, userName: true, userRole: true, timestamp: true, createdAt: true }, orderBy: { timestamp: 'desc' }, take: 10 })
     ]);
 
     const totalAssignmentsCount = allAssignments.length;

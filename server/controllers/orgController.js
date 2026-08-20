@@ -75,6 +75,15 @@ const getDepartments = async (req, res, next) => {
         organizationId: orgId,
         status: 'active'
       },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        jobRoles: true,
+        organizationId: true,
+        status: true,
+        createdAt: true
+      },
       orderBy: { name: 'asc' }
     });
 
