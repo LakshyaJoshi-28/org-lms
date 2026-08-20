@@ -829,13 +829,7 @@ const getMyReport = async (req, res, next) => {
       }),
       prisma.quizAttempt.findMany({
         where: { employeeId },
-        select: {
-          id: true,
-          score: true,
-          maxScore: true,
-          percentage: true,
-          passed: true,
-          createdAt: true,
+        include: {
           quiz: {
             select: {
               id: true,
@@ -844,22 +838,21 @@ const getMyReport = async (req, res, next) => {
               trainingId: true,
               subSectionId: true
             }
+          },
+          answers: {
+            orderBy: { questionIndex: 'asc' }
           }
         },
         orderBy: { createdAt: 'desc' }
       }),
       prisma.assignmentSubmission.findMany({
         where: { employeeId },
-        select: {
-          id: true,
-          status: true,
-          score: true,
-          submittedAt: true,
-          createdAt: true,
+        include: {
           assignment: {
             select: {
               id: true,
               title: true,
+              instructions: true,
               maxScore: true,
               trainingId: true,
               subSectionId: true
@@ -885,6 +878,9 @@ const getMyReport = async (req, res, next) => {
     const quizAttempts = quizAttemptsList.map(q => {
       const transformed = withId(q);
       if (transformed.quiz) transformed.quizId = transformed.quiz;
+      if (Array.isArray(transformed.answers)) {
+        transformed.answers = withId(transformed.answers);
+      }
       return transformed;
     });
 
