@@ -235,8 +235,11 @@ const login = async (req, res, next) => {
  */
 const logout = async (req, res, next) => {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
     res.cookie('jwt', '', {
       httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
       expires: new Date(0)
     });
 
