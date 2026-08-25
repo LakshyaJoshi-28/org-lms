@@ -35,6 +35,8 @@ model Organization {
   notifications       Notification[]
   auditLogs           AuditLog[]
 
+  @@index([createdAt])
+  @@index([status])
   @@map("organizations")
 }
 

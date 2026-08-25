@@ -271,24 +271,31 @@ const logout = async (req, res, next) => {
  * @access  Private
  */
 const getMe = async (req, res, next) => {
+  const startTime = performance.now();
   try {
     const userId = String(req.user.id || req.user._id);
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        organizationId: true,
-        departmentId: true,
-        jobRole: true,
-        isProfileComplete: true,
-        profilePicture: true,
+    const isSuperAdmin = req.user.role === 'SuperAdmin';
+
+    const selectFields = {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      status: true,
+      organizationId: true,
+      departmentId: true,
+      jobRole: true,
+      isProfileComplete: true,
+      profilePicture: true,
+      ...(isSuperAdmin ? {} : {
         organization: { select: { id: true, name: true, code: true } },
         department: { select: { id: true, name: true, jobRoles: true } }
-      }
+      })
+    };
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: selectFields
     });
 
     if (!user) {
@@ -296,6 +303,11 @@ const getMe = async (req, res, next) => {
     }
 
     const userObj = formatUserResponse(user);
+    const totalTime = (performance.now() - startTime).toFixed(2);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[PERF] GET /api/auth/me - Total: ${totalTime}ms`);
+    }
+
     res.status(200).json(new ApiResponse(200, { user: userObj }, 'Current user profile retrieved'));
   } catch (error) {
     next(error);

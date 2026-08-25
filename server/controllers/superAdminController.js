@@ -85,6 +85,7 @@ const createOrganization = async (req, res, next) => {
 // @route   GET /api/super-admin/organizations
 // @access  Private (SuperAdmin)
 const getAllOrganizations = async (req, res, next) => {
+  const startTime = performance.now();
   try {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.max(1, parseInt(req.query.limit, 10) || 10);
@@ -99,13 +100,22 @@ const getAllOrganizations = async (req, res, next) => {
       ]
     } : {};
 
-    const [orgs, totalCount, globalOrgCount, activeOrgCount, totalUsersCount] = await Promise.all([
+    const dbStart = performance.now();
+
+    const [orgs, totalCount, activeOrgCount, totalUsersCount] = await Promise.all([
       prisma.organization.findMany({
         where: whereClause,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          description: true,
+          status: true,
+          createdAt: true,
+          updatedAt: true,
           _count: {
             select: { users: true, departments: true, trainings: true }
           }
@@ -114,7 +124,6 @@ const getAllOrganizations = async (req, res, next) => {
       prisma.organization.count({
         where: whereClause
       }),
-      prisma.organization.count(),
       prisma.organization.count({
         where: { status: 'ACTIVE' }
       }),
@@ -122,6 +131,9 @@ const getAllOrganizations = async (req, res, next) => {
         where: { role: { not: 'SuperAdmin' } }
       })
     ]);
+
+    const globalOrgCount = search ? await prisma.organization.count() : totalCount;
+    const dbTime = (performance.now() - dbStart).toFixed(2);
 
     const formattedOrgs = orgs.map(org => {
       const transformed = withId(org);
@@ -134,6 +146,11 @@ const getAllOrganizations = async (req, res, next) => {
     });
 
     const totalPages = Math.ceil(totalCount / limit) || 1;
+    const totalTime = (performance.now() - startTime).toFixed(2);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[PERF] GET /api/super-admin/organizations - DB: ${dbTime}ms, Total: ${totalTime}ms`);
+    }
 
     res.status(200).json(
       new ApiResponse(
