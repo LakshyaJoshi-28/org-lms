@@ -58,9 +58,11 @@ export const SuperAdminDashboard = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const fetchOrganizations = async (pageNum = page, searchVal = searchTerm) => {
+    const targetPage = (typeof pageNum === 'number' && !isNaN(pageNum)) ? pageNum : page;
+    const targetSearch = typeof searchVal === 'string' ? searchVal : searchTerm;
     setLoading(true);
     try {
-      const res = await api.get(`/super-admin/organizations?page=${pageNum}&limit=${limit}&search=${encodeURIComponent(searchVal)}`);
+      const res = await api.get(`/super-admin/organizations?page=${targetPage}&limit=${limit}&search=${encodeURIComponent(targetSearch)}`);
       setOrganizations(res.data.data.organizations || []);
       if (res.data.data.pagination) {
         setPage(res.data.data.pagination.page);
@@ -240,7 +242,7 @@ export const SuperAdminDashboard = () => {
           </div>
 
           <button
-            onClick={fetchOrganizations}
+            onClick={() => fetchOrganizations()}
             className="py-2.5 px-4 rounded-xl glass-input text-xs font-bold text-slate-300 hover:text-white flex items-center justify-center space-x-2 transition-all cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
