@@ -40,18 +40,32 @@ const createDepartment = async (req, res, next) => {
       }
     });
 
-    if (existingDep) {
+    if (existingDep && existingDep.status === 'active') {
       throw new ApiError(400, 'Department with this name already exists in your organization');
     }
 
-    const department = await prisma.department.create({
-      data: {
-        name: name.trim(),
-        description: description || null,
-        jobRoles: Array.isArray(jobRoles) ? jobRoles : [],
-        organizationId: orgId
-      }
-    });
+    let department;
+    if (existingDep && existingDep.status !== 'active') {
+      department = await prisma.department.update({
+        where: { id: existingDep.id },
+        data: {
+          name: name.trim(),
+          description: description || null,
+          jobRoles: Array.isArray(jobRoles) ? jobRoles : [],
+          status: 'active'
+        }
+      });
+    } else {
+      department = await prisma.department.create({
+        data: {
+          name: name.trim(),
+          description: description || null,
+          jobRoles: Array.isArray(jobRoles) ? jobRoles : [],
+          organizationId: orgId,
+          status: 'active'
+        }
+      });
+    }
 
     logAuditAction(req.user, 'CREATE_DEPARTMENT', 'Department', department.id, `Created department ${department.name}`).catch(err => console.error('Audit log error in createDepartment:', err));
 
@@ -113,6 +127,20 @@ const updateDepartment = async (req, res, next) => {
 
     if (!department) {
       throw new ApiError(404, 'Department not found');
+    }
+
+    if (name && name.trim() !== department.name) {
+      const existingActive = await prisma.department.findFirst({
+        where: {
+          name: name.trim(),
+          organizationId: orgId,
+          status: 'active',
+          id: { not: department.id }
+        }
+      });
+      if (existingActive) {
+        throw new ApiError(400, 'Department with this name already exists in your organization');
+      }
     }
 
     const updateData = {};
