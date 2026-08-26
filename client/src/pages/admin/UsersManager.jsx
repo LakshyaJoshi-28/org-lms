@@ -47,14 +47,25 @@ export const UsersManager = () => {
     fetchData();
   }, []);
 
+  const [togglingUserIds, setTogglingUserIds] = useState(new Set());
+
   const handleToggleStatus = async (userId, currentStatus) => {
+    if (togglingUserIds.has(userId)) return;
     const newStatus = currentStatus === 'active' ? 'deactivated' : 'active';
+    setTogglingUserIds(prev => new Set(prev).add(userId));
     try {
       await updateUserStatus(userId, newStatus);
       addToast('success', `User ${newStatus === 'active' ? 'reactivated' : 'deactivated'} successfully`);
-      fetchData();
+      setEmployees(prev => prev.map(e => (e._id === userId || e.id === userId) ? { ...e, status: newStatus } : e));
+      setInstructors(prev => prev.map(i => (i._id === userId || i.id === userId) ? { ...i, status: newStatus } : i));
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to update user status');
+    } finally {
+      setTogglingUserIds(prev => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
     }
   };
 

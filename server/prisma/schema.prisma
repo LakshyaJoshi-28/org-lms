@@ -94,6 +94,8 @@ model User {
   extensionsGiven        ExtensionHistory[]     @relation("ExtendedBy")
 
   @@index([organizationId, role])
+  @@index([organizationId, role, createdAt])
+  @@index([organizationId, role, name])
   @@index([organizationId, departmentId])
   @@map("users")
 }

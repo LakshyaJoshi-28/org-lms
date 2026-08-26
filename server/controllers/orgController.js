@@ -53,7 +53,7 @@ const createDepartment = async (req, res, next) => {
       }
     });
 
-    await logAuditAction(req.user, 'CREATE_DEPARTMENT', 'Department', department.id, `Created department ${department.name}`);
+    logAuditAction(req.user, 'CREATE_DEPARTMENT', 'Department', department.id, `Created department ${department.name}`).catch(err => console.error('Audit log error in createDepartment:', err));
 
     res.status(201).json(new ApiResponse(201, { department: withId(department) }, 'Department created successfully'));
   } catch (error) {
@@ -467,36 +467,34 @@ const updateUserStatus = async (req, res, next) => {
     const actionName = isDeactivating ? 'DEACTIVATE_USER' : 'ACTIVATE_USER';
     const actionMessage = isDeactivating ? 'deactivated' : 'reactivated';
 
-    // Send Notification to affected user
-    await sendUserNotification(
-      updatedUser.id,
-      orgId,
-      updatedUser.role,
-      actionName,
-      isDeactivating ? 'Account Deactivated' : 'Account Reactivated',
-      isDeactivating
-        ? 'Your account has been deactivated by an administrator. Access to the system is currently blocked.'
-        : 'Your account has been reactivated. You may now log in and access the system normally.',
-      { entityType: 'User', entityId: updatedUser.id }
-    );
-
-    // Send Aggregated Notification to Organization Admins
-    await sendAdminNotification(
-      orgId,
-      actionName,
-      `User ${isDeactivating ? 'Deactivated' : 'Reactivated'}`,
-      `${updatedUser.role} "${updatedUser.name}" (${updatedUser.email}) was ${actionMessage} by Admin ${req.user.name}`,
-      { entityType: 'User', entityId: updatedUser.id }
-    );
-
-    // Audit Log
-    await logAuditAction(
-      req.user,
-      actionName,
-      'User',
-      updatedUser.id,
-      `${isDeactivating ? 'Deactivated' : 'Reactivated'} ${updatedUser.role} user ${updatedUser.name} (${updatedUser.email})`
-    );
+    // Send Notification & Audit logs asynchronously in background without blocking response
+    Promise.all([
+      sendUserNotification(
+        updatedUser.id,
+        orgId,
+        updatedUser.role,
+        actionName,
+        isDeactivating ? 'Account Deactivated' : 'Account Reactivated',
+        isDeactivating
+          ? 'Your account has been deactivated by an administrator. Access to the system is currently blocked.'
+          : 'Your account has been reactivated. You may now log in and access the system normally.',
+        { entityType: 'User', entityId: updatedUser.id }
+      ),
+      sendAdminNotification(
+        orgId,
+        actionName,
+        `User ${isDeactivating ? 'Deactivated' : 'Reactivated'}`,
+        `${updatedUser.role} "${updatedUser.name}" (${updatedUser.email}) was ${actionMessage} by Admin ${req.user.name}`,
+        { entityType: 'User', entityId: updatedUser.id }
+      ),
+      logAuditAction(
+        req.user,
+        actionName,
+        'User',
+        updatedUser.id,
+        `${isDeactivating ? 'Deactivated' : 'Reactivated'} ${updatedUser.role} user ${updatedUser.name} (${updatedUser.email})`
+      )
+    ]).catch(err => console.error('Background notification error in updateUserStatus:', err));
 
     res.status(200).json(
       new ApiResponse(200, { user: formatUserResponse(updatedUser) }, `User ${actionMessage} successfully`)

@@ -22,8 +22,8 @@ const responseCache = new Map();
 const DEFAULT_TTL = 10000; // 10 seconds memory TTL
 
 export const clearApiCache = (url = '') => {
-  if (url && (url.includes('/notifications') || url.includes('/progress'))) {
-    return; // Do not clear general entity cache for notification reads or progress pings
+  if (url && (url.includes('/notifications') || url.includes('/progress') || url.includes('/status'))) {
+    return; // Do not clear general entity cache for notification reads, progress pings, or user status updates
   }
   responseCache.clear();
 };
