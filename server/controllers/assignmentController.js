@@ -587,11 +587,61 @@ const getEmployeeFeedback = async (req, res, next) => {
         employeeId: userId,
         status: 'reviewed'
       },
-      select: { id: true },
+      select: {
+        id: true,
+        assignmentId: true,
+        employeeId: true,
+        reviewedBy: true,
+        submissionType: true,
+        githubUrl: true,
+        fileUrl: true,
+        filePublicId: true,
+        score: true,
+        grade: true,
+        feedback: true,
+        status: true,
+        submittedAt: true,
+        reviewedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        employee: { select: { id: true, name: true, email: true, profilePicture: true, departmentId: true, jobRole: true } },
+        assignment: {
+          select: {
+            id: true,
+            title: true,
+            instructions: true,
+            maxScore: true,
+            trainingId: true,
+            training: {
+              select: {
+                id: true,
+                title: true,
+                createdBy: true,
+                instructor: { select: { id: true, name: true, email: true, profilePicture: true } },
+                category: { select: { id: true, name: true } }
+              }
+            }
+          }
+        },
+        reviewer: { select: { id: true, name: true, email: true, profilePicture: true } }
+      },
       orderBy: { reviewedAt: 'desc' }
     });
 
-    const submissions = await Promise.all(submissionsList.map(s => getPopulatedSubmission(s.id)));
+    const submissions = submissionsList.map(sub => {
+      const transformed = withId(sub);
+      if (transformed.employee) transformed.employeeId = transformed.employee;
+      if (transformed.reviewer) transformed.reviewedBy = transformed.reviewer;
+      if (transformed.assignment) {
+        transformed.assignmentId = transformed.assignment;
+        if (transformed.assignment.training) {
+          transformed.assignmentId.trainingId = transformed.assignment.training;
+          if (transformed.assignment.training.instructor) transformed.assignmentId.trainingId.createdBy = transformed.assignment.training.instructor;
+          if (transformed.assignment.training.category) transformed.assignmentId.trainingId.categoryId = transformed.assignment.training.category;
+        }
+      }
+      return transformed;
+    });
 
     res.status(200).json(
       new ApiResponse(

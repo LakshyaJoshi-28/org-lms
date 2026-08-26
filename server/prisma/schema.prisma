@@ -351,6 +351,7 @@ model AssignmentSubmission {
 
   @@index([assignmentId, status])
   @@index([employeeId])
+  @@index([employeeId, status, reviewedAt])
   @@map("assignment_submissions")
 }
 
