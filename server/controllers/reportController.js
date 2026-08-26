@@ -23,19 +23,7 @@ const getFullOrgReport = async (req, res, next) => {
       prisma.user.count({ where: { organizationId: orgId, role: 'Instructor' } }),
       prisma.trainingAssignment.findMany({
         where: { organizationId: orgId },
-        select: {
-          id: true,
-          employeeId: true,
-          trainingId: true,
-          assignedBy: true,
-          organizationId: true,
-          assignmentType: true,
-          assignedDate: true,
-          deadline: true,
-          status: true,
-          progressPercentage: true,
-          completedDate: true,
-          createdAt: true,
+        include: {
           employee: { select: { id: true, name: true, email: true, departmentId: true, jobRole: true, profilePicture: true, status: true } },
           training: {
             select: {
@@ -46,56 +34,26 @@ const getFullOrgReport = async (req, res, next) => {
               isMandatory: true,
               category: { select: { id: true, name: true } }
             }
-          }
+          },
+          assigner: { select: { id: true, name: true, email: true, role: true } }
         }
       }),
       prisma.department.findMany({
         where: { organizationId: orgId, status: 'active' },
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          jobRoles: true,
-          status: true
-        },
         orderBy: { name: 'asc' }
       }),
       prisma.user.findMany({
         where: { organizationId: orgId, role: 'Employee' },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          profilePicture: true,
-          departmentId: true,
-          jobRole: true,
-          status: true,
-          createdAt: true,
-          department: { select: { id: true, name: true } }
-        }
+        include: { department: { select: { id: true, name: true, jobRoles: true } } }
       }),
       prisma.training.findMany({
         where: { organizationId: orgId, isPublished: true },
-        select: {
-          id: true,
-          title: true,
-          durationDays: true,
-          isMandatory: true,
-          categoryId: true,
-          category: { select: { id: true, name: true } }
-        },
+        include: { category: { select: { id: true, name: true } } },
         orderBy: { title: 'asc' }
       }),
       prisma.autoAssignmentRule.findMany({
         where: { organizationId: orgId, status: 'active' },
-        select: {
-          id: true,
-          organizationId: true,
-          trainingId: true,
-          createdBy: true,
-          status: true,
-          customDeadlineDays: true,
-          createdAt: true,
+        include: {
           training: {
             select: {
               id: true,
