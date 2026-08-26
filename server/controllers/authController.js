@@ -411,8 +411,19 @@ const changePassword = async (req, res, next) => {
     }
 
     const userId = String(req.user.id || req.user._id);
+
+    // Parallelize CPU-intensive hashing while querying DB with selective projection
+    const hashPromise = bcrypt.hash(newPassword, 10);
+
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: {
+        id: true,
+        password: true,
+        name: true,
+        role: true,
+        organizationId: true
+      }
     });
 
     if (!user) {
@@ -424,13 +435,17 @@ const changePassword = async (req, res, next) => {
       throw new ApiError(400, 'Current password is incorrect');
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await hashPromise;
+
     await prisma.user.update({
       where: { id: user.id },
       data: { password: hashedPassword }
     });
 
-    await logAuditAction(req.user, 'CHANGE_PASSWORD', 'User', user.id, `Password changed for user ${user.name}`);
+    // Fire and forget audit log non-blocking to maximize API speed
+    logAuditAction(req.user, 'CHANGE_PASSWORD', 'User', user.id, `Password changed for user ${user.name}`).catch((err) => {
+      console.error('Failed to log audit action for changePassword:', err);
+    });
 
     res.status(200).json(new ApiResponse(200, {}, 'Password changed successfully'));
   } catch (error) {
