@@ -183,7 +183,7 @@ const assignTraining = async (req, res, next) => {
       throw new ApiError(400, 'Invalid assignmentType. Must be "dept_role" or "specific"');
     }
 
-    await logAuditAction(req.user, 'ASSIGN_TRAINING', 'Training', trainingId, `Assigned training via ${assignmentType}`);
+    logAuditAction(req.user, 'ASSIGN_TRAINING', 'Training', trainingId, `Assigned training via ${assignmentType}`).catch(err => console.error('Audit log error in assignTraining:', err));
 
     res.status(201).json(new ApiResponse(201, { result }, 'Training assigned successfully'));
   } catch (error) {
@@ -213,13 +213,13 @@ const createAutoRule = async (req, res, next) => {
       customDeadlineDays || 30
     );
 
-    await logAuditAction(
+    logAuditAction(
       req.user,
       'CREATE_AUTO_ASSIGNMENT_RULE',
       'Training',
       trainingId,
       `Configured compulsory auto-assignment rule for ${assignedCount} of ${totalEmployees} employees`
-    );
+    ).catch(err => console.error('Audit log error in createAutoRule:', err));
 
     res.status(201).json(
       new ApiResponse(
@@ -249,13 +249,13 @@ const deactivateAutoRule = async (req, res, next) => {
       req.params.id
     );
 
-    await logAuditAction(
+    logAuditAction(
       req.user,
       'DEACTIVATE_AUTO_ASSIGNMENT_RULE',
       'AutoAssignmentRule',
       rule.id || rule._id,
       `Deactivated auto-assignment rule`
-    );
+    ).catch(err => console.error('Audit log error in deactivateAutoRule:', err));
 
     res.status(200).json(
       new ApiResponse(200, { rule }, 'Auto-assignment rule deactivated successfully')
@@ -281,13 +281,13 @@ const reactivateAutoRule = async (req, res, next) => {
       req.params.id
     );
 
-    await logAuditAction(
+    logAuditAction(
       req.user,
       'REACTIVATE_AUTO_ASSIGNMENT_RULE',
       'AutoAssignmentRule',
       rule.id || rule._id,
       `Reactivated auto-assignment rule`
-    );
+    ).catch(err => console.error('Audit log error in reactivateAutoRule:', err));
 
     res.status(200).json(
       new ApiResponse(200, { rule, newAssignmentsCount }, 'Auto-assignment rule reactivated successfully')

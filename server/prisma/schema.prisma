@@ -148,6 +148,7 @@ model Training {
   trainingProgresses  TrainingProgress[]
 
   @@index([organizationId, isPublished])
+  @@index([organizationId, status, createdAt])
   @@index([createdBy])
   @@index([categoryId])
   @@map("trainings")
@@ -438,6 +439,7 @@ model AutoAssignmentRule {
 
   @@unique([organizationId, trainingId])
   @@index([organizationId, status])
+  @@index([organizationId, createdAt])
   @@map("auto_assignment_rules")
 }
 
