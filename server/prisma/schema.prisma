@@ -149,7 +149,9 @@ model Training {
   trainingProgresses  TrainingProgress[]
 
   @@index([organizationId, isPublished])
+  @@index([organizationId, isPublished, title])
   @@index([organizationId, status, createdAt])
+  @@index([createdBy, organizationId, status, createdAt])
   @@index([createdBy])
   @@index([categoryId])
   @@map("trainings")
@@ -383,6 +385,7 @@ model TrainingAssignment {
   assignmentSubmissions AssignmentSubmission[]
 
   @@unique([employeeId, trainingId])
+  @@index([trainingId])
   @@index([organizationId, status])
   @@index([organizationId, trainingId])
   @@index([employeeId, organizationId])

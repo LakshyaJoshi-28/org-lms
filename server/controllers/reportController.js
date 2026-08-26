@@ -643,6 +643,13 @@ const getInstructorDashboardReports = async (req, res, next) => {
         organizationId: orgId,
         status: { notIn: ['archived', 'deleted'] }
       },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        isPublished: true,
+        createdAt: true
+      },
       orderBy: { createdAt: 'desc' }
     });
     const ownedTrainings = withId(ownedTrainingsList);
@@ -650,13 +657,38 @@ const getInstructorDashboardReports = async (req, res, next) => {
 
     const totalTrainings = ownedTrainings.length;
 
-    const rawAssignmentsList = await prisma.trainingAssignment.findMany({
-      where: { trainingId: { in: trainingIds } },
-      include: {
-        employee: { select: { id: true, name: true, email: true, departmentId: true, jobRole: true, profilePicture: true } },
-        training: { select: { id: true, title: true } }
-      }
-    });
+    const [rawAssignmentsList, instructorAssignmentsList] = await Promise.all([
+      trainingIds.length > 0
+        ? prisma.trainingAssignment.findMany({
+            where: {
+              organizationId: orgId,
+              trainingId: { in: trainingIds }
+            },
+            select: {
+              id: true,
+              employeeId: true,
+              trainingId: true,
+              assignedBy: true,
+              organizationId: true,
+              assignmentType: true,
+              assignedDate: true,
+              deadline: true,
+              status: true,
+              progressPercentage: true,
+              completedDate: true,
+              createdAt: true,
+              employee: { select: { id: true, name: true, email: true, departmentId: true, jobRole: true, profilePicture: true } },
+              training: { select: { id: true, title: true } }
+            }
+          })
+        : Promise.resolve([]),
+      prisma.assignment.findMany({
+        where: trainingIds.length > 0
+          ? { OR: [{ createdBy: instructorId }, { trainingId: { in: trainingIds } }] }
+          : { createdBy: instructorId },
+        select: { id: true, title: true, trainingId: true }
+      })
+    ]);
 
     const assignments = rawAssignmentsList.map(a => {
       const transformed = withId(a);
@@ -666,25 +698,7 @@ const getInstructorDashboardReports = async (req, res, next) => {
     });
 
     const totalEnrolled = assignments.length;
-
-    const instructorAssignmentsList = await prisma.assignment.findMany({
-      where: {
-        OR: [
-          { createdBy: instructorId },
-          { trainingId: { in: trainingIds } }
-        ]
-      },
-      select: { id: true, title: true, trainingId: true }
-    });
-
     const assignmentIds = instructorAssignmentsList.map(a => a.id);
-
-    const pendingReviewsCount = await prisma.assignmentSubmission.count({
-      where: {
-        assignmentId: { in: assignmentIds },
-        status: 'submitted'
-      }
-    });
 
     const overdueCount = assignments.filter(a => a.status === 'Overdue' || (new Date(a.deadline) < now && a.status !== 'Completed')).length;
 
@@ -700,18 +714,31 @@ const getInstructorDashboardReports = async (req, res, next) => {
         daysOverdue: Math.max(1, Math.floor((now - new Date(a.deadline)) / (1000 * 60 * 60 * 24)))
       }));
 
-    const recentSubmissionsList = await prisma.assignmentSubmission.findMany({
-      where: {
-        assignmentId: { in: assignmentIds },
-        status: 'submitted'
-      },
-      include: {
-        assignment: { select: { id: true, title: true, trainingId: true } },
-        employee: { select: { id: true, name: true, email: true, profilePicture: true } }
-      },
-      orderBy: { submittedAt: 'desc' },
-      take: 5
-    });
+    const [pendingReviewsCount, recentSubmissionsList] = await Promise.all([
+      prisma.assignmentSubmission.count({
+        where: {
+          assignmentId: { in: assignmentIds },
+          status: 'submitted'
+        }
+      }),
+      prisma.assignmentSubmission.findMany({
+        where: {
+          assignmentId: { in: assignmentIds },
+          status: 'submitted'
+        },
+        select: {
+          id: true,
+          assignmentId: true,
+          employeeId: true,
+          submittedAt: true,
+          createdAt: true,
+          assignment: { select: { id: true, title: true, trainingId: true } },
+          employee: { select: { id: true, name: true, email: true, profilePicture: true } }
+        },
+        orderBy: { submittedAt: 'desc' },
+        take: 5
+      })
+    ]);
 
     const recentSubmissions = recentSubmissionsList.map(s => {
       const transformed = withId(s);
