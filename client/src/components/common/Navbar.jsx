@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -7,6 +8,7 @@ import { ChangePasswordModal } from '../profile/ChangePasswordModal';
 import { Bell, User, KeyRound, LogOut, CheckCheck, Sparkles, Building, Sun, Moon } from 'lucide-react';
 
 export const Navbar = () => {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllRead } = useNotification();
   const { isDark, toggleTheme } = useTheme();
@@ -168,8 +170,12 @@ export const Navbar = () => {
 
                 <button
                   onClick={() => {
-                    setShowProfileModal(true);
                     setShowUserDropdown(false);
+                    if (user?.role === 'SuperAdmin') {
+                      navigate('/super-admin/settings');
+                    } else {
+                      setShowProfileModal(true);
+                    }
                   }}
                   className="w-full flex items-center px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                 >

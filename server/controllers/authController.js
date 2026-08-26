@@ -325,7 +325,16 @@ const updateMyProfile = async (req, res, next) => {
     const userId = String(req.user.id || req.user._id);
 
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        isCustomAvatar: true,
+        organizationId: true,
+        departmentId: true,
+        jobRole: true
+      }
     });
 
     if (!user) {
@@ -344,7 +353,7 @@ const updateMyProfile = async (req, res, next) => {
       }
     }
 
-    if (departmentId) {
+    if (departmentId && user.role !== 'SuperAdmin') {
       const depId = String(departmentId);
       const dep = await prisma.department.findFirst({
         where: { id: depId, organizationId: user.organizationId }
@@ -355,7 +364,7 @@ const updateMyProfile = async (req, res, next) => {
       updateData.departmentId = depId;
     }
 
-    if (jobRole) {
+    if (jobRole && user.role !== 'SuperAdmin') {
       updateData.jobRole = jobRole.trim();
     }
 
@@ -368,26 +377,24 @@ const updateMyProfile = async (req, res, next) => {
 
     const updatedUserRecord = await prisma.user.update({
       where: { id: user.id },
-      data: updateData
-    });
-
-    if (user.role === 'Employee' && updatedUserRecord.isProfileComplete) {
-      await autoAssignMandatoryTrainings(updatedUserRecord.id, updatedUserRecord.organizationId);
-      await autoAssignDeptRoleTrainings(updatedUserRecord.id, updatedUserRecord.organizationId, updatedUserRecord.departmentId, updatedUserRecord.jobRole);
-      await autoAssignRulesToNewEmployee(updatedUserRecord.id, updatedUserRecord.organizationId);
-    }
-
-    await logAuditAction(req.user, 'UPDATE_PROFILE', 'User', updatedUserRecord.id, `Profile updated for ${updatedUserRecord.role} ${updatedUserRecord.name}`);
-
-    const finalUser = await prisma.user.findUnique({
-      where: { id: updatedUserRecord.id },
+      data: updateData,
       include: {
         organization: { select: { id: true, name: true, code: true } },
         department: { select: { id: true, name: true, jobRoles: true } }
       }
     });
 
-    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(finalUser) }, 'Profile updated successfully'));
+    if (user.role === 'Employee' && updatedUserRecord.isProfileComplete) {
+      autoAssignMandatoryTrainings(updatedUserRecord.id, updatedUserRecord.organizationId).catch(console.error);
+      autoAssignDeptRoleTrainings(updatedUserRecord.id, updatedUserRecord.organizationId, updatedUserRecord.departmentId, updatedUserRecord.jobRole).catch(console.error);
+      autoAssignRulesToNewEmployee(updatedUserRecord.id, updatedUserRecord.organizationId).catch(console.error);
+    }
+
+    logAuditAction(req.user, 'UPDATE_PROFILE', 'User', updatedUserRecord.id, `Profile updated for ${updatedUserRecord.role} ${updatedUserRecord.name}`).catch((err) => {
+      console.error('Failed to log audit action for updateMyProfile:', err);
+    });
+
+    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(updatedUserRecord) }, 'Profile updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -466,7 +473,8 @@ const updateProfilePicture = async (req, res, next) => {
 
     const userId = String(req.user.id || req.user._id);
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, name: true, role: true, profilePicturePublicId: true }
     });
     if (!user) {
       throw new ApiError(404, 'User not found');
@@ -475,11 +483,9 @@ const updateProfilePicture = async (req, res, next) => {
     const cloudinaryInstance = getCloudinary();
 
     if (user.profilePicturePublicId) {
-      try {
-        await cloudinaryInstance.uploader.destroy(user.profilePicturePublicId);
-      } catch (err) {
+      cloudinaryInstance.uploader.destroy(user.profilePicturePublicId).catch((err) => {
         console.error('Failed to destroy previous profile picture from Cloudinary:', err);
-      }
+      });
     }
 
     const uploadResult = await new Promise((resolve, reject) => {
@@ -502,20 +508,18 @@ const updateProfilePicture = async (req, res, next) => {
         profilePicture: uploadResult.secure_url,
         profilePicturePublicId: uploadResult.public_id,
         isCustomAvatar: true
-      }
-    });
-
-    await logAuditAction(req.user, 'UPDATE_PROFILE_PICTURE', 'User', user.id, `Updated profile picture for ${user.role} ${user.name}`);
-
-    const finalUser = await prisma.user.findUnique({
-      where: { id: updatedUserRecord.id },
+      },
       include: {
         organization: { select: { id: true, name: true, code: true } },
         department: { select: { id: true, name: true, jobRoles: true } }
       }
     });
 
-    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(finalUser) }, 'Profile picture updated successfully'));
+    logAuditAction(req.user, 'UPDATE_PROFILE_PICTURE', 'User', user.id, `Updated profile picture for ${user.role} ${user.name}`).catch((err) => {
+      console.error('Failed to log audit action for updateProfilePicture:', err);
+    });
+
+    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(updatedUserRecord) }, 'Profile picture updated successfully'));
   } catch (error) {
     next(error);
   }
@@ -530,7 +534,8 @@ const resetProfilePicture = async (req, res, next) => {
   try {
     const userId = String(req.user.id || req.user._id);
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
+      select: { id: true, name: true, role: true, profilePicturePublicId: true }
     });
     if (!user) {
       throw new ApiError(404, 'User not found');
@@ -538,11 +543,9 @@ const resetProfilePicture = async (req, res, next) => {
 
     if (user.profilePicturePublicId) {
       const cloudinaryInstance = getCloudinary();
-      try {
-        await cloudinaryInstance.uploader.destroy(user.profilePicturePublicId);
-      } catch (err) {
+      cloudinaryInstance.uploader.destroy(user.profilePicturePublicId).catch((err) => {
         console.error('Failed to destroy Cloudinary image:', err);
-      }
+      });
     }
 
     const updatedUserRecord = await prisma.user.update({
@@ -551,20 +554,18 @@ const resetProfilePicture = async (req, res, next) => {
         profilePicturePublicId: null,
         isCustomAvatar: false,
         profilePicture: getDefaultDiceBearAvatar(user.name)
-      }
-    });
-
-    await logAuditAction(req.user, 'RESET_PROFILE_PICTURE', 'User', user.id, `Reset profile picture to default for ${user.name}`);
-
-    const finalUser = await prisma.user.findUnique({
-      where: { id: updatedUserRecord.id },
+      },
       include: {
         organization: { select: { id: true, name: true, code: true } },
         department: { select: { id: true, name: true, jobRoles: true } }
       }
     });
 
-    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(finalUser) }, 'Profile picture reset to default avatar successfully'));
+    logAuditAction(req.user, 'RESET_PROFILE_PICTURE', 'User', user.id, `Reset profile picture to default for ${user.name}`).catch((err) => {
+      console.error('Failed to log audit action for resetProfilePicture:', err);
+    });
+
+    res.status(200).json(new ApiResponse(200, { user: formatUserResponse(updatedUserRecord) }, 'Profile picture reset to default avatar successfully'));
   } catch (error) {
     next(error);
   }

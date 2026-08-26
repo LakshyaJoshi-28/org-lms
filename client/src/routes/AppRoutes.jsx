@@ -35,6 +35,7 @@ import { MyReport } from '../pages/employee/MyReport';
 
 // Super Admin Pages
 import { SuperAdminDashboard } from '../pages/superAdmin/SuperAdminDashboard';
+import { SuperAdminSettings } from '../pages/superAdmin/SuperAdminSettings';
 
 // Common Pages
 import { NotificationsPage } from '../pages/common/NotificationsPage';
@@ -64,6 +65,7 @@ export const AppRoutes = () => {
       <Route element={<ProtectedRoute allowedRoles={['SuperAdmin']} />}>
         <Route element={<MainLayout />}>
           <Route path="/super-admin" element={<SuperAdminDashboard />} />
+          <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
         </Route>
       </Route>
 

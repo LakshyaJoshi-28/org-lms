@@ -14,7 +14,8 @@ import {
   Clock,
   GraduationCap,
   MessageSquare,
-  Bell
+  Bell,
+  User
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -50,7 +51,8 @@ export const Sidebar = () => {
   ];
 
   const superAdminLinks = [
-    { to: '/super-admin', label: 'Organizations Console', icon: Building2, end: true }
+    { to: '/super-admin', label: 'Organizations Console', icon: Building2, end: true },
+    { to: '/super-admin/settings', label: 'Account Settings', icon: User }
   ];
 
   const links =

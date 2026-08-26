@@ -102,7 +102,7 @@ const getAllOrganizations = async (req, res, next) => {
 
     const dbStart = performance.now();
 
-    const [orgs, totalCount, activeOrgCount, totalUsersCount] = await Promise.all([
+    const [orgs, totalCount, activeOrgCount, totalUsersCount, searchGlobalCount] = await Promise.all([
       prisma.organization.findMany({
         where: whereClause,
         skip,
@@ -129,10 +129,11 @@ const getAllOrganizations = async (req, res, next) => {
       }),
       prisma.user.count({
         where: { role: { not: 'SuperAdmin' } }
-      })
+      }),
+      search ? prisma.organization.count() : Promise.resolve(null)
     ]);
 
-    const globalOrgCount = search ? await prisma.organization.count() : totalCount;
+    const globalOrgCount = search ? searchGlobalCount : totalCount;
     const dbTime = (performance.now() - dbStart).toFixed(2);
 
     const formattedOrgs = orgs.map(org => {

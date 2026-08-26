@@ -6,7 +6,7 @@ import { updateProfile, updateProfilePicture, resetProfilePicture, getDepartment
 import { Upload, RefreshCw, User, Briefcase, Building2, Check, AlertCircle } from 'lucide-react';
 
 export const ProfileModal = ({ isOpen, onClose }) => {
-  const { user, refreshUser } = useAuth();
+  const { user, setUser } = useAuth();
   const { addToast } = useNotification();
 
   const [name, setName] = useState(user?.name || '');
@@ -17,7 +17,6 @@ export const ProfileModal = ({ isOpen, onClose }) => {
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingPic, setUploadingPic] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -52,8 +51,10 @@ export const ProfileModal = ({ isOpen, onClose }) => {
     e.preventDefault();
     setSavingProfile(true);
     try {
-      await updateProfile({ name, departmentId, jobRole });
-      await refreshUser();
+      const res = await updateProfile({ name, departmentId, jobRole });
+      if (res.data?.data?.user) {
+        setUser(res.data.data.user);
+      }
       addToast('success', 'Profile details updated successfully');
       onClose();
     } catch (err) {
@@ -72,8 +73,10 @@ export const ProfileModal = ({ isOpen, onClose }) => {
 
     setUploadingPic(true);
     try {
-      await updateProfilePicture(formData);
-      await refreshUser();
+      const res = await updateProfilePicture(formData);
+      if (res.data?.data?.user) {
+        setUser(res.data.data.user);
+      }
       addToast('success', 'Profile picture updated successfully!');
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to upload profile picture');
@@ -85,8 +88,10 @@ export const ProfileModal = ({ isOpen, onClose }) => {
   const handleResetPic = async () => {
     setUploadingPic(true);
     try {
-      await resetProfilePicture();
-      await refreshUser();
+      const res = await resetProfilePicture();
+      if (res.data?.data?.user) {
+        setUser(res.data.data.user);
+      }
       addToast('success', 'Profile picture reset to default DiceBear avatar');
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to reset profile picture');
