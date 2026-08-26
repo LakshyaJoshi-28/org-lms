@@ -31,16 +31,10 @@ export const MyTrainings = () => {
 
   const handleTogglePublish = async (t) => {
     const newStatus = t.status === 'published' ? 'draft' : 'published';
-    const targetId = t._id || t.id;
     try {
-      const res = await updateTraining(targetId, { status: newStatus });
-      const updated = res.data?.data?.training;
-      if (updated) {
-        setTrainings(prev => prev.map(item => (item._id === targetId || item.id === targetId) ? updated : item));
-      } else {
-        fetchData();
-      }
+      await updateTraining(t._id, { status: newStatus });
       addToast('success', `Course status changed to ${newStatus}`);
+      fetchData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to update status');
     }
@@ -50,8 +44,8 @@ export const MyTrainings = () => {
     if (!window.confirm('Are you sure you want to delete this training course?')) return;
     try {
       await deleteTraining(id);
-      setTrainings(prev => prev.filter(t => t._id !== id && t.id !== id));
       addToast('success', 'Training course deleted');
+      fetchData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to delete training');
     }
