@@ -21,7 +21,10 @@ const pendingGetRequests = new Map();
 const responseCache = new Map();
 const DEFAULT_TTL = 4000; // 4 seconds memory TTL
 
-export const clearApiCache = () => {
+export const clearApiCache = (url = '') => {
+  if (url && (url.includes('/notifications') || url.includes('/progress'))) {
+    return; // Do not clear general entity cache for notification reads or progress pings
+  }
   responseCache.clear();
 };
 
@@ -31,17 +34,17 @@ const originalPut = api.put.bind(api);
 const originalDelete = api.delete.bind(api);
 
 api.post = function (url, data, config) {
-  clearApiCache();
+  clearApiCache(url);
   return originalPost(url, data, config);
 };
 
 api.put = function (url, data, config) {
-  clearApiCache();
+  clearApiCache(url);
   return originalPut(url, data, config);
 };
 
 api.delete = function (url, config) {
-  clearApiCache();
+  clearApiCache(url);
   return originalDelete(url, config);
 };
 

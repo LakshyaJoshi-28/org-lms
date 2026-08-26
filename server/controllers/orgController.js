@@ -8,13 +8,13 @@ const { logAuditAction } = require('../services/auditLogService');
 
 const formatUserResponse = (user) => {
   if (!user) return null;
-  const userObj = withId(user);
+  const userObj = { ...user, _id: user.id };
   delete userObj.password;
   if (userObj.department) {
-    userObj.departmentId = withId(userObj.department);
+    userObj.departmentId = { ...userObj.department, _id: userObj.department.id };
   }
   if (userObj.organization) {
-    userObj.organizationId = withId(userObj.organization);
+    userObj.organizationId = { ...userObj.organization, _id: userObj.organization.id };
   }
   return userObj;
 };
