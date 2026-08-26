@@ -4,7 +4,13 @@ const { PrismaClient } = require('@prisma/client');
 let prisma;
 
 const createPrismaClient = () => {
+  const dbUrl = process.env.DATABASE_URL || process.env.DIRECT_URL;
   const baseClient = new PrismaClient({
+    datasources: {
+      db: {
+        url: dbUrl
+      }
+    },
     log: [
       { emit: 'event', level: 'error' },
       { emit: 'event', level: 'warn' }
@@ -25,7 +31,13 @@ const createPrismaClient = () => {
 
           while (true) {
             try {
-              return await query(args);
+              const start = Date.now();
+              const result = await query(args);
+              const duration = Date.now() - start;
+              if (duration >= 50) {
+                console.log(`[DB PERF] ${model}.${operation} - ${duration} ms`);
+              }
+              return result;
             } catch (error) {
               const errCode = error?.code || '';
               const errMsg = error?.message || '';

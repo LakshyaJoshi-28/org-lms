@@ -22,6 +22,19 @@ const { cacheMiddleware, invalidateServerCache } = require('./middleware/cacheMi
 
 const app = express();
 
+// Performance logging middleware for API response times
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const url = req.originalUrl || req.url || '';
+    if (url.startsWith('/api') && !url.startsWith('/api/health')) {
+      const duration = Date.now() - start;
+      console.log(`[PERF] ${req.method} ${url} - ${duration} ms`);
+    }
+  });
+  next();
+});
+
 app.set('trust proxy', 1);
 
 app.use(cors({
