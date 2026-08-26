@@ -13,11 +13,13 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
 
+const { cacheMiddleware } = require('../middleware/cacheMiddleware');
+
 router.use(protect);
 
 router.post('/', authorizeRoles('Instructor', 'Admin'), createAssignment);
-router.get('/instructor-submissions', authorizeRoles('Instructor', 'Admin'), getInstructorSubmissions);
-router.get('/my-feedback', authorizeRoles('Employee'), getEmployeeFeedback);
+router.get('/instructor-submissions', authorizeRoles('Instructor', 'Admin'), cacheMiddleware(), getInstructorSubmissions);
+router.get('/my-feedback', authorizeRoles('Employee'), cacheMiddleware(), getEmployeeFeedback);
 
 router.route('/:id')
   .get(getAssignmentById)

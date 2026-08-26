@@ -322,6 +322,8 @@ model Assignment {
   subSections    TrainingSubSection[]
 
   @@index([trainingId])
+  @@index([createdBy])
+  @@index([organizationId, createdBy])
   @@map("assignments")
 }
 

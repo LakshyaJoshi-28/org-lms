@@ -422,33 +422,50 @@ const getInstructorSubmissions = async (req, res, next) => {
     }
 
     const assignments = await prisma.assignment.findMany({
-      where: {
-        OR: [
-          { trainingId: { in: targetTrainingIds } },
-          { createdBy: userId }
-        ]
-      },
+      where: targetTrainingIds.length > 0
+        ? {
+            OR: [
+              { trainingId: { in: targetTrainingIds } },
+              { createdBy: userId }
+            ]
+          }
+        : { createdBy: userId },
       select: { id: true }
     });
 
     const assignmentIds = assignments.map(a => a.id);
 
-    const submissionsList = await prisma.assignmentSubmission.findMany({
-      where: { assignmentId: { in: assignmentIds } },
-      include: {
-        assignment: {
+    const submissionsList = assignmentIds.length > 0
+      ? await prisma.assignmentSubmission.findMany({
+          where: { assignmentId: { in: assignmentIds } },
           select: {
             id: true,
-            title: true,
-            maxScore: true,
-            training: { select: { id: true, title: true } }
-          }
-        },
-        employee: { select: { id: true, name: true, email: true, departmentId: true, profilePicture: true } },
-        reviewer: { select: { id: true, name: true, email: true } }
-      },
-      orderBy: { submittedAt: 'desc' }
-    });
+            assignmentId: true,
+            employeeId: true,
+            reviewedBy: true,
+            submissionText: true,
+            fileUrl: true,
+            filePublicId: true,
+            score: true,
+            feedback: true,
+            status: true,
+            submittedAt: true,
+            reviewedAt: true,
+            createdAt: true,
+            assignment: {
+              select: {
+                id: true,
+                title: true,
+                maxScore: true,
+                training: { select: { id: true, title: true } }
+              }
+            },
+            employee: { select: { id: true, name: true, email: true, departmentId: true, profilePicture: true } },
+            reviewer: { select: { id: true, name: true, email: true } }
+          },
+          orderBy: { submittedAt: 'desc' }
+        })
+      : [];
 
     const submissions = submissionsList.map(s => {
       const transformed = withId(s);

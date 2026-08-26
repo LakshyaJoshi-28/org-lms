@@ -641,11 +641,25 @@ const getTrainings = async (req, res, next) => {
     });
 
     const trainings = trainingsList.map(t => {
-      const transformed = withId(t);
-      if (transformed.category) transformed.categoryId = transformed.category;
-      if (transformed.department) transformed.departmentId = transformed.department;
-      if (transformed.instructor) transformed.createdBy = transformed.instructor;
-      return transformed;
+      const catObj = t.category ? { id: t.category.id, _id: t.category.id, name: t.category.name } : null;
+      const deptObj = t.department ? { id: t.department.id, _id: t.department.id, name: t.department.name } : null;
+      const instObj = t.instructor ? { id: t.instructor.id, _id: t.instructor.id, name: t.instructor.name, email: t.instructor.email } : null;
+
+      return {
+        id: t.id,
+        _id: t.id,
+        title: t.title,
+        categoryId: catObj || t.categoryId,
+        departmentId: deptObj || t.departmentId,
+        createdBy: instObj || t.createdBy,
+        organizationId: t.organizationId,
+        durationDays: t.durationDays,
+        isMandatory: t.isMandatory,
+        isPublished: t.isPublished,
+        status: t.status,
+        thumbnailUrl: t.thumbnailUrl,
+        createdAt: t.createdAt
+      };
     });
 
     res.status(200).json(new ApiResponse(200, { trainings }, 'Trainings retrieved successfully'));
