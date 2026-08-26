@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 let prisma;
 
 const createPrismaClient = () => {
-  const dbUrl = process.env.DATABASE_URL || process.env.DIRECT_URL;
+  const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
   const baseClient = new PrismaClient({
     datasources: {
       db: {
