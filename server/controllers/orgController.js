@@ -8,15 +8,29 @@ const { logAuditAction } = require('../services/auditLogService');
 
 const formatUserResponse = (user) => {
   if (!user) return null;
-  const userObj = { ...user, _id: user.id };
-  delete userObj.password;
-  if (userObj.department) {
-    userObj.departmentId = { ...userObj.department, _id: userObj.department.id };
-  }
-  if (userObj.organization) {
-    userObj.organizationId = { ...userObj.organization, _id: userObj.organization.id };
-  }
-  return userObj;
+  const deptObj = user.department
+    ? { id: user.department.id, _id: user.department.id, name: user.department.name }
+    : (user.departmentId ? (typeof user.departmentId === 'object' ? user.departmentId : { id: user.departmentId, _id: user.departmentId }) : null);
+
+  const orgObj = user.organization
+    ? { id: user.organization.id, _id: user.organization.id, name: user.organization.name, code: user.organization.code }
+    : (user.organizationId ? (typeof user.organizationId === 'object' ? user.organizationId : { id: user.organizationId, _id: user.organizationId }) : null);
+
+  return {
+    id: user.id,
+    _id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    jobRole: user.jobRole || null,
+    isProfileComplete: user.isProfileComplete || false,
+    profilePicture: user.profilePicture || null,
+    departmentId: deptObj,
+    organizationId: orgObj,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
+  };
 };
 
 /**
