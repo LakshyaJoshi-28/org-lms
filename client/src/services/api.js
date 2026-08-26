@@ -19,7 +19,7 @@ const api = axios.create({
 // In-flight GET request deduplicator and short-lived client-side response cache
 const pendingGetRequests = new Map();
 const responseCache = new Map();
-const DEFAULT_TTL = 4000; // 4 seconds memory TTL
+const DEFAULT_TTL = 10000; // 10 seconds memory TTL
 
 export const clearApiCache = (url = '') => {
   if (url && (url.includes('/notifications') || url.includes('/progress'))) {

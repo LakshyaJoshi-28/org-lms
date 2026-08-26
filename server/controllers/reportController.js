@@ -13,21 +13,14 @@ const getFullOrgReport = async (req, res, next) => {
     const now = new Date();
 
     const [
-      totalEmployees,
       totalInstructors,
-      totalDepartments,
-      activeTrainingsCount,
       rawAssignmentsList,
       departmentsList,
       employeesList,
       trainingsList,
-      activeAutoRulesList,
-      mandatoryTrainingsList
+      activeAutoRulesList
     ] = await Promise.all([
-      prisma.user.count({ where: { organizationId: orgId, role: 'Employee' } }),
       prisma.user.count({ where: { organizationId: orgId, role: 'Instructor' } }),
-      prisma.department.count({ where: { organizationId: orgId, status: 'active' } }),
-      prisma.training.count({ where: { organizationId: orgId, isPublished: true, status: 'published' } }),
       prisma.trainingAssignment.findMany({
         where: { organizationId: orgId },
         include: {
@@ -73,12 +66,13 @@ const getFullOrgReport = async (req, res, next) => {
           },
           creator: { select: { id: true, name: true, email: true } }
         }
-      }),
-      prisma.training.findMany({
-        where: { organizationId: orgId, isMandatory: true, isPublished: true },
-        include: { category: { select: { id: true, name: true } } }
       })
     ]);
+
+    const totalEmployees = employeesList.length;
+    const totalDepartments = departmentsList.length;
+    const activeTrainingsCount = trainingsList.length;
+    const mandatoryTrainingsList = trainingsList.filter(t => t.isMandatory);
 
     const allAssignments = rawAssignmentsList.map(a => {
       const transformed = withId(a);
@@ -99,6 +93,22 @@ const getFullOrgReport = async (req, res, next) => {
 
     const overallComplianceRate = totalAssignments > 0 ? Math.round((completedAssignments / totalAssignments) * 100) : 0;
 
+    // Build fast lookup Hash Maps
+    const assignsByEmp = new Map();
+    const assignsByTraining = new Map();
+    allAssignments.forEach(a => {
+      if (a.employeeId && a.employeeId._id) {
+        const empId = a.employeeId._id.toString();
+        if (!assignsByEmp.has(empId)) assignsByEmp.set(empId, []);
+        assignsByEmp.get(empId).push(a);
+      }
+      if (a.trainingId && a.trainingId._id) {
+        const trgId = a.trainingId._id.toString();
+        if (!assignsByTraining.has(trgId)) assignsByTraining.set(trgId, []);
+        assignsByTraining.get(trgId).push(a);
+      }
+    });
+
     // 2. Department & Role Drill-Down Analytics
     const departments = withId(departmentsList);
 
@@ -109,16 +119,25 @@ const getFullOrgReport = async (req, res, next) => {
       return transformed;
     });
 
+    const empByDept = new Map();
+    employees.forEach(e => {
+      const dId = typeof e.departmentId === 'object' ? e.departmentId?._id : e.departmentId;
+      if (dId) {
+        const key = dId.toString();
+        if (!empByDept.has(key)) empByDept.set(key, []);
+        empByDept.get(key).push(e);
+      }
+    });
+
     const departmentAnalytics = [];
 
     for (const dep of departments) {
-      const depEmployees = employees.filter(e => {
-        const dId = typeof e.departmentId === 'object' ? e.departmentId?._id : e.departmentId;
-        return String(dId) === String(dep._id);
+      const depEmployees = empByDept.get(dep._id.toString()) || [];
+      const depAssignments = [];
+      depEmployees.forEach(e => {
+        const empAssigns = assignsByEmp.get(e._id.toString()) || [];
+        depAssignments.push(...empAssigns);
       });
-
-      const depEmpIds = new Set(depEmployees.map(e => e._id.toString()));
-      const depAssignments = allAssignments.filter(a => a.employeeId && depEmpIds.has(a.employeeId._id.toString()));
 
       const depTotalAssigned = depAssignments.length;
       const depCompleted = depAssignments.filter(a => a.status === 'Completed').length;
@@ -134,8 +153,11 @@ const getFullOrgReport = async (req, res, next) => {
       const allRolesInDept = Array.from(new Set([...(dep.jobRoles || []), ...depEmployees.map(e => e.jobRole).filter(Boolean)]));
       const roleAnalytics = allRolesInDept.map(roleName => {
         const roleEmployees = depEmployees.filter(e => e.jobRole === roleName);
-        const roleEmpIds = new Set(roleEmployees.map(e => e._id.toString()));
-        const roleAssignments = depAssignments.filter(a => a.employeeId && roleEmpIds.has(a.employeeId._id.toString()));
+        const roleAssignments = [];
+        roleEmployees.forEach(e => {
+          const empAssigns = assignsByEmp.get(e._id.toString()) || [];
+          roleAssignments.push(...empAssigns);
+        });
 
         const rTotal = roleAssignments.length;
         const rComp = roleAssignments.filter(a => a.status === 'Completed').length;
@@ -154,7 +176,7 @@ const getFullOrgReport = async (req, res, next) => {
           overdue: rOverdue,
           complianceRate: rCompliance,
           employees: roleEmployees.map(emp => {
-            const empAssigns = roleAssignments.filter(a => a.employeeId._id.toString() === emp._id.toString());
+            const empAssigns = assignsByEmp.get(emp._id.toString()) || [];
             const eComp = empAssigns.filter(a => a.status === 'Completed').length;
             const eTotal = empAssigns.length;
             const eAvgProgress = eTotal > 0 ? Math.round(empAssigns.reduce((acc, a) => acc + (a.progressPercentage || 0), 0) / eTotal) : 0;
@@ -193,7 +215,7 @@ const getFullOrgReport = async (req, res, next) => {
 
     // 3. Employee Progress Table Analytics
     const employeeAnalytics = employees.map(emp => {
-      const empAssigns = allAssignments.filter(a => a.employeeId && a.employeeId._id.toString() === emp._id.toString());
+      const empAssigns = assignsByEmp.get(emp._id.toString()) || [];
       const eTotal = empAssigns.length;
       const eComp = empAssigns.filter(a => a.status === 'Completed').length;
       const eInProg = empAssigns.filter(a => a.status === 'In Progress').length;
@@ -239,7 +261,7 @@ const getFullOrgReport = async (req, res, next) => {
     });
 
     const trainingAnalytics = trainings.map(t => {
-      const tAssigns = allAssignments.filter(a => a.trainingId && a.trainingId._id.toString() === t._id.toString());
+      const tAssigns = assignsByTraining.get(t._id.toString()) || [];
       const tTotal = tAssigns.length;
       const tComp = tAssigns.filter(a => a.status === 'Completed').length;
       const tInProg = tAssigns.filter(a => a.status === 'In Progress').length;

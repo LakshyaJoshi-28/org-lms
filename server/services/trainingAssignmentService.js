@@ -348,28 +348,33 @@ const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => 
 const getAutoAssignmentRules = async (organizationId) => {
   const orgId = String(organizationId);
 
-  const [rules, coverageCounts] = await Promise.all([
-    prisma.autoAssignmentRule.findMany({
-      where: { organizationId: orgId },
-      include: {
-        training: {
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            category: { select: { id: true, name: true } }
-          }
-        },
-        creator: { select: { id: true, name: true, email: true } }
+  const rules = await prisma.autoAssignmentRule.findMany({
+    where: { organizationId: orgId },
+    include: {
+      training: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          category: { select: { id: true, name: true } }
+        }
       },
-      orderBy: { createdAt: 'desc' }
-    }),
-    prisma.trainingAssignment.groupBy({
-      by: ['trainingId'],
-      where: { organizationId: orgId },
-      _count: { trainingId: true }
-    })
-  ]);
+      creator: { select: { id: true, name: true, email: true } }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  if (rules.length === 0) {
+    return [];
+  }
+
+  const targetTrainingIds = Array.from(new Set(rules.map(r => r.trainingId)));
+
+  const coverageCounts = await prisma.trainingAssignment.groupBy({
+    by: ['trainingId'],
+    where: { organizationId: orgId, trainingId: { in: targetTrainingIds } },
+    _count: { trainingId: true }
+  });
 
   const countMap = new Map(coverageCounts.map(c => [c.trainingId, c._count.trainingId]));
 

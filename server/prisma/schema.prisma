@@ -382,6 +382,7 @@ model TrainingAssignment {
   @@index([organizationId, status])
   @@index([employeeId, organizationId])
   @@index([organizationId, createdAt])
+  @@index([organizationId, assignedDate])
   @@map("training_assignments")
 }
 

@@ -36,32 +36,35 @@ const getNotifications = async (req, res, next) => {
       whereClause.recipientId = userId;
     }
 
-    const [notificationsList, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          title: true,
-          message: true,
-          type: true,
-          isRead: true,
-          role: true,
-          recipientId: true,
-          organizationId: true,
-          relatedEntityType: true,
-          relatedEntityId: true,
-          createdAt: true
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 50
-      }),
-      prisma.notification.count({
+    const notificationsList = await prisma.notification.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        type: true,
+        isRead: true,
+        role: true,
+        recipientId: true,
+        organizationId: true,
+        relatedEntityType: true,
+        relatedEntityId: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+
+    let unreadCount = notificationsList.filter(n => !n.isRead).length;
+
+    if (notificationsList.length === 50) {
+      unreadCount = await prisma.notification.count({
         where: {
           ...whereClause,
           isRead: false
         }
-      })
-    ]);
+      });
+    }
 
     const notifications = notificationsList.map(formatNotification);
 
