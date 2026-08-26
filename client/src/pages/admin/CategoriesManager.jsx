@@ -52,14 +52,26 @@ export const CategoriesManager = () => {
     setSubmitting(true);
     try {
       if (editingCat) {
-        await updateCategory(editingCat._id, { name, description });
+        const targetId = editingCat._id || editingCat.id;
+        const res = await updateCategory(targetId, { name, description });
+        const updated = res.data?.data?.category;
+        if (updated) {
+          setCategories(prev => prev.map(c => (c._id === targetId || c.id === targetId) ? updated : c));
+        } else {
+          fetchCats();
+        }
         addToast('success', 'Category updated successfully');
       } else {
-        await createCategory({ name, description });
+        const res = await createCategory({ name, description });
+        const created = res.data?.data?.category;
+        if (created) {
+          setCategories(prev => [...prev, created]);
+        } else {
+          fetchCats();
+        }
         addToast('success', 'Category created successfully');
       }
       setShowModal(false);
-      fetchCats();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Action failed');
     } finally {
@@ -71,8 +83,8 @@ export const CategoriesManager = () => {
     if (!window.confirm('Are you sure you want to deactivate this category?')) return;
     try {
       await deleteCategory(id);
+      setCategories(prev => prev.filter(c => c._id !== id && c.id !== id));
       addToast('success', 'Category deactivated');
-      fetchCats();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to deactivate category');
     }

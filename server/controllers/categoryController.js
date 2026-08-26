@@ -23,17 +23,30 @@ const createCategory = async (req, res, next) => {
       }
     });
 
-    if (existingCategory) {
+    if (existingCategory && existingCategory.status === 'active') {
       throw new ApiError(400, 'Training category with this name already exists in your organization');
     }
 
-    const category = await prisma.trainingCategory.create({
-      data: {
-        name: name.trim(),
-        description: description || null,
-        organizationId: orgId
-      }
-    });
+    let category;
+    if (existingCategory && existingCategory.status !== 'active') {
+      category = await prisma.trainingCategory.update({
+        where: { id: existingCategory.id },
+        data: {
+          name: name.trim(),
+          description: description || null,
+          status: 'active'
+        }
+      });
+    } else {
+      category = await prisma.trainingCategory.create({
+        data: {
+          name: name.trim(),
+          description: description || null,
+          organizationId: orgId,
+          status: 'active'
+        }
+      });
+    }
 
     res.status(201).json(new ApiResponse(201, { category: withId(category) }, 'Training category created successfully'));
   } catch (error) {
@@ -54,6 +67,14 @@ const getCategories = async (req, res, next) => {
       where: {
         organizationId: orgId,
         status: 'active'
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        organizationId: true,
+        status: true,
+        createdAt: true
       },
       orderBy: { name: 'asc' }
     });
@@ -84,6 +105,20 @@ const updateCategory = async (req, res, next) => {
 
     if (!category) {
       throw new ApiError(404, 'Training category not found');
+    }
+
+    if (name && name.trim() !== category.name) {
+      const existingActive = await prisma.trainingCategory.findFirst({
+        where: {
+          name: name.trim(),
+          organizationId: orgId,
+          status: 'active',
+          id: { not: category.id }
+        }
+      });
+      if (existingActive) {
+        throw new ApiError(400, 'Training category with this name already exists in your organization');
+      }
     }
 
     const updateData = {};
