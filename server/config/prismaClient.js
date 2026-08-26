@@ -4,7 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 let prisma;
 
 const createPrismaClient = () => {
-  const dbUrl = process.env.DATABASE_URL || process.env.DIRECT_URL;
+  const dbUrl = process.env.DIRECT_URL || process.env.DATABASE_URL;
   const baseClient = new PrismaClient({
     datasources: {
       db: {
@@ -27,7 +27,7 @@ const createPrismaClient = () => {
         async $allOperations({ model, operation, args, query }) {
           let attempts = 0;
           const maxRetries = 5;
-          const retryDelays = [50, 150, 300, 600, 1200];
+          const retryDelays = [500, 1000, 1500, 2500, 3500];
 
           while (true) {
             try {

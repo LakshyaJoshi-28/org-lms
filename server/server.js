@@ -17,8 +17,6 @@ connectDB()
     const app = require('./app');
 
     server = http.createServer(app);
-    server.keepAliveTimeout = 65000; // 65 seconds to prevent cloud proxy socket drop race condition
-    server.headersTimeout = 66000;   // 66 seconds (must be greater than keepAliveTimeout)
     initSocket(server);
 
     server.listen(PORT, () => {
