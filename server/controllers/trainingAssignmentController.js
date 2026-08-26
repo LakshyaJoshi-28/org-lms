@@ -331,7 +331,25 @@ const getMyAssignments = async (req, res, next) => {
         employeeId: userId,
         organizationId: orgId
       },
-      include: {
+      select: {
+        id: true,
+        employeeId: true,
+        trainingId: true,
+        assignedBy: true,
+        organizationId: true,
+        assignmentType: true,
+        assignedDate: true,
+        deadline: true,
+        status: true,
+        progressPercentage: true,
+        completedDate: true,
+        overdueCount: true,
+        isLocked: true,
+        lockedAt: true,
+        unlockedAt: true,
+        lockedReason: true,
+        createdAt: true,
+        updatedAt: true,
         training: {
           select: {
             id: true,
