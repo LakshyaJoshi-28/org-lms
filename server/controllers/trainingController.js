@@ -635,7 +635,8 @@ const getTrainings = async (req, res, next) => {
         createdAt: true,
         category: { select: { id: true, name: true } },
         department: { select: { id: true, name: true } },
-        instructor: { select: { id: true, name: true, email: true } }
+        instructor: { select: { id: true, name: true, email: true } },
+        sections: { select: { id: true } }
       },
       orderBy: { createdAt: 'desc' }
     });

@@ -122,12 +122,9 @@ export const MyTrainings = () => {
 
                   <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{t.description || 'No description provided.'}</p>
 
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">
                     <span className="flex items-center">
                       <Layers className="w-3.5 h-3.5 mr-1 text-indigo-500" /> {t.sections?.length || 0} Sections
-                    </span>
-                    <span className="flex items-center">
-                      <Clock className="w-3.5 h-3.5 mr-1 text-amber-500" /> {t.durationDays || 30} Days
                     </span>
                   </div>
                 </div>
