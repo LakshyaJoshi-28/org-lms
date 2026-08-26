@@ -246,16 +246,17 @@ const createInstructor = async (req, res, next) => {
       }
     });
 
-    await logAuditAction(req.user, 'CREATE_INSTRUCTOR', 'User', instructor.id, `Created instructor ${instructor.name} (${instructor.email})`);
-
     const { sendAdminNotification } = require('../services/notificationService');
-    await sendAdminNotification(
-      orgId,
-      'INSTRUCTOR_ADDED',
-      'Instructor Added',
-      `A new instructor, ${instructor.name}, has been added to your organization.`,
-      { entityType: 'User', entityId: instructor.id }
-    );
+    Promise.all([
+      logAuditAction(req.user, 'CREATE_INSTRUCTOR', 'User', instructor.id, `Created instructor ${instructor.name} (${instructor.email})`),
+      sendAdminNotification(
+        orgId,
+        'INSTRUCTOR_ADDED',
+        'Instructor Added',
+        `A new instructor, ${instructor.name}, has been added to your organization.`,
+        { entityType: 'User', entityId: instructor.id }
+      )
+    ]).catch(err => console.error('Background task error in createInstructor:', err));
 
     const userObj = formatUserResponse(instructor);
 
@@ -338,7 +339,7 @@ const createAdmin = async (req, res, next) => {
       }
     });
 
-    await logAuditAction(req.user, 'CREATE_ADMIN', 'User', admin.id, `Created admin ${admin.name} (${admin.email})`);
+    logAuditAction(req.user, 'CREATE_ADMIN', 'User', admin.id, `Created admin ${admin.name} (${admin.email})`).catch(err => console.error('Audit log error in createAdmin:', err));
 
     const userObj = formatUserResponse(admin);
 
@@ -374,7 +375,7 @@ const getEmployees = async (req, res, next) => {
         departmentId: true,
         organizationId: true,
         createdAt: true,
-        department: { select: { id: true, name: true, jobRoles: true } }
+        department: { select: { id: true, name: true } }
       },
       orderBy: { createdAt: 'desc' }
     });

@@ -73,11 +73,16 @@ export const UsersManager = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createInstructor({ name, email, password, departmentId });
+      const res = await createInstructor({ name, email, password, departmentId });
+      const newInst = res.data?.data?.instructor;
+      if (newInst) {
+        setInstructors(prev => [newInst, ...prev]);
+      } else {
+        fetchData();
+      }
       addToast('success', 'Instructor account created successfully');
       setShowInstModal(false);
       setName(''); setEmail(''); setPassword(''); setDepartmentId('');
-      fetchData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to create instructor');
     } finally {
@@ -93,7 +98,6 @@ export const UsersManager = () => {
       addToast('success', 'Organization Admin account created successfully');
       setShowAdminModal(false);
       setName(''); setEmail(''); setPassword('');
-      fetchData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to create admin');
     } finally {
