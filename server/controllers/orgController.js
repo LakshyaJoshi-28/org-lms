@@ -126,7 +126,7 @@ const updateDepartment = async (req, res, next) => {
       data: updateData
     });
 
-    await logAuditAction(req.user, 'UPDATE_DEPARTMENT', 'Department', updatedDepartment.id, `Updated department ${updatedDepartment.name}`);
+    logAuditAction(req.user, 'UPDATE_DEPARTMENT', 'Department', updatedDepartment.id, `Updated department ${updatedDepartment.name}`).catch(err => console.error('Audit log error in updateDepartment:', err));
 
     res.status(200).json(new ApiResponse(200, { department: withId(updatedDepartment) }, 'Department updated successfully'));
   } catch (error) {
@@ -160,7 +160,7 @@ const deleteDepartment = async (req, res, next) => {
       data: { status: 'deactivated' }
     });
 
-    await logAuditAction(req.user, 'DEACTIVATE_DEPARTMENT', 'Department', deactivatedDepartment.id, `Deactivated department ${deactivatedDepartment.name}`);
+    logAuditAction(req.user, 'DEACTIVATE_DEPARTMENT', 'Department', deactivatedDepartment.id, `Deactivated department ${deactivatedDepartment.name}`).catch(err => console.error('Audit log error in deleteDepartment:', err));
 
     res.status(200).json(new ApiResponse(200, {}, 'Department deactivated successfully'));
   } catch (error) {

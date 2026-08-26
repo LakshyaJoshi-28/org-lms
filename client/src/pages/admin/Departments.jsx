@@ -81,14 +81,26 @@ export const Departments = () => {
     setSubmitting(true);
     try {
       if (editingDept) {
-        await updateDepartment(editingDept._id, { name: name.trim(), description: description.trim(), jobRoles });
+        const targetId = editingDept._id || editingDept.id;
+        const res = await updateDepartment(targetId, { name: name.trim(), description: description.trim(), jobRoles });
+        const updated = res.data?.data?.department;
+        if (updated) {
+          setDepartments(prev => prev.map(d => (d._id === targetId || d.id === targetId) ? updated : d));
+        } else {
+          fetchDepts();
+        }
         addToast('success', 'Department updated successfully');
       } else {
-        await createDepartment({ name: name.trim(), description: description.trim(), jobRoles });
+        const res = await createDepartment({ name: name.trim(), description: description.trim(), jobRoles });
+        const created = res.data?.data?.department;
+        if (created) {
+          setDepartments(prev => [...prev, created]);
+        } else {
+          fetchDepts();
+        }
         addToast('success', 'Department created successfully');
       }
       setShowModal(false);
-      fetchDepts();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Action failed');
     } finally {
@@ -100,8 +112,8 @@ export const Departments = () => {
     if (!window.confirm('Are you sure you want to deactivate this department?')) return;
     try {
       await deleteDepartment(id);
+      setDepartments(prev => prev.filter(d => d._id !== id && d.id !== id));
       addToast('success', 'Department deactivated');
-      fetchDepts();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to deactivate department');
     }
