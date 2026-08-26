@@ -36,7 +36,7 @@ export const NotificationProvider = ({ children }) => {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [user]);
+  }, [user?.id, user?.role]);
 
   // Real-time listener for Socket.IO notifications
   useEffect(() => {

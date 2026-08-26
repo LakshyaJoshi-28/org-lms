@@ -459,7 +459,6 @@ const getAdminDashboardReports = async (req, res, next) => {
     const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
     const [
-      totalEmployees,
       totalInstructors,
       activeTrainingsCount,
       departments,
@@ -467,7 +466,6 @@ const getAdminDashboardReports = async (req, res, next) => {
       allAssignments,
       logsList
     ] = await Promise.all([
-      prisma.user.count({ where: { organizationId: orgId, role: 'Employee', status: 'active' } }),
       prisma.user.count({ where: { organizationId: orgId, role: 'Instructor', status: 'active' } }),
       prisma.training.count({ where: { organizationId: orgId, isPublished: true, status: 'published' } }),
       prisma.department.findMany({ where: { organizationId: orgId, status: 'active' }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
@@ -475,6 +473,8 @@ const getAdminDashboardReports = async (req, res, next) => {
       prisma.trainingAssignment.findMany({ where: { organizationId: orgId }, select: { id: true, employeeId: true, status: true, progressPercentage: true } }),
       prisma.auditLog.findMany({ where: { organizationId: orgId }, select: { id: true, action: true, details: true, userName: true, userRole: true, timestamp: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 10 })
     ]);
+
+    const totalEmployees = allEmployees.length;
 
     const totalAssignmentsCount = allAssignments.length;
     const completedAssignmentsCount = allAssignments.filter(a => a.status === 'Completed').length;

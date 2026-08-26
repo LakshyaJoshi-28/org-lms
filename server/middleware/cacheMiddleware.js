@@ -37,7 +37,7 @@ const cacheMiddleware = (duration = DEFAULT_SERVER_TTL) => {
 const invalidateServerCache = (req, res, next) => {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     const url = req.originalUrl || req.url || '';
-    if (!url.includes('/notifications') && !url.includes('/progress')) {
+    if (!url.includes('/notifications') && !url.includes('/progress') && !url.includes('/status') && !url.includes('/auto-rules')) {
       responseCache.clear();
     }
   }
