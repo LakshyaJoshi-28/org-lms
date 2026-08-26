@@ -32,41 +32,41 @@ export const Login = () => {
   };
 
   return (
-    <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-6 animate-fade-in">
+    <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-800 shadow-2xl space-y-6 animate-fade-in">
       <div className="space-y-2">
-        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Sign In to IT360 LMS</h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        <h2 className="text-2xl font-black text-white tracking-tight">Sign In to IT360 LMS</h2>
+        <p className="text-xs text-slate-400 leading-relaxed">
           Enter your organizational credentials to access your personalized learning dashboard.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Work Email Address</label>
+          <label className="block text-xs font-bold text-slate-300 mb-1.5">Work Email Address</label>
           <div className="relative">
-            <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+            <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="name@company.com"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+          <label className="block text-xs font-bold text-slate-300 mb-1.5">Password</label>
           <div className="relative">
-            <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+            <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
         </div>
@@ -87,10 +87,10 @@ export const Login = () => {
         </button>
       </form>
 
-      <div className="pt-5 border-t border-slate-200 dark:border-slate-800 text-center text-xs">
-        <p className="text-slate-500 dark:text-slate-400">
+      <div className="pt-5 border-t border-slate-800/80 text-center text-xs">
+        <p className="text-slate-400">
           New employee?{' '}
-          <Link to="/register-employee" className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold transition-colors">
+          <Link to="/register-employee" className="text-blue-400 hover:text-blue-300 font-bold underline transition-colors">
             Register Employee Account
           </Link>
         </p>

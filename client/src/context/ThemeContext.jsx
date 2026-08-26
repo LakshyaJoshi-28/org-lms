@@ -5,7 +5,7 @@ const ThemeContext = createContext();
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('it360_lms_theme');
-    return saved ? saved : 'light';
+    return saved ? saved : 'dark';
   });
 
   useEffect(() => {

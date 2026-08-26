@@ -9,8 +9,6 @@
     font-family: var(--font-sans);
     overflow-x: hidden;
     transition: background-color 0.25s ease, color 0.25s ease;
-    background-color: #f8fafc;
-    color: #0f172a;
   }
 
   html.dark body {
@@ -47,36 +45,19 @@ html.light ::-webkit-scrollbar-thumb {
 }
 
 /* Glassmorphism & Panel Utilities for Dark & Light Mode */
-.glass-panel {
-  background: #ffffff;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
-}
-
 html.dark .glass-panel {
   background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: none;
 }
 
 html.light .glass-panel {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04);
-}
-
-.glass-card {
-  background: #ffffff;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 }
 
 html.dark .glass-card {
@@ -84,21 +65,14 @@ html.dark .glass-card {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: none;
 }
 
 html.light .glass-card {
-  background: #ffffff;
+  background: rgba(248, 250, 252, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(203, 213, 225, 0.8);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-}
-
-.glass-input {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
 }
 
 html.dark .glass-input {
