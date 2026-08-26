@@ -149,6 +149,7 @@ model Training {
   trainingProgresses  TrainingProgress[]
 
   @@index([organizationId, isPublished])
+  @@index([organizationId, isPublished, title])
   @@index([organizationId, status, createdAt])
   @@index([createdBy])
   @@index([categoryId])
