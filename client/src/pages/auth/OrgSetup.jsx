@@ -60,7 +60,7 @@ export const OrgSetup = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Org Code (Optional)</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Org Code </label>
             <div className="relative">
               <Building className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
               <input
