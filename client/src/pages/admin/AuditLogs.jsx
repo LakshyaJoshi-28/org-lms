@@ -69,6 +69,7 @@ export const AuditLogs = () => {
   const filteredLogs = logs.filter((log) => {
     const formattedAction = formatAuditAction(log.action).toLowerCase();
     const rawAction = (log.action || '').toLowerCase();
+    const rawActionUpper = (log.action || '').toUpperCase();
     const details = (log.details || '').toLowerCase();
     const userName = (log.userName || log.userId?.name || '').toLowerCase();
     const userEmail = (log.userId?.email || '').toLowerCase();
@@ -91,13 +92,13 @@ export const AuditLogs = () => {
 
     // 2. Action Category Filter
     if (actionCategory !== 'ALL') {
-      if (actionCategory === 'CREATE' && !rawAction.includes('CREATE') && !rawAction.includes('REGISTER')) return false;
-      if (actionCategory === 'UPDATE' && !rawAction.includes('UPDATE') && !rawAction.includes('EXTEND')) return false;
-      if (actionCategory === 'ASSIGN' && !rawAction.includes('ASSIGN')) return false;
-      if (actionCategory === 'DEACTIVATE_LOCK' && !rawAction.includes('DEACTIVATE') && !rawAction.includes('LOCK')) return false;
-      if (actionCategory === 'REACTIVATE_UNLOCK' && !rawAction.includes('REACTIVATE') && !rawAction.includes('UNLOCK')) return false;
-      if (actionCategory === 'REVIEW_SUBMIT' && !rawAction.includes('REVIEW') && !rawAction.includes('SUBMIT')) return false;
-      if (actionCategory === 'SECURITY' && !rawAction.includes('LOGIN')) return false;
+      if (actionCategory === 'CREATE' && !rawActionUpper.includes('CREATE') && !rawActionUpper.includes('REGISTER') && !rawActionUpper.includes('SETUP') && !rawActionUpper.includes('ADD')) return false;
+      if (actionCategory === 'UPDATE' && !rawActionUpper.includes('UPDATE') && !rawActionUpper.includes('EXTEND') && !rawActionUpper.includes('CHANGE') && !rawActionUpper.includes('RESET') && !rawActionUpper.includes('EDIT')) return false;
+      if (actionCategory === 'ASSIGN' && !rawActionUpper.includes('ASSIGN') && !rawActionUpper.includes('DISPATCH') && !rawActionUpper.includes('RULE')) return false;
+      if (actionCategory === 'DEACTIVATE_LOCK' && !rawActionUpper.includes('DEACTIVATE') && !rawActionUpper.includes('LOCK')) return false;
+      if (actionCategory === 'REACTIVATE_UNLOCK' && !rawActionUpper.includes('REACTIVATE') && !rawActionUpper.includes('UNLOCK')) return false;
+      if (actionCategory === 'REVIEW_SUBMIT' && !rawActionUpper.includes('REVIEW') && !rawActionUpper.includes('SUBMIT') && !rawActionUpper.includes('GRADE')) return false;
+      if (actionCategory === 'SECURITY' && !rawActionUpper.includes('LOGIN') && !rawActionUpper.includes('LOGOUT') && !rawActionUpper.includes('AUTH') && !rawActionUpper.includes('SECURITY') && !rawActionUpper.includes('PASSWORD')) return false;
     }
 
     // 3. Role Filter
