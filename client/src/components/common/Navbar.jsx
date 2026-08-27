@@ -2,16 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { useTheme } from '../../context/ThemeContext';
 import { ProfileModal } from '../profile/ProfileModal';
 import { ChangePasswordModal } from '../profile/ChangePasswordModal';
-import { Bell, User, KeyRound, LogOut, CheckCheck, Sparkles, Building, Sun, Moon } from 'lucide-react';
+import { Bell, User, KeyRound, LogOut, CheckCheck, Sparkles, Building } from 'lucide-react';
 
 export const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllRead } = useNotification();
-  const { isDark, toggleTheme } = useTheme();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showPassModal, setShowPassModal] = useState(false);
@@ -44,17 +42,8 @@ export const Navbar = () => {
           )}
         </div>
 
-        {/* Right: Theme Toggle, Role Badge, Notifications & Profile Dropdown */}
+        {/* Right: Role Badge, Notifications & Profile Dropdown */}
         <div className="flex items-center space-x-2 sm:space-x-3">
-          {/* Theme Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            aria-label="Toggle Theme"
-            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors focus:outline-none"
-            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700" />}
-          </button>
 
           {/* Role Badge */}
           <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider border ${roleColors[user?.role] || 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'}`}>
