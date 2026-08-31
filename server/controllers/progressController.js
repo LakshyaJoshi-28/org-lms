@@ -67,6 +67,20 @@ const completeSubSection = async (req, res, next) => {
       where: { trainingAssignmentId: assignment.id }
     });
 
+    const completedList = progress && Array.isArray(progress.completedSubSectionIds)
+      ? progress.completedSubSectionIds
+      : [];
+    const isAlreadyCompleted = completedList.includes(subSecId);
+
+    // Enforce 100% video progress requirement for uncompleted video lessons
+    const isVideoLesson = Boolean(targetSubSection.videoUrl && targetSubSection.videoUrl.trim() !== '');
+    if (isVideoLesson && !isAlreadyCompleted) {
+      const submittedProgress = Number(req.body.videoProgress ?? req.body.progress ?? 0);
+      if (isNaN(submittedProgress) || submittedProgress < 100) {
+        throw new ApiError(400, 'Video lesson progress must reach 100% before marking as complete');
+      }
+    }
+
     if (!progress) {
       progress = await prisma.trainingProgress.create({
         data: {

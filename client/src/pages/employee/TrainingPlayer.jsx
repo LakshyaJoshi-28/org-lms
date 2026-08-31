@@ -58,6 +58,8 @@ export const TrainingPlayer = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [maxWatchedTime, setMaxWatchedTime] = useState(0);
+  const [hasVideoReachedEnd, setHasVideoReachedEnd] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -132,6 +134,10 @@ export const TrainingPlayer = () => {
   useEffect(() => {
     setVideoError(false);
     setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setMaxWatchedTime(0);
+    setHasVideoReachedEnd(false);
   }, [activeItem]);
 
   const formatMediaUrl = (url) => {
@@ -555,11 +561,18 @@ export const TrainingPlayer = () => {
   const handleMarkComplete = async () => {
     if (!activeItem || activeItem.type !== 'lesson') return;
 
+    const isVideoLesson = Boolean(activeItem.videoUrl && activeItem.videoUrl.trim() !== '');
+    if (isVideoLesson && !activeStatus.isCompleted && !hasVideoReachedEnd) {
+      addToast('warning', 'You must watch 100% of the video before marking the lesson as complete.');
+      return;
+    }
+
     setSubmittingComplete(true);
     try {
       const res = await completeSubSection({
         trainingAssignmentId: assignmentId,
-        subSectionId: activeItem.id
+        subSectionId: activeItem.id,
+        videoProgress: isVideoLesson ? 100 : undefined
       });
       addToast('success', 'Lesson completed!');
       await fetchWorkspace(true);
@@ -591,19 +604,26 @@ export const TrainingPlayer = () => {
     if (videoRef.current) {
       const cur = videoRef.current.currentTime;
       const dur = videoRef.current.duration || 0;
-      if (dur > 0 && (videoRef.current.ended || cur >= dur - 0.25)) {
+      setDuration(dur);
+
+      if (dur > 0 && (videoRef.current.ended || cur >= dur - 0.5)) {
         setCurrentTime(dur);
+        setMaxWatchedTime(dur);
+        setHasVideoReachedEnd(true);
       } else {
         setCurrentTime(cur);
+        setMaxWatchedTime(prevMax => Math.max(prevMax, cur));
       }
-      setDuration(dur);
     }
   };
 
   const handleVideoEnded = () => {
     setIsPlaying(false);
     if (videoRef.current && videoRef.current.duration) {
-      setCurrentTime(videoRef.current.duration);
+      const dur = videoRef.current.duration;
+      setCurrentTime(dur);
+      setMaxWatchedTime(dur);
+      setHasVideoReachedEnd(true);
     }
   };
 
@@ -611,6 +631,28 @@ export const TrainingPlayer = () => {
     const time = Number(e.target.value);
     if (videoRef.current) {
       const dur = videoRef.current.duration || duration || 0;
+
+      // Allow unrestricted seeking for already completed video lessons
+      if (activeStatus.isCompleted) {
+        if (dur > 0 && time >= dur - 0.25) {
+          videoRef.current.currentTime = dur;
+          setCurrentTime(dur);
+        } else {
+          videoRef.current.currentTime = time;
+          setCurrentTime(time);
+        }
+        return;
+      }
+
+      // For uncompleted video lesson: restrict forward seeking past unwatched portion
+      if (time > maxWatchedTime + 0.5) {
+        const allowed = Math.min(time, maxWatchedTime);
+        videoRef.current.currentTime = allowed;
+        setCurrentTime(allowed);
+        addToast('warning', 'Forward seeking is disabled until you watch the full video.');
+        return;
+      }
+
       if (dur > 0 && time >= dur - 0.25) {
         videoRef.current.currentTime = dur;
         setCurrentTime(dur);
@@ -618,6 +660,19 @@ export const TrainingPlayer = () => {
         videoRef.current.currentTime = time;
         setCurrentTime(time);
       }
+    }
+  };
+
+  const handleSeeking = () => {
+    if (!videoRef.current) return;
+    if (activeStatus.isCompleted) return;
+
+    const targetTime = videoRef.current.currentTime;
+    if (targetTime > maxWatchedTime + 0.5) {
+      const allowed = maxWatchedTime;
+      videoRef.current.currentTime = allowed;
+      setCurrentTime(allowed);
+      addToast('warning', 'Forward seeking is disabled until you watch the full video.');
     }
   };
 
@@ -831,6 +886,7 @@ export const TrainingPlayer = () => {
                         src={formatMediaUrl(activeItem.videoUrl)}
                         onTimeUpdate={handleTimeUpdate}
                         onEnded={handleVideoEnded}
+                        onSeeking={handleSeeking}
                         onError={() => setVideoError(true)}
                         className="w-full h-full object-contain cursor-pointer"
                         onClick={togglePlay}
@@ -1323,20 +1379,34 @@ export const TrainingPlayer = () => {
             </button>
 
             {/* Mark as Complete (Show ONLY for Video/Content Lessons) */}
-            {activeItem?.type === 'lesson' && (
-              <button
-                onClick={handleMarkComplete}
-                disabled={activeStatus.isCompleted || submittingComplete}
-                className={`px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all cursor-pointer inline-flex items-center ${
-                  activeStatus.isCompleted
-                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-default'
-                    : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20'
-                }`}
-              >
-                <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                {activeStatus.isCompleted ? '✓ Completed' : submittingComplete ? 'Updating...' : 'Mark as Complete'}
-              </button>
-            )}
+            {activeItem?.type === 'lesson' && (() => {
+              const isVideoLesson = Boolean(activeItem.videoUrl && activeItem.videoUrl.trim() !== '');
+              const isVideoIncomplete = isVideoLesson && !activeStatus.isCompleted && !hasVideoReachedEnd;
+              const isBtnDisabled = activeStatus.isCompleted || submittingComplete || isVideoIncomplete;
+
+              return (
+                <button
+                  onClick={handleMarkComplete}
+                  disabled={isBtnDisabled}
+                  className={`px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all inline-flex items-center ${
+                    activeStatus.isCompleted
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-default'
+                      : isVideoIncomplete
+                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 cursor-pointer'
+                  }`}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                  {activeStatus.isCompleted
+                    ? '✓ Completed'
+                    : submittingComplete
+                    ? 'Updating...'
+                    : isVideoIncomplete
+                    ? 'Watch Video to Complete'
+                    : 'Mark as Complete'}
+                </button>
+              );
+            })()}
 
             <button
               onClick={() => {
