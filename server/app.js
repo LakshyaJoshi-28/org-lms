@@ -16,6 +16,7 @@ const progressRoutes = require('./routes/progressRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
+const certificateRoutes = require('./routes/certificateRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 
 const { cacheMiddleware, invalidateServerCache } = require('./middleware/cacheMiddleware');
@@ -70,6 +71,7 @@ app.use('/api/progress', progressRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/certificates', certificateRoutes);
 
 // Global Error Handler
 app.use(errorHandler);

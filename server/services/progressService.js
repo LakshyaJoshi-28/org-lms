@@ -174,6 +174,14 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
     });
 
     if (isNewlyCompleted) {
+      // Automatically generate certificate for completed training
+      try {
+        const { generateCertificateForAssignment } = require('./certificateService');
+        await generateCertificateForAssignment(updatedAssignment.id);
+      } catch (certErr) {
+        console.error('Failed to generate certificate on training completion:', certErr);
+      }
+
       const { sendUserNotification, sendAdminNotification } = require('./notificationService');
       const employee = await prisma.user.findUnique({
         where: { id: empId },

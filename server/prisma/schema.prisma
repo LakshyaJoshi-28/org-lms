@@ -34,6 +34,8 @@ model Organization {
   autoAssignmentRules AutoAssignmentRule[]
   notifications       Notification[]
   auditLogs           AuditLog[]
+  certificates        Certificate[]
+  certificateTemplate CertificateTemplate?
 
   @@index([createdAt])
   @@index([status])
@@ -93,6 +95,7 @@ model User {
   createdRules           AutoAssignmentRule[]   @relation("RuleCreatedBy")
   trainingProgresses     TrainingProgress[]
   extensionsGiven        ExtensionHistory[]     @relation("ExtendedBy")
+  certificates           Certificate[]          @relation("EmployeeCertificates")
 
   @@index([organizationId, role])
   @@index([organizationId, role, createdAt])
@@ -147,6 +150,7 @@ model Training {
   trainingAssignments TrainingAssignment[]
   autoAssignmentRules AutoAssignmentRule[]
   trainingProgresses  TrainingProgress[]
+  certificates        Certificate[]
 
   @@index([organizationId, isPublished])
   @@index([organizationId, isPublished, title])
@@ -384,6 +388,7 @@ model TrainingAssignment {
   progress           TrainingProgress?
   quizAttempts       QuizAttempt[]
   assignmentSubmissions AssignmentSubmission[]
+  certificate        Certificate?
 
   @@unique([employeeId, trainingId])
   @@index([trainingId])
@@ -494,4 +499,47 @@ model AuditLog {
 
   @@index([organizationId, timestamp])
   @@map("audit_logs")
+}
+
+model CertificateTemplate {
+  id             String       @id @default(uuid())
+  organizationId String       @unique
+  title          String       @default("CERTIFICATE OF COMPLETION")
+  primaryColor   String       @default("#1E3A8A")
+  accentColor    String       @default("#D97706")
+  fontFamily     String       @default("Inter")
+  borderStyle    String       @default("classic_gold")
+  layoutStyle    String       @default("centered")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("certificate_templates")
+}
+
+model Certificate {
+  id                   String             @id @default(uuid())
+  certificateId        String             @unique
+  trainingAssignmentId String             @unique
+  employeeId           String
+  trainingId           String
+  organizationId       String
+  issueDate            DateTime           @default(now())
+  completionDate       DateTime
+  templateSnapshot     Json
+
+  trainingAssignment   TrainingAssignment @relation(fields: [trainingAssignmentId], references: [id], onDelete: Cascade)
+  employee             User               @relation("EmployeeCertificates", fields: [employeeId], references: [id], onDelete: Cascade)
+  training             Training           @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([employeeId])
+  @@index([organizationId])
+  @@index([trainingId])
+  @@index([organizationId, createdAt])
+  @@map("certificates")
 }

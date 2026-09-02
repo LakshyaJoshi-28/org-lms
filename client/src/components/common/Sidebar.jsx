@@ -15,7 +15,8 @@ import {
   GraduationCap,
   MessageSquare,
   Bell,
-  User
+  User,
+  Award
 } from 'lucide-react';
 
 export const Sidebar = () => {
@@ -29,6 +30,7 @@ export const Sidebar = () => {
     { to: '/admin/users', label: 'Users Directory & Status', icon: Users },
     { to: '/admin/categories', label: 'Training Categories', icon: FolderKanban },
     { to: '/admin/assign', label: 'Assign Training Engine', icon: UserPlus },
+    { to: '/admin/certificates', label: 'Certificates & Designer', icon: Award },
     { to: '/admin/reports', label: 'Org Reports & Analytics', icon: BarChart3 },
     { to: '/admin/notifications', label: 'Notifications', icon: Bell },
     { to: '/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert }
@@ -38,6 +40,7 @@ export const Sidebar = () => {
     { to: '/instructor', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/instructor/trainings', label: 'My Trainings & Syllabus', icon: BookOpen },
     { to: '/instructor/submissions', label: 'Assignment Submissions', icon: FileCheck2 },
+    { to: '/instructor/certificates', label: 'Course Certificates', icon: Award },
     { to: '/instructor/deadlines', label: 'Overdue & Lock Controls', icon: Clock },
     { to: '/instructor/notifications', label: 'Notifications', icon: Bell }
   ];
@@ -45,6 +48,7 @@ export const Sidebar = () => {
   const employeeLinks = [
     { to: '/employee', label: 'Dashboard', icon: LayoutDashboard, end: true },
     { to: '/employee/my-trainings', label: 'My Assigned Trainings', icon: GraduationCap },
+    { to: '/employee/certificates', label: 'My Certificates', icon: Award },
     { to: '/employee/notifications', label: 'Notifications', icon: Bell },
     { to: '/employee/feedback', label: 'Feedback', icon: MessageSquare },
     { to: '/employee/report', label: 'Personal Report & Stats', icon: BarChart3 }

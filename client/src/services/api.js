@@ -191,4 +191,15 @@ export const getEmployeeReport = (employeeId) => api.get(`/reports/employee/${em
 // Audit Logs APIs
 export const getAuditLogs = () => api.get('/audit-logs');
 
+// Certificate APIs
+export const getMyCertificates = () => api.get('/certificates/my-certificates');
+export const getOrgCertificates = (params) => api.get('/certificates/org-certificates', { params });
+export const getInstructorCertificates = () => api.get('/certificates/instructor-certificates');
+export const getCertificateById = (id) => api.get(`/certificates/${id}`);
+export const getCertificateTemplate = () => api.get('/certificates/template');
+export const updateCertificateTemplate = (data) => api.put('/certificates/template', data);
+export const resetCertificateTemplate = () => api.post('/certificates/template/reset');
+export const getBackfillEligible = () => api.get('/certificates/backfill-eligible');
+export const backfillCertificates = () => api.post('/certificates/backfill');
+
 export default api;

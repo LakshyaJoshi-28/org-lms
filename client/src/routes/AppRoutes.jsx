@@ -17,6 +17,7 @@ import { UsersManager } from '../pages/admin/UsersManager';
 import { CategoriesManager } from '../pages/admin/CategoriesManager';
 import { AssignTraining } from '../pages/admin/AssignTraining';
 import { Reports as AdminReports } from '../pages/admin/Reports';
+import { AdminCertificates } from '../pages/admin/AdminCertificates';
 import { AuditLogs } from '../pages/admin/AuditLogs';
 
 // Instructor Pages
@@ -25,10 +26,12 @@ import { MyTrainings as InstructorTrainings } from '../pages/instructor/MyTraini
 import { CourseBuilder } from '../pages/instructor/CourseBuilder';
 import { SubmissionsReviewer } from '../pages/instructor/SubmissionsReviewer';
 import { DeadlineManager } from '../pages/instructor/DeadlineManager';
+import { InstructorCertificates } from '../pages/instructor/InstructorCertificates';
 
 // Employee Pages
 import { EmployeeDashboard } from '../pages/employee/EmployeeDashboard';
 import { MyTrainings as EmployeeTrainings } from '../pages/employee/MyTrainings';
+import { MyCertificates } from '../pages/employee/MyCertificates';
 import { TrainingPlayer } from '../pages/employee/TrainingPlayer';
 import { EmployeeFeedback } from '../pages/employee/EmployeeFeedback';
 import { MyReport } from '../pages/employee/MyReport';
@@ -77,6 +80,7 @@ export const AppRoutes = () => {
           <Route path="/admin/users" element={<UsersManager />} />
           <Route path="/admin/categories" element={<CategoriesManager />} />
           <Route path="/admin/assign" element={<AssignTraining />} />
+          <Route path="/admin/certificates" element={<AdminCertificates />} />
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/notifications" element={<NotificationsPage />} />
           <Route path="/admin/audit-logs" element={<AuditLogs />} />
@@ -91,6 +95,7 @@ export const AppRoutes = () => {
           <Route path="/instructor/course-builder/new" element={<CourseBuilder />} />
           <Route path="/instructor/course-builder/:id" element={<CourseBuilder />} />
           <Route path="/instructor/submissions" element={<SubmissionsReviewer />} />
+          <Route path="/instructor/certificates" element={<InstructorCertificates />} />
           <Route path="/instructor/deadlines" element={<DeadlineManager />} />
           <Route path="/instructor/notifications" element={<NotificationsPage />} />
         </Route>
@@ -101,6 +106,7 @@ export const AppRoutes = () => {
         <Route element={<MainLayout />}>
           <Route path="/employee" element={<EmployeeDashboard />} />
           <Route path="/employee/my-trainings" element={<EmployeeTrainings />} />
+          <Route path="/employee/certificates" element={<MyCertificates />} />
           <Route path="/employee/feedback" element={<EmployeeFeedback />} />
           <Route path="/employee/player/:assignmentId" element={<TrainingPlayer />} />
           <Route path="/employee/notifications" element={<NotificationsPage />} />
