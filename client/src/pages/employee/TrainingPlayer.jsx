@@ -445,7 +445,17 @@ export const TrainingPlayer = () => {
     if (isSubmittingQuizRef.current && !isAutoSubmit) return;
 
     // Validate required questions for manual submit
-    const unansweredCount = quizData.questions.length - Object.keys(selectedAnswers).length;
+    let unansweredCount = 0;
+    quizData.questions.forEach((q, idx) => {
+      const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
+      const val = selectedAnswers[idx];
+      if (qType === 'FILL_IN_BLANK') {
+        if (val === undefined || val === null || String(val).trim().length === 0) unansweredCount++;
+      } else {
+        if (val === undefined || val === null) unansweredCount++;
+      }
+    });
+
     if (!isAutoSubmit && unansweredCount > 0 && quizTimeRemaining > 0) {
       addToast('warning', `Please answer all questions before submitting. (${unansweredCount} unanswered)`);
       return;
@@ -456,10 +466,31 @@ export const TrainingPlayer = () => {
     setSubmittingQuiz(true);
 
     try {
-      const userAnswersPayload = Object.keys(selectedAnswers).map(qIdx => ({
-        questionIndex: Number(qIdx),
-        selectedOptionIndex: selectedAnswers[qIdx]
-      }));
+      const userAnswersPayload = quizData.questions.map((q, qIdx) => {
+        const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
+        const ansVal = selectedAnswers[qIdx];
+        if (qType === 'FILL_IN_BLANK') {
+          return {
+            questionIndex: qIdx,
+            selectedOptionIndex: null,
+            selectedAnswerText: ansVal !== undefined && ansVal !== null ? String(ansVal) : ''
+          };
+        } else if (qType === 'TRUE_FALSE') {
+          const idx = ansVal !== undefined && ansVal !== null ? Number(ansVal) : null;
+          return {
+            questionIndex: qIdx,
+            selectedOptionIndex: idx,
+            selectedAnswerText: idx === 0 ? 'True' : (idx === 1 ? 'False' : '')
+          };
+        } else {
+          const idx = ansVal !== undefined && ansVal !== null ? Number(ansVal) : null;
+          return {
+            questionIndex: qIdx,
+            selectedOptionIndex: idx,
+            selectedAnswerText: (q.options && idx !== null && q.options[idx]) ? q.options[idx] : ''
+          };
+        }
+      });
 
       const res = await submitQuiz(quizData._id, {
         userAnswers: userAnswersPayload,
@@ -1014,7 +1045,8 @@ export const TrainingPlayer = () => {
                     <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">Question Performance Breakdown</h4>
                     {quizResult.evaluatedAnswers?.map((ans, idx) => {
                       const userAnsText = ans.selectedAnswerText || (ans.options && ans.selectedOptionIndex !== null && ans.selectedOptionIndex !== undefined ? ans.options[ans.selectedOptionIndex] : (ans.status === 'data_unavailable' ? 'Answer data unavailable' : 'Not Answered'));
-                      const corrAnsText = ans.correctAnswerText || (ans.options && ans.correctAnswerIndex !== undefined ? ans.options[ans.correctAnswerIndex] : 'N/A');
+                      const corrAnsText = ans.correctAnswerText || (ans.options && ans.correctAnswerIndex !== null && ans.correctAnswerIndex !== undefined ? ans.options[ans.correctAnswerIndex] : 'N/A');
+                      const isUnanswered = (ans.selectedOptionIndex === null || ans.selectedOptionIndex === undefined) && (!ans.selectedAnswerText || !ans.selectedAnswerText.trim());
 
                       return (
                         <div key={idx} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
@@ -1023,14 +1055,14 @@ export const TrainingPlayer = () => {
                             <span className={`px-2.5 py-0.5 rounded font-extrabold text-[10px] ${
                               ans.isCorrect
                                 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
-                                : ans.selectedOptionIndex === null || ans.selectedOptionIndex === undefined
+                                : isUnanswered
                                 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                                 : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
                             }`}>
-                              {ans.isCorrect ? '✓ Correct' : (ans.selectedOptionIndex === null || ans.selectedOptionIndex === undefined) ? '○ Not Answered' : '✕ Incorrect'}
+                              {ans.isCorrect ? '✓ Correct' : isUnanswered ? '○ Not Answered' : '✕ Incorrect'}
                             </span>
                           </div>
-                          <p className="text-slate-500">Your Answer: <strong className={ans.isCorrect ? 'text-emerald-500' : 'text-rose-500'}>{userAnsText}</strong></p>
+                          <p className="text-slate-500">Your Answer: <strong className={ans.isCorrect ? 'text-emerald-500' : 'text-rose-500'}>{userAnsText || 'Not Answered'}</strong></p>
                           {!ans.isCorrect && (
                             <p className="text-slate-500">Correct Answer: <strong className="text-emerald-500">{corrAnsText}</strong></p>
                           )}
@@ -1157,70 +1189,128 @@ export const TrainingPlayer = () => {
                   </div>
 
                   {/* Single Question View with Stepper */}
-                  {quizData.questions && quizData.questions.length > 0 && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center text-xs font-extrabold text-slate-700 dark:text-slate-300">
-                        <span>Question {currentQuestionIdx + 1} of {quizData.questions.length}</span>
-                        <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[11px]">
-                          {Math.round(((currentQuestionIdx + 1) / quizData.questions.length) * 100)}% Completed
-                        </span>
-                      </div>
+                  {quizData.questions && quizData.questions.length > 0 && (() => {
+                    const currentQ = quizData.questions[currentQuestionIdx];
+                    const qType = currentQ.questionType || (currentQ.options && currentQ.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
 
-                      <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-4">
-                        <p className="font-bold text-slate-900 dark:text-white text-sm">
-                          {quizData.questions[currentQuestionIdx].questionText}
-                        </p>
-                        <div className="space-y-2">
-                          {quizData.questions[currentQuestionIdx].options?.map((opt, optIdx) => (
-                            <label
-                              key={optIdx}
-                              className={`flex items-center space-x-3 p-3.5 rounded-xl border text-xs cursor-pointer transition-all ${
-                                selectedAnswers[currentQuestionIdx] === optIdx
-                                  ? 'bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-300 font-bold'
-                                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-                              }`}
-                            >
+                    return (
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center text-xs font-extrabold text-slate-700 dark:text-slate-300">
+                          <div className="flex items-center space-x-2">
+                            <span>Question {currentQuestionIdx + 1} of {quizData.questions.length}</span>
+                            <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">
+                              {qType === 'TRUE_FALSE' ? 'True / False' : qType === 'FILL_IN_BLANK' ? 'Fill in the Blank' : 'MCQ'}
+                            </span>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[11px]">
+                            {Math.round(((currentQuestionIdx + 1) / quizData.questions.length) * 100)}% Completed
+                          </span>
+                        </div>
+
+                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-4">
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">
+                            {currentQ.questionText}
+                          </p>
+
+                          {/* MCQ Choice Options */}
+                          {qType === 'MCQ' && (
+                            <div className="space-y-2">
+                              {currentQ.options?.map((opt, optIdx) => (
+                                <label
+                                  key={optIdx}
+                                  className={`flex items-center space-x-3 p-3.5 rounded-xl border text-xs cursor-pointer transition-all ${
+                                    selectedAnswers[currentQuestionIdx] === optIdx
+                                      ? 'bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-300 font-bold'
+                                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                                  }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    name={`q_${currentQuestionIdx}`}
+                                    checked={selectedAnswers[currentQuestionIdx] === optIdx}
+                                    onChange={() => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: optIdx })}
+                                    className="text-amber-500 cursor-pointer"
+                                  />
+                                  <span>{opt}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* True / False Choice Buttons */}
+                          {qType === 'TRUE_FALSE' && (
+                            <div className="grid grid-cols-2 gap-3 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: 0 })}
+                                className={`p-4 rounded-xl border text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center space-x-2 ${
+                                  selectedAnswers[currentQuestionIdx] === 0
+                                    ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/30'
+                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500/40'
+                                }`}
+                              >
+                                <span className="text-base">✓</span>
+                                <span>True</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: 1 })}
+                                className={`p-4 rounded-xl border text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center space-x-2 ${
+                                  selectedAnswers[currentQuestionIdx] === 1
+                                    ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/30'
+                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-500/40'
+                                }`}
+                              >
+                                <span className="text-base">✕</span>
+                                <span>False</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Fill in the Blank Text Input */}
+                          {qType === 'FILL_IN_BLANK' && (
+                            <div className="space-y-2 pt-1">
+                              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">Type Your Answer:</label>
                               <input
-                                type="radio"
-                                name={`q_${currentQuestionIdx}`}
-                                checked={selectedAnswers[currentQuestionIdx] === optIdx}
-                                onChange={() => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: optIdx })}
-                                className="text-amber-500 cursor-pointer"
+                                type="text"
+                                value={selectedAnswers[currentQuestionIdx] !== undefined && selectedAnswers[currentQuestionIdx] !== null ? selectedAnswers[currentQuestionIdx] : ''}
+                                onChange={(e) => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: e.target.value })}
+                                placeholder="Type answer text here..."
+                                className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                               />
-                              <span>{opt}</span>
-                            </label>
-                          ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex justify-between pt-2">
+                          <button
+                            onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
+                            disabled={currentQuestionIdx === 0}
+                            className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold disabled:opacity-30 cursor-pointer"
+                          >
+                            Previous Question
+                          </button>
+
+                          {currentQuestionIdx < quizData.questions.length - 1 ? (
+                            <button
+                              onClick={() => setCurrentQuestionIdx(prev => Math.min(quizData.questions.length - 1, prev + 1))}
+                              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
+                            >
+                              Next Question →
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => submitQuizAnswers(false)}
+                              disabled={submittingQuiz}
+                              className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 cursor-pointer"
+                            >
+                              {submittingQuiz ? 'Evaluating...' : 'Submit Quiz'}
+                            </button>
+                          )}
                         </div>
                       </div>
-
-                      <div className="flex justify-between pt-2">
-                        <button
-                          onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
-                          disabled={currentQuestionIdx === 0}
-                          className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold disabled:opacity-30 cursor-pointer"
-                        >
-                          Previous Question
-                        </button>
-
-                        {currentQuestionIdx < quizData.questions.length - 1 ? (
-                          <button
-                            onClick={() => setCurrentQuestionIdx(prev => Math.min(quizData.questions.length - 1, prev + 1))}
-                            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
-                          >
-                            Next Question →
-                          </button>
-                        ) : (
-                          <button
-                            onClick={submitQuizAnswers}
-                            disabled={submittingQuiz}
-                            className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 cursor-pointer"
-                          >
-                            {submittingQuiz ? 'Evaluating...' : 'Submit Quiz'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
             </div>

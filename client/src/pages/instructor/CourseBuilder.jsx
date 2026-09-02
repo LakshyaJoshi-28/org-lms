@@ -433,7 +433,37 @@ export const CourseBuilder = () => {
             title: quizTitle || `${sec.title} Quiz`,
             timeLimitMinutes: Number(quizDurationMinutes) || 15,
             passingScorePercent: Number(quizPassingScorePercent) || 70,
-            questions: quizQuestions.filter(q => q.questionText.trim())
+            questions: quizQuestions.filter(q => q.questionText.trim()).map(q => {
+              const qType = q.questionType || 'MCQ';
+              if (qType === 'TRUE_FALSE') {
+                const idx = Number(q.correctAnswerIndex) === 1 ? 1 : 0;
+                return {
+                  questionText: q.questionText,
+                  questionType: 'TRUE_FALSE',
+                  options: ['True', 'False'],
+                  correctAnswerIndex: idx,
+                  correctAnswerText: idx === 0 ? 'True' : 'False'
+                };
+              } else if (qType === 'FILL_IN_BLANK') {
+                return {
+                  questionText: q.questionText,
+                  questionType: 'FILL_IN_BLANK',
+                  options: [],
+                  correctAnswerIndex: null,
+                  correctAnswerText: (q.correctAnswerText || '').trim()
+                };
+              } else {
+                const idx = Number(q.correctAnswerIndex) || 0;
+                const opts = Array.isArray(q.options) ? q.options : [];
+                return {
+                  questionText: q.questionText,
+                  questionType: 'MCQ',
+                  options: opts,
+                  correctAnswerIndex: idx,
+                  correctAnswerText: opts[idx] || ''
+                };
+              }
+            })
           };
         }
         return {
@@ -886,59 +916,155 @@ export const CourseBuilder = () => {
                     </button>
                   </div>
 
-                  {quizQuestions.map((q, qIdx) => (
-                    <div key={qIdx} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs text-amber-600 dark:text-amber-400">Question #{qIdx + 1}</span>
-                        {quizQuestions.length > 1 && (
-                          <button onClick={() => handleDeleteQuestion(qIdx)} className="text-slate-400 hover:text-rose-500 cursor-pointer">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
+                  {quizQuestions.map((q, qIdx) => {
+                    const currentType = q.questionType || 'MCQ';
 
-                      <input
-                        type="text"
-                        value={q.questionText}
-                        onChange={(e) => {
-                          const updated = [...quizQuestions];
-                          updated[qIdx].questionText = e.target.value;
-                          setQuizQuestions(updated);
-                        }}
-                        placeholder="Enter question text..."
-                        className="w-full px-3 py-2 rounded-lg glass-input text-xs font-semibold"
-                      />
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {q.options.map((opt, optIdx) => (
-                          <div key={optIdx} className="flex items-center space-x-2 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                            <input
-                              type="radio"
-                              name={`correct_${qIdx}`}
-                              checked={q.correctAnswerIndex === optIdx}
-                              onChange={() => {
+                    return (
+                      <div key={qIdx} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">Question #{qIdx + 1}</span>
+                          <div className="flex items-center space-x-2">
+                            <select
+                              value={currentType}
+                              onChange={(e) => {
+                                const newType = e.target.value;
                                 const updated = [...quizQuestions];
-                                updated[qIdx].correctAnswerIndex = optIdx;
+                                updated[qIdx].questionType = newType;
+                                if (newType === 'TRUE_FALSE') {
+                                  updated[qIdx].options = ['True', 'False'];
+                                  updated[qIdx].correctAnswerIndex = 0;
+                                  updated[qIdx].correctAnswerText = 'True';
+                                } else if (newType === 'FILL_IN_BLANK') {
+                                  updated[qIdx].options = [];
+                                  updated[qIdx].correctAnswerIndex = null;
+                                  updated[qIdx].correctAnswerText = updated[qIdx].correctAnswerText || '';
+                                } else {
+                                  // MCQ
+                                  if (!updated[qIdx].options || updated[qIdx].options.length === 0) {
+                                    updated[qIdx].options = ['', '', '', ''];
+                                  }
+                                  updated[qIdx].correctAnswerIndex = 0;
+                                }
                                 setQuizQuestions(updated);
                               }}
-                              className="text-amber-500 cursor-pointer"
-                            />
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+                            >
+                              <option value="MCQ">MCQ (Multiple Choice)</option>
+                              <option value="TRUE_FALSE">True / False</option>
+                              <option value="FILL_IN_BLANK">Fill in the Blank</option>
+                            </select>
+                            {quizQuestions.length > 1 && (
+                              <button onClick={() => handleDeleteQuestion(qIdx)} className="text-slate-400 hover:text-rose-500 cursor-pointer p-1">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <input
+                          type="text"
+                          value={q.questionText}
+                          onChange={(e) => {
+                            const updated = [...quizQuestions];
+                            updated[qIdx].questionText = e.target.value;
+                            setQuizQuestions(updated);
+                          }}
+                          placeholder="Enter question text..."
+                          className="w-full px-3 py-2 rounded-lg glass-input text-xs font-semibold"
+                        />
+
+                        {/* MCQ Field Rendering */}
+                        {currentType === 'MCQ' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {(q.options || ['', '', '', '']).map((opt, optIdx) => (
+                              <div key={optIdx} className="flex items-center space-x-2 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                                <input
+                                  type="radio"
+                                  name={`correct_${qIdx}`}
+                                  checked={q.correctAnswerIndex === optIdx}
+                                  onChange={() => {
+                                    const updated = [...quizQuestions];
+                                    updated[qIdx].correctAnswerIndex = optIdx;
+                                    setQuizQuestions(updated);
+                                  }}
+                                  className="text-amber-500 cursor-pointer"
+                                />
+                                <input
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const updated = [...quizQuestions];
+                                    if (!updated[qIdx].options) updated[qIdx].options = ['', '', '', ''];
+                                    updated[qIdx].options[optIdx] = e.target.value;
+                                    setQuizQuestions(updated);
+                                  }}
+                                  placeholder={`Option ${String.fromCharCode(65 + optIdx)}`}
+                                  className="flex-1 bg-transparent border-none text-xs focus:ring-0"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* True / False Field Rendering */}
+                        {currentType === 'TRUE_FALSE' && (
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                            <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Select Correct Answer:</span>
+                            <div className="flex space-x-4">
+                              <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`tf_correct_${qIdx}`}
+                                  checked={q.correctAnswerIndex === 0}
+                                  onChange={() => {
+                                    const updated = [...quizQuestions];
+                                    updated[qIdx].correctAnswerIndex = 0;
+                                    updated[qIdx].correctAnswerText = 'True';
+                                    setQuizQuestions(updated);
+                                  }}
+                                  className="text-amber-500 cursor-pointer"
+                                />
+                                <span>True</span>
+                              </label>
+                              <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`tf_correct_${qIdx}`}
+                                  checked={q.correctAnswerIndex === 1}
+                                  onChange={() => {
+                                    const updated = [...quizQuestions];
+                                    updated[qIdx].correctAnswerIndex = 1;
+                                    updated[qIdx].correctAnswerText = 'False';
+                                    setQuizQuestions(updated);
+                                  }}
+                                  className="text-amber-500 cursor-pointer"
+                                />
+                                <span>False</span>
+                              </label>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Fill in the Blank Field Rendering */}
+                        {currentType === 'FILL_IN_BLANK' && (
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5">
+                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Correct Answer Text:</label>
                             <input
                               type="text"
-                              value={opt}
+                              value={q.correctAnswerText || ''}
                               onChange={(e) => {
                                 const updated = [...quizQuestions];
-                                updated[qIdx].options[optIdx] = e.target.value;
+                                updated[qIdx].correctAnswerText = e.target.value;
                                 setQuizQuestions(updated);
                               }}
-                              placeholder={`Option ${String.fromCharCode(65 + optIdx)}`}
-                              className="flex-1 bg-transparent border-none text-xs focus:ring-0"
+                              placeholder="Enter expected correct text (evaluation is case-insensitive)..."
+                              className="w-full px-3 py-1.5 rounded-md glass-input text-xs font-semibold"
                             />
                           </div>
-                        ))}
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

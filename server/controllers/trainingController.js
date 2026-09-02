@@ -367,11 +367,39 @@ const saveFullCourse = async (req, res, next) => {
                   timeLimitMinutes: Number(sec.quiz.timeLimitMinutes) || 15,
                   passingScorePercent: Number(sec.quiz.passingScorePercent) || 70,
                   questions: {
-                    create: sec.quiz.questions.map(q => ({
-                      questionText: q.questionText,
-                      options: Array.isArray(q.options) ? q.options : [],
-                      correctAnswerIndex: Number(q.correctAnswerIndex) || 0
-                    }))
+                    create: sec.quiz.questions.map(q => {
+                      const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
+                      if (qType === 'TRUE_FALSE') {
+                        const idx = Number(q.correctAnswerIndex) === 1 ? 1 : 0;
+                        const txt = q.correctAnswerText || (idx === 0 ? 'True' : 'False');
+                        return {
+                          questionText: q.questionText,
+                          questionType: 'TRUE_FALSE',
+                          options: ['True', 'False'],
+                          correctAnswerIndex: idx,
+                          correctAnswerText: txt
+                        };
+                      } else if (qType === 'FILL_IN_BLANK') {
+                        return {
+                          questionText: q.questionText,
+                          questionType: 'FILL_IN_BLANK',
+                          options: [],
+                          correctAnswerIndex: null,
+                          correctAnswerText: (q.correctAnswerText || '').trim()
+                        };
+                      } else {
+                        const opts = Array.isArray(q.options) ? q.options : [];
+                        const idx = q.correctAnswerIndex !== undefined && q.correctAnswerIndex !== null ? Number(q.correctAnswerIndex) : 0;
+                        const txt = q.correctAnswerText || (opts[idx] || '');
+                        return {
+                          questionText: q.questionText,
+                          questionType: 'MCQ',
+                          options: opts,
+                          correctAnswerIndex: idx,
+                          correctAnswerText: txt
+                        };
+                      }
+                    })
                   }
                 }
               });
@@ -391,11 +419,39 @@ const saveFullCourse = async (req, res, next) => {
                   createdBy: instructorId,
                   organizationId: orgId,
                   questions: {
-                    create: sec.quiz.questions.map(q => ({
-                      questionText: q.questionText,
-                      options: Array.isArray(q.options) ? q.options : [],
-                      correctAnswerIndex: Number(q.correctAnswerIndex) || 0
-                    }))
+                    create: sec.quiz.questions.map(q => {
+                      const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
+                      if (qType === 'TRUE_FALSE') {
+                        const idx = Number(q.correctAnswerIndex) === 1 ? 1 : 0;
+                        const txt = q.correctAnswerText || (idx === 0 ? 'True' : 'False');
+                        return {
+                          questionText: q.questionText,
+                          questionType: 'TRUE_FALSE',
+                          options: ['True', 'False'],
+                          correctAnswerIndex: idx,
+                          correctAnswerText: txt
+                        };
+                      } else if (qType === 'FILL_IN_BLANK') {
+                        return {
+                          questionText: q.questionText,
+                          questionType: 'FILL_IN_BLANK',
+                          options: [],
+                          correctAnswerIndex: null,
+                          correctAnswerText: (q.correctAnswerText || '').trim()
+                        };
+                      } else {
+                        const opts = Array.isArray(q.options) ? q.options : [];
+                        const idx = q.correctAnswerIndex !== undefined && q.correctAnswerIndex !== null ? Number(q.correctAnswerIndex) : 0;
+                        const txt = q.correctAnswerText || (opts[idx] || '');
+                        return {
+                          questionText: q.questionText,
+                          questionType: 'MCQ',
+                          options: opts,
+                          correctAnswerIndex: idx,
+                          correctAnswerText: txt
+                        };
+                      }
+                    })
                   }
                 }
               });

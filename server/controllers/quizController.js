@@ -40,6 +40,45 @@ const getPopulatedQuizAttempt = async (attemptId) => {
 };
 
 /**
+ * Helper to normalize question objects for storage in Prisma
+ */
+const mapQuestionData = (q) => {
+  const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
+
+  if (qType === 'TRUE_FALSE') {
+    const idx = Number(q.correctAnswerIndex) === 1 ? 1 : 0;
+    const txt = q.correctAnswerText || (idx === 0 ? 'True' : 'False');
+    return {
+      questionText: q.questionText,
+      questionType: 'TRUE_FALSE',
+      options: ['True', 'False'],
+      correctAnswerIndex: idx,
+      correctAnswerText: txt
+    };
+  } else if (qType === 'FILL_IN_BLANK') {
+    return {
+      questionText: q.questionText,
+      questionType: 'FILL_IN_BLANK',
+      options: [],
+      correctAnswerIndex: null,
+      correctAnswerText: (q.correctAnswerText || '').trim()
+    };
+  } else {
+    // MCQ
+    const opts = Array.isArray(q.options) ? q.options : [];
+    const idx = q.correctAnswerIndex !== undefined && q.correctAnswerIndex !== null ? Number(q.correctAnswerIndex) : 0;
+    const txt = q.correctAnswerText || (opts[idx] || '');
+    return {
+      questionText: q.questionText,
+      questionType: 'MCQ',
+      options: opts,
+      correctAnswerIndex: idx,
+      correctAnswerText: txt
+    };
+  }
+};
+
+/**
  * @desc    Create Quiz for a SubSection
  * @route   POST /api/quizzes
  * @access  Private (Instructor, Admin)
@@ -88,12 +127,7 @@ const createQuiz = async (req, res, next) => {
         createdBy: instructorId,
         organizationId: orgId,
         questions: {
-          create: questions.map(q => ({
-            questionText: q.questionText,
-            options: Array.isArray(q.options) ? q.options : [],
-            correctAnswerIndex: Number(q.correctAnswerIndex) || 0,
-            score: Number(q.score) || 1
-          }))
+          create: questions.map(q => mapQuestionData(q))
         }
       }
     });
@@ -153,7 +187,7 @@ const getQuizById = async (req, res, next) => {
     // Mask correct answers if employee is attempting the quiz
     if (req.user.role === 'Employee') {
       quizObj.questions = quizObj.questions.map(q => {
-        const { correctAnswerIndex, ...rest } = q;
+        const { correctAnswerIndex, correctAnswerText, ...rest } = q;
         return rest;
       });
     }
@@ -306,10 +340,7 @@ const updateQuiz = async (req, res, next) => {
       await prisma.quizQuestion.createMany({
         data: questions.map(q => ({
           quizId: quiz.id,
-          questionText: q.questionText,
-          options: Array.isArray(q.options) ? q.options : [],
-          correctAnswerIndex: Number(q.correctAnswerIndex) || 0,
-          score: Number(q.score) || 1
+          ...mapQuestionData(q)
         }))
       });
     }
@@ -405,16 +436,76 @@ const submitQuiz = async (req, res, next) => {
       maxScore += qScore;
 
       const userAns = userAnswers.find(a => a.questionIndex === idx || a.questionIdx === idx);
-      const rawOpt = userAns
-        ? (userAns.selectedOptionIndex !== undefined ? userAns.selectedOptionIndex : userAns.selectedOptionIdx)
-        : null;
 
-      const selectedOpt = rawOpt !== null && rawOpt !== undefined && !isNaN(Number(rawOpt))
-        ? Number(rawOpt)
-        : null;
+      const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
 
-      const hasSelected = selectedOpt !== null && selectedOpt >= 0 && selectedOpt < (q.options ? q.options.length : 0);
-      const isCorrect = hasSelected && selectedOpt === q.correctAnswerIndex;
+      let isCorrect = false;
+      let selectedOptionIndex = null;
+      let selectedAnswerText = '';
+      let correctAnswerIndex = q.correctAnswerIndex;
+      let correctAnswerText = q.correctAnswerText || '';
+
+      if (qType === 'TRUE_FALSE') {
+        const rawOpt = userAns
+          ? (userAns.selectedOptionIndex !== undefined && userAns.selectedOptionIndex !== null
+            ? userAns.selectedOptionIndex
+            : userAns.selectedOptionIdx)
+          : null;
+
+        selectedOptionIndex = rawOpt !== null && rawOpt !== undefined && !isNaN(Number(rawOpt))
+          ? Number(rawOpt)
+          : null;
+
+        if (selectedOptionIndex !== null && selectedOptionIndex >= 0 && selectedOptionIndex <= 1) {
+          selectedAnswerText = selectedOptionIndex === 0 ? 'True' : 'False';
+        } else if (userAns && userAns.selectedAnswerText !== undefined && userAns.selectedAnswerText !== null) {
+          const textVal = String(userAns.selectedAnswerText).trim().toLowerCase();
+          if (textVal === 'true') {
+            selectedOptionIndex = 0;
+            selectedAnswerText = 'True';
+          } else if (textVal === 'false') {
+            selectedOptionIndex = 1;
+            selectedAnswerText = 'False';
+          } else {
+            selectedAnswerText = String(userAns.selectedAnswerText).trim();
+          }
+        }
+
+        correctAnswerIndex = q.correctAnswerIndex !== null && q.correctAnswerIndex !== undefined ? q.correctAnswerIndex : 0;
+        correctAnswerText = correctAnswerText || (correctAnswerIndex === 0 ? 'True' : 'False');
+
+        isCorrect = selectedOptionIndex !== null && selectedOptionIndex === correctAnswerIndex;
+
+      } else if (qType === 'FILL_IN_BLANK') {
+        selectedAnswerText = userAns && userAns.selectedAnswerText !== undefined && userAns.selectedAnswerText !== null
+          ? String(userAns.selectedAnswerText)
+          : '';
+
+        const normUser = selectedAnswerText.trim().toLowerCase();
+        const normCorrect = (correctAnswerText || '').trim().toLowerCase();
+
+        isCorrect = Boolean(normUser && normCorrect && normUser === normCorrect);
+        selectedOptionIndex = null;
+        correctAnswerIndex = null;
+
+      } else {
+        // MCQ
+        const rawOpt = userAns
+          ? (userAns.selectedOptionIndex !== undefined && userAns.selectedOptionIndex !== null
+            ? userAns.selectedOptionIndex
+            : userAns.selectedOptionIdx)
+          : null;
+
+        selectedOptionIndex = rawOpt !== null && rawOpt !== undefined && !isNaN(Number(rawOpt))
+          ? Number(rawOpt)
+          : null;
+
+        const hasSelected = selectedOptionIndex !== null && selectedOptionIndex >= 0 && selectedOptionIndex < (q.options ? q.options.length : 0);
+        selectedAnswerText = hasSelected ? (q.options[selectedOptionIndex] || '') : (userAns?.selectedAnswerText || '');
+        correctAnswerText = correctAnswerText || (q.options && q.correctAnswerIndex !== null && q.correctAnswerIndex !== undefined ? q.options[q.correctAnswerIndex] : '');
+
+        isCorrect = hasSelected && selectedOptionIndex === q.correctAnswerIndex;
+      }
 
       if (isCorrect) {
         totalScore += qScore;
@@ -423,10 +514,11 @@ const submitQuiz = async (req, res, next) => {
       evaluatedAnswersData.push({
         questionIndex: idx,
         questionText: q.questionText || `Question ${idx + 1}`,
-        selectedOptionIndex: hasSelected ? selectedOpt : null,
-        selectedAnswerText: hasSelected ? (q.options[selectedOpt] || '') : '',
-        correctAnswerIndex: q.correctAnswerIndex,
-        correctAnswerText: (q.options && q.options[q.correctAnswerIndex]) || '',
+        questionType: qType,
+        selectedOptionIndex,
+        selectedAnswerText,
+        correctAnswerIndex,
+        correctAnswerText,
         options: q.options || [],
         isCorrect
       });
