@@ -531,7 +531,7 @@ export const CourseBuilder = () => {
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <div className="inline-flex items-center text-[11px] font-bold text-indigo-600">
+            <div className="inline-flex items-center text-[11px] font-bold text-emerald-700">
               <Sparkles className="w-3 h-3 mr-1" /> {isEditMode ? 'Edit Training Course' : 'Create New Training Course'}
             </div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-heading">
@@ -566,14 +566,14 @@ export const CourseBuilder = () => {
                   disabled={st.step > currentStep}
                   className={`flex items-center space-x-2 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-xs'
+                      ? 'bg-emerald-600 text-white shadow-xs'
                       : isDone
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       : 'bg-slate-100 text-slate-400 opacity-60'
                   }`}
                 >
                   <span className={`w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center ${
-                    isActive ? 'bg-white text-indigo-600' : isDone ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-600'
+                    isActive ? 'bg-white text-emerald-700' : isDone ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-600'
                   }`}>
                     {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : st.step}
                   </span>
@@ -593,7 +593,7 @@ export const CourseBuilder = () => {
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
           <div className="border-b border-slate-200 pb-3">
             <h2 className="text-lg font-bold text-slate-900 flex items-center">
-              <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
+              <BookOpen className="w-5 h-5 mr-2 text-emerald-600" />
               Step 1: Basic Information
             </h2>
             <p className="text-xs text-slate-500">Provide the title, category, description, and thumbnail for this training.</p>
@@ -610,7 +610,7 @@ export const CourseBuilder = () => {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 placeholder="e.g. Master React 19 & Next.js Architecture"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:border-indigo-600 outline-none"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:border-emerald-600 outline-none"
               />
             </div>
 
@@ -623,7 +623,7 @@ export const CourseBuilder = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="A concise overview of what learners will gain from this course..."
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:border-indigo-600 outline-none resize-none"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:border-emerald-600 outline-none resize-none"
               />
             </div>
 
@@ -635,7 +635,7 @@ export const CourseBuilder = () => {
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:border-indigo-600 outline-none cursor-pointer"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:border-emerald-600 outline-none cursor-pointer"
               >
                 <option value="">-- Choose Category --</option>
                 {categories.map(c => (
@@ -658,7 +658,7 @@ export const CourseBuilder = () => {
                   </div>
                 )}
                 <div className="space-y-2">
-                  <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
+                  <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors">
                     <Upload className="w-4 h-4 mr-1.5" />
                     {uploadingThumb ? 'Uploading...' : 'Upload Thumbnail Image'}
                     <input type="file" accept="image/*" onChange={handleThumbnailUpload} className="hidden" disabled={uploadingThumb} />
@@ -680,12 +680,12 @@ export const CourseBuilder = () => {
                   onChange={(e) => setBenefitInput(e.target.value)}
                   placeholder="e.g. Learn modern React state management"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddBenefit(); } }}
-                  className="flex-1 px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 focus:border-indigo-600 outline-none"
+                  className="flex-1 px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 focus:border-emerald-600 outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAddBenefit}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 cursor-pointer"
                 >
                   + Add Benefit
                 </button>
@@ -717,14 +717,14 @@ export const CourseBuilder = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
             <div>
               <h2 className="text-lg font-bold text-slate-900 flex items-center">
-                <Layers className="w-5 h-5 mr-2 text-indigo-600" />
+                <Layers className="w-5 h-5 mr-2 text-emerald-600" />
                 Step 2: Course Builder
               </h2>
               <p className="text-xs text-slate-500">Structure your training into Sections and Add Video Lectures inside each section.</p>
             </div>
             <button
               onClick={openAddSectionModal}
-              className="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 shadow-xs cursor-pointer"
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 shadow-xs cursor-pointer"
             >
               <Plus className="w-4 h-4 mr-1.5" />
               Add Section
@@ -733,14 +733,14 @@ export const CourseBuilder = () => {
 
           {sections.length === 0 ? (
             <div className="p-10 text-center rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-              <Layers className="w-10 h-10 text-indigo-600 mx-auto" />
+              <Layers className="w-10 h-10 text-emerald-600 mx-auto" />
               <h3 className="font-bold text-slate-900 text-sm">No Sections Added Yet</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 Click "+ Add Section" above to create module sections for your course.
               </p>
               <button
                 onClick={openAddSectionModal}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer"
               >
                 Add Section
               </button>
@@ -752,7 +752,7 @@ export const CourseBuilder = () => {
                   <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                     <div>
                       <h3 className="font-bold text-slate-900 text-base flex items-center">
-                        <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-extrabold text-xs flex items-center justify-center mr-2">
+                        <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 font-extrabold text-xs flex items-center justify-center mr-2">
                           {sIdx + 1}
                         </span>
                         {sec.title}
@@ -763,11 +763,11 @@ export const CourseBuilder = () => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => openAddLectureModal(sIdx)}
-                        className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer inline-flex items-center"
+                        className="px-3 py-1.5 rounded-xl bg-teal-50 text-teal-700 border border-teal-200 text-xs font-semibold hover:bg-teal-100 transition-colors cursor-pointer inline-flex items-center"
                       >
                         <Plus className="w-3.5 h-3.5 mr-1" /> Add Lecture
                       </button>
-                      <button onClick={() => openEditSectionModal(sIdx)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 cursor-pointer">
+                      <button onClick={() => openEditSectionModal(sIdx)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 cursor-pointer">
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDeleteSection(sIdx)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer">
@@ -784,7 +784,7 @@ export const CourseBuilder = () => {
                       sec.lectures.map((lec, lIdx) => (
                         <div key={lIdx} className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
                           <div className="flex items-center space-x-3">
-                            <Video className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                            <Video className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                             <div>
                               <p className="font-bold text-slate-900">{lec.title}</p>
                               {lec.description && <p className="text-[11px] text-slate-500 line-clamp-1">{lec.description}</p>}
@@ -797,7 +797,7 @@ export const CourseBuilder = () => {
                                 Video Attached
                               </span>
                             )}
-                            <button onClick={() => openEditLectureModal(sIdx, lIdx)} className="p-1 text-slate-400 hover:text-indigo-600 cursor-pointer">
+                            <button onClick={() => openEditLectureModal(sIdx, lIdx)} className="p-1 text-slate-400 hover:text-emerald-600 cursor-pointer">
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button onClick={() => handleDeleteLecture(sIdx, lIdx)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer">
@@ -1137,7 +1137,7 @@ export const CourseBuilder = () => {
                   type="checkbox"
                   checked={addResourcesEnabled}
                   onChange={(e) => setAddResourcesEnabled(e.target.checked)}
-                  className="w-5 h-5 text-indigo-600 rounded cursor-pointer"
+                  className="w-5 h-5 text-teal-600 rounded cursor-pointer"
                 />
                 <div>
                   <span className="font-bold text-slate-900 text-sm">Add Downloadable PDF Resources</span>
@@ -1148,7 +1148,7 @@ export const CourseBuilder = () => {
               {addResourcesEnabled && (
                 <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                   <div>
-                    <label className="cursor-pointer inline-flex items-center px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors shadow-xs">
+                    <label className="cursor-pointer inline-flex items-center px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition-colors shadow-xs">
                       <Upload className="w-4 h-4 mr-2" />
                       {uploadingPdf ? 'Uploading PDFs...' : 'Upload PDF Files'}
                       <input
@@ -1200,10 +1200,10 @@ export const CourseBuilder = () => {
             {/* Overview Summary */}
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-indigo-600">
+                <span className="font-bold text-emerald-700">
                   {categories.find(c => String(c._id) === String(categoryId))?.name || 'Category'}
                 </span>
-                <span className="font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <span className="font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                   Step 1 Verified
                 </span>
               </div>
@@ -1222,7 +1222,7 @@ export const CourseBuilder = () => {
             {/* Sections & Lectures Summary */}
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <h4 className="font-bold text-slate-900 text-sm flex items-center">
-                <Layers className="w-4 h-4 mr-1.5 text-indigo-600" /> Course Structure ({sections.length} Sections)
+                <Layers className="w-4 h-4 mr-1.5 text-emerald-600" /> Course Structure ({sections.length} Sections)
               </h4>
               <div className="space-y-2">
                 {sections.map((sec, sIdx) => (
@@ -1256,7 +1256,7 @@ export const CourseBuilder = () => {
 
             {/* Resources Summary */}
             {addResourcesEnabled && resources.length > 0 && (
-              <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-800 space-y-1">
+              <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 text-teal-900 space-y-1">
                 <h4 className="font-bold text-xs flex items-center">
                   <FileText className="w-4 h-4 mr-1.5" /> {resources.length} Downloadable PDF Resources Attached
                 </h4>
@@ -1280,7 +1280,7 @@ export const CourseBuilder = () => {
           {currentStep < 5 ? (
             <button
               onClick={handleNextStep}
-              className="inline-flex items-center px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
+              className="inline-flex items-center px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
             >
               Next Step <ChevronRight className="w-4 h-4 ml-1" />
             </button>
@@ -1319,7 +1319,7 @@ export const CourseBuilder = () => {
               onChange={(e) => setSectionTitle(e.target.value)}
               required
               placeholder="e.g. Module 1: Introduction & Environment Setup"
-              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none focus:border-emerald-600"
             />
           </div>
 
@@ -1330,7 +1330,7 @@ export const CourseBuilder = () => {
               onChange={(e) => setSectionDesc(e.target.value)}
               rows={2}
               placeholder="Section goals and objectives..."
-              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none resize-none"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none resize-none focus:border-emerald-600"
             />
           </div>
 
@@ -1338,7 +1338,7 @@ export const CourseBuilder = () => {
             <button type="button" onClick={() => setShowSectionModal(false)} className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700">
+            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white cursor-pointer hover:bg-emerald-700">
               Save Section
             </button>
           </div>
@@ -1356,7 +1356,7 @@ export const CourseBuilder = () => {
               onChange={(e) => setLectureTitle(e.target.value)}
               required
               placeholder="e.g. Lecture 1.1: What is React?"
-              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none focus:border-emerald-600"
             />
           </div>
 
@@ -1367,7 +1367,7 @@ export const CourseBuilder = () => {
               onChange={(e) => setLectureDesc(e.target.value)}
               rows={2}
               placeholder="Lecture notes and summary..."
-              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none resize-none"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none resize-none focus:border-emerald-600"
             />
           </div>
 
@@ -1375,7 +1375,7 @@ export const CourseBuilder = () => {
             <label className="block text-xs font-semibold text-slate-700 mb-1">Lecture Video *</label>
             <div className="flex items-center space-x-3 mb-2">
               <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800">
-                <Upload className="w-4 h-4 mr-1.5 text-indigo-400" />
+                <Upload className="w-4 h-4 mr-1.5 text-emerald-400" />
                 {uploadingVideo ? 'Uploading Video...' : 'Upload Video File'}
                 <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" disabled={uploadingVideo} />
               </label>
@@ -1389,7 +1389,7 @@ export const CourseBuilder = () => {
               value={lectureVideoUrl}
               onChange={(e) => setLectureVideoUrl(e.target.value)}
               placeholder="Or paste video URL directly (e.g. Cloudinary, MP4 URL)..."
-              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 outline-none"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 outline-none focus:border-emerald-600"
             />
           </div>
 
@@ -1397,7 +1397,7 @@ export const CourseBuilder = () => {
             <button type="button" onClick={() => setShowLectureModal(false)} className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700">
+            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white cursor-pointer hover:bg-emerald-700">
               Save Lecture
             </button>
           </div>

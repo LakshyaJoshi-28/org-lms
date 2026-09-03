@@ -135,9 +135,9 @@ export const Sidebar = ({ mobileOpen = false, onCloseMobile = () => {} }) => {
             onCloseMobile();
             logout();
           }}
-          className="w-full flex items-center justify-start px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-200 hover:text-white hover:bg-rose-900/50 border border-rose-700/40 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-start px-3.5 py-2.5 rounded-xl text-xs font-semibold text-white bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/30 transition-all cursor-pointer shadow-xs"
         >
-          <LogOut className="w-4 h-4 mr-3 shrink-0" />
+          <LogOut className="w-4 h-4 mr-3 shrink-0 text-white" />
           <span>Logout</span>
         </button>
       </div>

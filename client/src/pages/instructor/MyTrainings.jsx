@@ -62,7 +62,7 @@ export const MyTrainings = () => {
         </div>
         <button
           onClick={() => navigate('/instructor/course-builder/new')}
-          className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all cursor-pointer"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           Create New Training
@@ -79,7 +79,7 @@ export const MyTrainings = () => {
           action={
             <button
               onClick={() => navigate('/instructor/course-builder/new')}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 text-white cursor-pointer hover:bg-emerald-700"
             >
               Create Training
             </button>
@@ -94,7 +94,7 @@ export const MyTrainings = () => {
                   {t.thumbnailUrl ? (
                     <img src={t.thumbnailUrl} alt={t.title} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-indigo-300 font-bold text-base p-4 text-center">
+                    <div className="w-full h-full flex items-center justify-center bg-slate-900 text-emerald-300 font-bold text-base p-4 text-center">
                       {t.title}
                     </div>
                   )}
@@ -106,7 +106,7 @@ export const MyTrainings = () => {
                   </span>
 
                   {t.isMandatory && (
-                    <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-600 text-white">
+                    <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white">
                       Mandatory
                     </span>
                   )}
@@ -114,7 +114,7 @@ export const MyTrainings = () => {
 
                 <div className="p-5 space-y-3">
                   <div>
-                    <span className="text-[11px] font-semibold text-indigo-600">
+                    <span className="text-[11px] font-semibold text-emerald-700">
                       {t.categoryId?.name || 'General Category'}
                     </span>
                     <h3 className="font-bold text-slate-900 text-base line-clamp-1">{t.title}</h3>
@@ -124,7 +124,7 @@ export const MyTrainings = () => {
 
                   <div className="flex items-center text-[11px] text-slate-500 pt-2 border-t border-slate-200">
                     <span className="flex items-center">
-                      <Layers className="w-3.5 h-3.5 mr-1 text-indigo-600" /> {t.sections?.length || 0} Sections
+                      <Layers className="w-3.5 h-3.5 mr-1 text-emerald-600" /> {t.sections?.length || 0} Sections
                     </span>
                   </div>
                 </div>
@@ -133,7 +133,7 @@ export const MyTrainings = () => {
               <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
                 <button
                   onClick={() => navigate(`/instructor/course-builder/${t._id}`)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors inline-flex items-center cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors inline-flex items-center cursor-pointer"
                 >
                   <FileCode className="w-3.5 h-3.5 mr-1" />
                   Edit & Course Builder
@@ -151,7 +151,7 @@ export const MyTrainings = () => {
                   </button>
                   <button
                     onClick={() => navigate(`/instructor/course-builder/${t._id}`)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 cursor-pointer"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
