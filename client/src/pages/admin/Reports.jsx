@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Modal } from '../../components/common/Modal';
-import { formatDate, formatAssignmentType } from '../../utils/formatters';
+import { formatDate } from '../../utils/formatters';
 import {
   exportEmployeeProgressReport,
   exportDepartmentComplianceReport,
@@ -18,22 +18,16 @@ import {
   Building2,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   RefreshCw,
   Users,
   BookOpen,
   Award,
-  TrendingUp,
   AlertCircle,
   Download,
   Search,
-  Filter,
   ChevronRight,
   ChevronDown,
-  UserCheck,
-  ShieldAlert,
   Zap,
-  Tag,
   Briefcase,
   FileSpreadsheet,
   PieChart
@@ -178,17 +172,17 @@ export const Reports = () => {
   if (loading) return <LoadingSpinner text="Generating comprehensive LMS reports & analytics..." />;
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto">
       {/* Top Header & Global Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-2">
-            <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Enterprise Analytics Suite
+          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 mb-2">
+            <BarChart3 className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> Enterprise Analytics Suite
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-heading">
             Organizational Reports & Analytics
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-slate-500">
             Monitor training progress, department compliance, employee performance, and organizational learning.
           </p>
         </div>
@@ -197,7 +191,7 @@ export const Reports = () => {
           <button
             onClick={() => fetchReports(true)}
             disabled={refreshing || loading}
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-all cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh Reports'}
@@ -207,7 +201,7 @@ export const Reports = () => {
           <div className="relative">
             <button
               onClick={() => setShowExportMenu(!showExportMenu)}
-              className="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-purple-500 transition-all cursor-pointer"
+              className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
             >
               <Download className="w-4 h-4 mr-2" />
               Export Report
@@ -215,43 +209,43 @@ export const Reports = () => {
             </button>
 
             {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-64 glass-panel bg-white/95 dark:bg-slate-900/95 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-fade-in space-y-1">
-                <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800 mb-1">
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-fade-in space-y-1">
+                <p className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 mb-1">
                   Download CSV / Excel
                 </p>
                 <button
                   onClick={() => { exportFullOrgReport(reportData); setShowExportMenu(false); }}
-                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
-                  <FileSpreadsheet className="w-4 h-4 mr-2.5 text-indigo-500" />
+                  <FileSpreadsheet className="w-4 h-4 mr-2.5 text-emerald-600" />
                   Full Organization Summary
                 </button>
                 <button
                   onClick={() => { exportDepartmentComplianceReport(departmentAnalytics); setShowExportMenu(false); }}
-                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
-                  <Building2 className="w-4 h-4 mr-2.5 text-purple-500" />
+                  <Building2 className="w-4 h-4 mr-2.5 text-teal-600" />
                   Department Compliance Report
                 </button>
                 <button
                   onClick={() => { exportEmployeeProgressReport(filteredEmployees); setShowExportMenu(false); }}
-                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
-                  <Users className="w-4 h-4 mr-2.5 text-emerald-500" />
+                  <Users className="w-4 h-4 mr-2.5 text-emerald-600" />
                   Employee Progress Report
                 </button>
                 <button
                   onClick={() => { exportTrainingAnalyticsReport(trainingAnalytics); setShowExportMenu(false); }}
-                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                 >
-                  <BookOpen className="w-4 h-4 mr-2.5 text-blue-500" />
+                  <BookOpen className="w-4 h-4 mr-2.5 text-teal-600" />
                   Training Completion Report
                 </button>
                 <button
                   onClick={() => { exportOverdueReport(overdueReport); setShowExportMenu(false); }}
-                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-colors"
+                  className="w-full flex items-center px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                 >
-                  <Clock className="w-4 h-4 mr-2.5 text-rose-500" />
+                  <Clock className="w-4 h-4 mr-2.5 text-rose-600" />
                   Overdue Trainings Report
                 </button>
               </div>
@@ -262,9 +256,9 @@ export const Reports = () => {
 
       {/* ERROR STATE */}
       {error && !loading && (
-        <div className="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-between">
+        <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <AlertCircle className="w-6 h-6 flex-shrink-0" />
+            <AlertCircle className="w-6 h-6 flex-shrink-0 text-rose-600" />
             <div>
               <h4 className="font-bold text-sm">Failed to Load Compliance Analytics</h4>
               <p className="text-xs opacity-90">{error}</p>
@@ -272,7 +266,7 @@ export const Reports = () => {
           </div>
           <button
             onClick={() => fetchReports(false)}
-            className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold text-xs shadow hover:bg-rose-500 transition-colors"
+            className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold text-xs shadow hover:bg-rose-700 transition-colors cursor-pointer"
           >
             Retry
           </button>
@@ -281,59 +275,59 @@ export const Reports = () => {
 
       {/* Top Overview Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="p-4.5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-3">
-          <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-3">
+          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Employees</p>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white">{overview.totalEmployees || 0}</h3>
+            <p className="text-[11px] font-medium text-slate-500">Employees</p>
+            <h3 className="text-xl font-black text-slate-900">{overview.totalEmployees || 0}</h3>
           </div>
         </div>
 
-        <div className="p-4.5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-3">
-          <div className="p-3 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-3">
+          <div className="p-3 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Departments</p>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white">{overview.totalDepartments || 0}</h3>
+            <p className="text-[11px] font-medium text-slate-500">Departments</p>
+            <h3 className="text-xl font-black text-slate-900">{overview.totalDepartments || 0}</h3>
           </div>
         </div>
 
-        <div className="p-4.5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-3">
-          <div className="p-3 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-3">
+          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Assigned</p>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white">{overview.totalAssignments || 0}</h3>
+            <p className="text-[11px] font-medium text-slate-500">Assigned</p>
+            <h3 className="text-xl font-black text-slate-900">{overview.totalAssignments || 0}</h3>
           </div>
         </div>
 
-        <div className="p-4.5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-3">
-          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-3">
+          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Completed</p>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white">{overview.completedAssignments || 0}</h3>
+            <p className="text-[11px] font-medium text-slate-500">Completed</p>
+            <h3 className="text-xl font-black text-slate-900">{overview.completedAssignments || 0}</h3>
           </div>
         </div>
 
-        <div className="p-4.5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-3">
-          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+        <div className="p-4.5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-3">
+          <div className="p-3 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Compliance Rate</p>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white">{overview.overallComplianceRate || 0}%</h3>
+            <p className="text-[11px] font-medium text-slate-500">Compliance Rate</p>
+            <h3 className="text-xl font-black text-slate-900">{overview.overallComplianceRate || 0}%</h3>
           </div>
         </div>
       </div>
 
       {/* Global Filter Bar */}
-      <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
           <input
@@ -341,36 +335,36 @@ export const Reports = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search employee, department, role..."
-            className="w-full pl-9 pr-3 py-2 rounded-xl glass-input text-xs"
+            className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 focus:border-emerald-600 outline-none"
           />
         </div>
 
         <select
           value={selectedDept}
           onChange={(e) => setSelectedDept(e.target.value)}
-          className="px-3 py-2 rounded-xl glass-input text-xs"
+          className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs text-slate-900 outline-none cursor-pointer"
         >
           <option value="">All Departments</option>
           {departmentAnalytics.map(d => (
-            <option key={d.departmentId} value={d.departmentId} className="bg-slate-900 text-white">{d.departmentName}</option>
+            <option key={d.departmentId} value={d.departmentId}>{d.departmentName}</option>
           ))}
         </select>
 
         <select
           value={selectedTraining}
           onChange={(e) => setSelectedTraining(e.target.value)}
-          className="px-3 py-2 rounded-xl glass-input text-xs"
+          className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs text-slate-900 outline-none cursor-pointer"
         >
           <option value="">All Training Courses</option>
           {trainingAnalytics.map(t => (
-            <option key={t._id} value={t._id} className="bg-slate-900 text-white">{t.title}</option>
+            <option key={t._id} value={t._id}>{t.title}</option>
           ))}
         </select>
 
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="px-3 py-2 rounded-xl glass-input text-xs"
+          className="px-3 py-2 rounded-xl border border-slate-300 bg-white text-xs text-slate-900 outline-none cursor-pointer"
         >
           <option value="">All Statuses</option>
           <option value="Completed">Completed</option>
@@ -381,14 +375,14 @@ export const Reports = () => {
 
         <button
           onClick={() => { setSearch(''); setSelectedDept(''); setSelectedRole(''); setSelectedTraining(''); setSelectedStatus(''); }}
-          className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
         >
           Reset Filters
         </button>
       </div>
 
       {/* Main Specialized Tabs Switcher */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         {[
           { id: 'overview', label: 'Overview', icon: PieChart },
           { id: 'departments', label: 'Department Analytics', icon: Building2 },
@@ -402,16 +396,16 @@ export const Reports = () => {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`flex items-center px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === t.id
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
-                  : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
               }`}
             >
               <Icon className="w-4 h-4 mr-2" />
               {t.label}
               {t.badge !== undefined && (
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === t.id ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}>
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === t.id ? 'bg-white/20 text-white font-bold' : 'bg-slate-100 text-slate-700'}`}>
                   {t.badge}
                 </span>
               )}
@@ -427,10 +421,10 @@ export const Reports = () => {
         <div className="space-y-6 animate-fade-in">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Department Compliance Bar Chart */}
-            <div className="lg:col-span-2 p-6 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 space-y-4">
+            <div className="lg:col-span-2 p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-                  <BarChart3 className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="font-bold text-slate-900 text-base flex items-center">
+                  <BarChart3 className="w-5 h-5 mr-2 text-emerald-600" />
                   Department Compliance %
                 </h3>
                 <span className="text-xs text-slate-500">Real-Time Aggregation</span>
@@ -442,21 +436,21 @@ export const Reports = () => {
                 <div className="h-72 w-full pt-4">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={deptChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
-                      <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={12} />
-                      <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={12} unit="%" domain={[0, 100]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
+                      <YAxis stroke="#64748b" fontSize={12} unit="%" domain={[0, 100]} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: isDark ? '#0f172a' : '#ffffff',
-                          borderColor: isDark ? '#334155' : '#cbd5e1',
+                          backgroundColor: '#ffffff',
+                          borderColor: '#cbd5e1',
                           borderRadius: '12px',
-                          color: isDark ? '#f8fafc' : '#0f172a'
+                          color: '#0f172a'
                         }}
                         formatter={(value) => [`${value}%`, 'Compliance Rate']}
                       />
-                      <Bar dataKey="complianceRate" fill="#6366f1" radius={[6, 6, 0, 0]}>
+                      <Bar dataKey="complianceRate" fill="#059669" radius={[6, 6, 0, 0]}>
                         {deptChartData.map((entry, index) => (
-                          <Cell key={`c-${index}`} fill={entry.complianceRate >= 80 ? '#10b981' : entry.complianceRate >= 50 ? '#6366f1' : '#f59e0b'} />
+                          <Cell key={`c-${index}`} fill={entry.complianceRate >= 80 ? '#10b981' : entry.complianceRate >= 50 ? '#059669' : '#0f766e'} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -466,31 +460,31 @@ export const Reports = () => {
             </div>
 
             {/* Status Breakdown Summary */}
-            <div className="p-6 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 space-y-4">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-                <PieChart className="w-5 h-5 mr-2 text-purple-600 dark:text-purple-400" />
+            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+              <h3 className="font-bold text-slate-900 text-base flex items-center">
+                <PieChart className="w-5 h-5 mr-2 text-teal-600" />
                 Training Status Distribution
               </h3>
 
               <div className="space-y-4 pt-2">
-                <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Completed Trainings</span>
-                  <span className="font-extrabold text-sm text-slate-900 dark:text-white">{overview.completedAssignments || 0}</span>
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-700">Completed Trainings</span>
+                  <span className="font-extrabold text-sm text-slate-900">{overview.completedAssignments || 0}</span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">In Progress</span>
-                  <span className="font-extrabold text-sm text-slate-900 dark:text-white">{overview.inProgressAssignments || 0}</span>
+                <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-emerald-700">In Progress</span>
+                  <span className="font-extrabold text-sm text-slate-900">{overview.inProgressAssignments || 0}</span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">Pending / Unstarted</span>
-                  <span className="font-extrabold text-sm text-slate-900 dark:text-white">{overview.pendingAssignments || 0}</span>
+                <div className="p-3.5 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-teal-700">Pending / Unstarted</span>
+                  <span className="font-extrabold text-sm text-slate-900">{overview.pendingAssignments || 0}</span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Overdue Trainings</span>
-                  <span className="font-extrabold text-sm text-slate-900 dark:text-white">{overview.overdueAssignments || 0}</span>
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-rose-700">Overdue Trainings</span>
+                  <span className="font-extrabold text-sm text-slate-900">{overview.overdueAssignments || 0}</span>
                 </div>
               </div>
             </div>
@@ -502,140 +496,187 @@ export const Reports = () => {
       {/* TAB 2: DEPARTMENT ANALYTICS DRILL-DOWN */}
       {/* ================================================== */}
       {activeTab === 'departments' && (
-        <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-              <Building2 className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
-              Department Wise Drill-Down Compliance
-            </h3>
-            <span className="text-xs text-slate-500">Expand to view Job Roles & Employees</span>
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-2">
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-base flex items-center font-heading">
+                <Building2 className="w-5 h-5 mr-2 text-emerald-600" />
+                Department Wise Drill-Down Compliance
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Interactive organizational tree hierarchy: Department → Job Roles → Employees
+              </p>
+            </div>
+            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">
+              {departmentAnalytics.length} Departments Tracked
+            </span>
           </div>
 
           {departmentAnalytics.length === 0 ? (
             <EmptyState icon={Building2} title="No Departments Found" description="No active departments in your organization." />
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {departmentAnalytics.map((dept) => {
                 const isDeptExpanded = expandedDepts[dept.departmentId];
 
                 return (
-                  <div key={dept.departmentId} className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 overflow-hidden transition-all">
-                    {/* Department Header Accordion Bar */}
+                  <div key={dept.departmentId} className="rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden transition-all">
+                    {/* Department Header Accordion Bar (PARENT NODE) */}
                     <div
                       onClick={() => toggleDeptExpand(dept.departmentId)}
-                      className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-slate-100/80 dark:hover:bg-slate-900/60 transition-colors"
+                      className={`p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer transition-colors ${
+                        isDeptExpanded ? 'bg-emerald-50/40 border-b border-slate-200/80' : 'hover:bg-slate-50'
+                      }`}
                     >
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                      <div className="flex items-center space-x-3.5">
+                        <div className={`p-2.5 rounded-xl transition-transform ${isDeptExpanded ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600'}`}>
                           {isDeptExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                         </div>
                         <div>
-                          <h4 className="font-extrabold text-slate-900 dark:text-white text-base">{dept.departmentName}</h4>
-                          <p className="text-[11px] text-slate-500">
-                            {dept.totalEmployees} Employees • {dept.totalRoles} Roles • {dept.totalAssigned} Trainings Assigned
+                          <div className="flex items-center space-x-2">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                              Department
+                            </span>
+                            <h4 className="font-extrabold text-slate-900 text-base font-heading">{dept.departmentName}</h4>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {dept.totalEmployees} Employees • {dept.totalRoles} Job Roles • {dept.totalAssigned} Trainings Assigned
                           </p>
                         </div>
                       </div>
 
                       {/* Stat Metrics Badges */}
-                      <div className="flex flex-wrap items-center gap-3 text-xs">
-                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20">
+                      <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
                           {dept.completed} Completed
                         </span>
-                        <span className="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold border border-indigo-500/20">
+                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
                           {dept.inProgress} In Progress
                         </span>
-                        <span className="px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 font-semibold border border-blue-500/20">
+                        <span className="px-2.5 py-1 rounded-lg bg-teal-50 text-teal-700 font-semibold border border-teal-200">
                           {dept.pending} Pending
                         </span>
-                        <span className="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/20">
+                        <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-bold border border-rose-200">
                           {dept.overdue} Overdue
                         </span>
-                        <div className="px-3 py-1 rounded-xl bg-indigo-600 text-white font-extrabold shadow-sm">
-                          {dept.complianceRate}% Compliance
+                        <div className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#064E3B] to-[#0F766E] text-white font-black text-xs shadow-xs flex items-center space-x-1">
+                          <span>{dept.complianceRate}% Compliance</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Department Drill-Down Section */}
+                    {/* Department Drill-Down Tree Section */}
                     {isDeptExpanded && (
-                      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 space-y-4 animate-fade-in">
+                      <div className="p-4 sm:p-6 bg-slate-50/50 space-y-4 animate-fade-in relative">
                         {dept.totalAssigned === 0 && (
-                          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs">
+                          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
                             No training assignments have been made for this department yet.
                           </div>
                         )}
 
-                        {/* Job Roles Hierarchy */}
-                        <div className="space-y-3">
+                        {/* TREE CONTAINER WITH CONNECTOR SPINE */}
+                        <div className="relative pl-6 sm:pl-8 space-y-4">
+                          {/* Continuous Vertical Spine Connector Line from Parent to Child Roles */}
+                          {dept.roles.length > 0 && (
+                            <div className="absolute left-2.5 sm:left-3.5 top-2 bottom-6 w-0.5 bg-emerald-200/90 rounded-full" />
+                          )}
+
                           {dept.roles.map((role) => {
                             const roleKey = `${dept.departmentId}_${role.jobRole}`;
                             const isRoleExpanded = expandedRoles[roleKey];
 
                             return (
-                              <div key={roleKey} className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/60 p-3 space-y-3">
-                                <div
-                                  onClick={() => toggleRoleExpand(roleKey)}
-                                  className="flex items-center justify-between cursor-pointer text-xs"
-                                >
-                                  <div className="flex items-center space-x-2 font-bold text-slate-800 dark:text-slate-200">
-                                    <Briefcase className="w-4 h-4 text-purple-500" />
-                                    <span>{role.jobRole}</span>
-                                    <span className="text-[10px] text-slate-400 font-normal">({role.totalEmployees} Employees)</span>
+                              <div key={roleKey} className="relative">
+                                {/* L-Shaped Branch Connector to Job Role Card */}
+                                <div className="absolute -left-3.5 sm:-left-4.5 top-5 w-4 sm:w-5 h-0.5 bg-emerald-200/90 rounded-l-xs" />
+                                <div className="absolute -left-4 sm:-left-5 top-4 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+
+                                {/* JOB ROLE CARD (CHILD NODE) */}
+                                <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-2xs space-y-3 transition-all hover:border-emerald-300">
+                                  <div
+                                    onClick={() => toggleRoleExpand(roleKey)}
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 cursor-pointer text-xs"
+                                  >
+                                    <div className="flex items-center space-x-2 font-bold text-slate-900">
+                                      <div className={`p-1.5 rounded-lg transition-transform ${isRoleExpanded ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500'}`}>
+                                        {isRoleExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                      </div>
+                                      <Briefcase className="w-4 h-4 text-teal-600" />
+                                      <span className="font-extrabold text-sm">{role.jobRole}</span>
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                        {role.totalEmployees} {role.totalEmployees === 1 ? 'Employee' : 'Employees'}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center space-x-3 font-semibold text-[11px]">
+                                      <span className="text-emerald-700 font-bold">{role.completed} Completed</span>
+                                      <span className="text-emerald-700">{role.inProgress} In Progress</span>
+                                      <span className="text-rose-700 font-bold">{role.overdue} Overdue</span>
+                                      <span className="font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                        {role.complianceRate}% Compliance
+                                      </span>
+                                    </div>
                                   </div>
 
-                                  <div className="flex items-center space-x-3 font-semibold">
-                                    <span className="text-emerald-500">{role.completed} Completed</span>
-                                    <span className="text-indigo-500">{role.inProgress} In Progress</span>
-                                    <span className="text-rose-500">{role.overdue} Overdue</span>
-                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">{role.complianceRate}%</span>
-                                  </div>
-                                </div>
+                                  {/* Employees in Role (GRANDCHILD NODES) */}
+                                  {isRoleExpanded && (
+                                    <div className="pt-3 border-t border-slate-100 space-y-2.5 animate-fade-in relative pl-5 sm:pl-6">
+                                      {/* Secondary Vertical Spine for Employees */}
+                                      {role.employees.length > 0 && (
+                                        <div className="absolute left-2.5 sm:left-3 top-3 bottom-4 w-0.5 bg-teal-200/90 rounded-full" />
+                                      )}
 
-                                {/* Employees in Role */}
-                                {isRoleExpanded && (
-                                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-2 animate-fade-in">
-                                    {role.employees.length === 0 ? (
-                                      <p className="text-xs text-slate-400 italic p-1">No employees assigned to this role.</p>
-                                    ) : (
-                                      role.employees.map((emp) => (
-                                        <div
-                                          key={emp._id}
-                                          onClick={() => {
-                                            const fullEmp = employeeAnalytics.find(e => String(e._id) === String(emp._id));
-                                            if (fullEmp) setSelectedEmpModal(fullEmp);
-                                          }}
-                                          className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs cursor-pointer hover:border-indigo-500/50 transition-all"
-                                        >
-                                          <div className="flex items-center space-x-3">
-                                            <img
-                                              src={emp.profilePicture || `https://api.dicebear.com/7.x/initials/svg?seed=${emp.name}`}
-                                              alt={emp.name}
-                                              className="w-7 h-7 rounded-lg object-cover bg-slate-800 border border-slate-700"
-                                            />
-                                            <div>
-                                              <p className="font-bold text-slate-900 dark:text-slate-100">{emp.name}</p>
-                                              <p className="text-[10px] text-slate-400">{emp.email}</p>
+                                      {role.employees.length === 0 ? (
+                                        <p className="text-xs text-slate-400 italic p-1">No employees assigned to this job role.</p>
+                                      ) : (
+                                        role.employees.map((emp) => (
+                                          <div key={emp._id} className="relative">
+                                            {/* Secondary L-Connector to Employee Card */}
+                                            <div className="absolute -left-2.5 sm:-left-3 top-4.5 w-3 h-0.5 bg-teal-200/90" />
+                                            <div className="absolute -left-3 sm:-left-3.5 top-4 w-1.5 h-1.5 rounded-full bg-teal-500 ring-2 ring-white" />
+
+                                            {/* EMPLOYEE CARD (GRANDCHILD) */}
+                                            <div
+                                              onClick={() => {
+                                                const fullEmp = employeeAnalytics.find(e => String(e._id) === String(emp._id));
+                                                if (fullEmp) setSelectedEmpModal(fullEmp);
+                                              }}
+                                              className="p-3 rounded-xl bg-slate-50/70 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between text-xs cursor-pointer hover:bg-white hover:border-indigo-400 hover:shadow-xs transition-all gap-2"
+                                            >
+                                              <div className="flex items-center space-x-3">
+                                                <img
+                                                  src={emp.profilePicture || `https://api.dicebear.com/7.x/initials/svg?seed=${emp.name}`}
+                                                  alt={emp.name}
+                                                  className="w-8 h-8 rounded-lg object-cover bg-white border border-slate-200 shrink-0"
+                                                />
+                                                <div>
+                                                  <p className="font-bold text-slate-900">{emp.name}</p>
+                                                  <p className="text-[10px] text-slate-500">{emp.email}</p>
+                                                </div>
+                                              </div>
+
+                                              <div className="flex items-center space-x-4">
+                                                <div className="flex items-center space-x-2">
+                                                  <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                                    <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${emp.overallProgress}%` }} />
+                                                  </div>
+                                                  <span className="text-slate-700 font-bold text-xs">{emp.overallProgress}%</span>
+                                                </div>
+                                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                                  emp.complianceStatus === 'Fully Compliant' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                                  emp.complianceStatus === 'At Risk' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                                  'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                                }`}>
+                                                  {emp.complianceStatus}
+                                                </span>
+                                              </div>
                                             </div>
                                           </div>
-
-                                          <div className="flex items-center space-x-4">
-                                            <span className="text-slate-600 dark:text-slate-400 font-medium">
-                                              Progress: <strong className="text-indigo-600 dark:text-indigo-400">{emp.overallProgress}%</strong>
-                                            </span>
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                              emp.complianceStatus === 'Fully Compliant' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                                              emp.complianceStatus === 'At Risk' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                              'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                                            }`}>
-                                              {emp.complianceStatus}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      ))
-                                    )}
-                                  </div>
-                                )}
+                                        ))
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             );
                           })}
@@ -654,10 +695,10 @@ export const Reports = () => {
       {/* TAB 3: EMPLOYEE PROGRESS TABLE */}
       {/* ================================================== */}
       {activeTab === 'employees' && (
-        <div className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800/80 p-6 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-              <Users className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <h3 className="font-bold text-slate-900 text-base flex items-center">
+              <Users className="w-5 h-5 mr-2 text-indigo-600" />
               Employee Training Progress ({filteredEmployees.length})
             </h3>
             <span className="text-xs text-slate-500">Click employee row to view full profile & assignments</span>
@@ -666,9 +707,9 @@ export const Reports = () => {
           {filteredEmployees.length === 0 ? (
             <EmptyState icon={Users} title="No Employees Found" description="No employees match your active filters." />
           ) : (
-            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-950/60 text-slate-400 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-800">
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                   <tr>
                     <th className="p-3.5">Employee</th>
                     <th className="p-3.5">Department & Role</th>
@@ -680,45 +721,45 @@ export const Reports = () => {
                     <th className="p-3.5 text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                <tbody className="divide-y divide-slate-100">
                   {filteredEmployees.map((emp) => (
                     <tr
                       key={emp._id}
                       onClick={() => setSelectedEmpModal(emp)}
-                      className="hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-colors cursor-pointer"
+                      className="hover:bg-slate-50/80 transition-colors cursor-pointer"
                     >
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-slate-100 flex items-center space-x-3">
+                      <td className="p-3.5 font-bold text-slate-900 flex items-center space-x-3">
                         <img
                           src={emp.profilePicture || `https://api.dicebear.com/7.x/initials/svg?seed=${emp.name}`}
                           alt={emp.name}
-                          className="w-8 h-8 rounded-lg object-cover bg-slate-800 border border-slate-700"
+                          className="w-8 h-8 rounded-lg object-cover bg-slate-100 border border-slate-200"
                         />
                         <div>
-                          <p className="font-bold text-slate-900 dark:text-slate-100">{emp.name}</p>
-                          <p className="text-[10px] text-slate-400">{emp.email}</p>
+                          <p className="font-bold text-slate-900">{emp.name}</p>
+                          <p className="text-[10px] text-slate-500">{emp.email}</p>
                         </div>
                       </td>
                       <td className="p-3.5">
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">{emp.departmentName}</p>
-                        <p className="text-[10px] text-indigo-600 dark:text-indigo-400">{emp.jobRole}</p>
+                        <p className="font-semibold text-slate-800">{emp.departmentName}</p>
+                        <p className="text-[10px] text-indigo-600">{emp.jobRole}</p>
                       </td>
-                      <td className="p-3.5 text-center font-bold text-slate-900 dark:text-slate-200">{emp.totalAssigned}</td>
-                      <td className="p-3.5 text-center font-bold text-emerald-600 dark:text-emerald-400">{emp.completed}</td>
-                      <td className="p-3.5 text-center font-semibold text-indigo-600 dark:text-indigo-400">{emp.inProgress}</td>
-                      <td className="p-3.5 text-center font-semibold text-rose-600 dark:text-rose-400">{emp.overdue}</td>
+                      <td className="p-3.5 text-center font-bold text-slate-900">{emp.totalAssigned}</td>
+                      <td className="p-3.5 text-center font-bold text-emerald-700">{emp.completed}</td>
+                      <td className="p-3.5 text-center font-semibold text-indigo-700">{emp.inProgress}</td>
+                      <td className="p-3.5 text-center font-semibold text-rose-700">{emp.overdue}</td>
                       <td className="p-3.5 text-center">
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-16 bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div className="w-16 bg-slate-200 rounded-full h-1.5 overflow-hidden">
                             <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${emp.overallProgress}%` }} />
                           </div>
-                          <span className="font-extrabold text-slate-900 dark:text-slate-100">{emp.overallProgress}%</span>
+                          <span className="font-extrabold text-slate-900">{emp.overallProgress}%</span>
                         </div>
                       </td>
                       <td className="p-3.5 text-right">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          emp.complianceStatus === 'Fully Compliant' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-                          emp.complianceStatus === 'At Risk' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20' :
-                          'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                          emp.complianceStatus === 'Fully Compliant' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          emp.complianceStatus === 'At Risk' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                          'bg-indigo-50 text-indigo-700 border border-indigo-200'
                         }`}>
                           {emp.complianceStatus}
                         </span>
@@ -736,10 +777,10 @@ export const Reports = () => {
       {/* TAB 4: TRAINING ANALYTICS */}
       {/* ================================================== */}
       {activeTab === 'trainings' && (
-        <div className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800/80 p-6 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-              <BookOpen className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <h3 className="font-bold text-slate-900 text-base flex items-center">
+              <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
               Training Completion Analytics ({filteredTrainings.length})
             </h3>
             <span className="text-xs text-slate-500">Click course row to view enrolled employee roster</span>
@@ -748,9 +789,9 @@ export const Reports = () => {
           {filteredTrainings.length === 0 ? (
             <EmptyState icon={BookOpen} title="No Trainings Found" description="No training courses match your active filter." />
           ) : (
-            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-950/60 text-slate-400 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-800">
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                   <tr>
                     <th className="p-3.5">Training Title</th>
                     <th className="p-3.5">Category</th>
@@ -762,27 +803,27 @@ export const Reports = () => {
                     <th className="p-3.5 text-right">Completion Rate</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                <tbody className="divide-y divide-slate-100">
                   {filteredTrainings.map((t) => (
                     <tr
                       key={t._id}
                       onClick={() => setSelectedTrainingModal(t)}
-                      className="hover:bg-purple-50/50 dark:hover:bg-purple-950/30 transition-colors cursor-pointer"
+                      className="hover:bg-purple-50/50 transition-colors cursor-pointer"
                     >
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-slate-100">{t.title}</td>
-                      <td className="p-3.5 font-semibold text-indigo-600 dark:text-indigo-400">{t.categoryName}</td>
+                      <td className="p-3.5 font-bold text-slate-900">{t.title}</td>
+                      <td className="p-3.5 font-semibold text-indigo-600">{t.categoryName}</td>
                       <td className="p-3.5 text-center">
                         {t.isMandatory ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Compulsory</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Compulsory</span>
                         ) : (
                           <span className="text-slate-400">Standard</span>
                         )}
                       </td>
                       <td className="p-3.5 text-center font-bold">{t.totalAssigned}</td>
-                      <td className="p-3.5 text-center font-bold text-emerald-600 dark:text-emerald-400">{t.completed}</td>
-                      <td className="p-3.5 text-center font-semibold text-indigo-600 dark:text-indigo-400">{t.inProgress}</td>
-                      <td className="p-3.5 text-center font-semibold text-rose-600 dark:text-rose-400">{t.overdue}</td>
-                      <td className="p-3.5 text-right font-extrabold text-indigo-600 dark:text-indigo-400">
+                      <td className="p-3.5 text-center font-bold text-emerald-700">{t.completed}</td>
+                      <td className="p-3.5 text-center font-semibold text-indigo-700">{t.inProgress}</td>
+                      <td className="p-3.5 text-center font-semibold text-rose-700">{t.overdue}</td>
+                      <td className="p-3.5 text-right font-extrabold text-indigo-600">
                         {t.completionRate}%
                       </td>
                     </tr>
@@ -798,9 +839,9 @@ export const Reports = () => {
       {/* TAB 5: OVERDUE TRAININGS REPORT */}
       {/* ================================================== */}
       {activeTab === 'overdue' && (
-        <div className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800/80 p-6 space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 className="font-bold text-rose-600 dark:text-rose-400 text-base flex items-center">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <h3 className="font-bold text-rose-600 text-base flex items-center">
               <Clock className="w-5 h-5 mr-2" />
               Overdue Training Assignments ({filteredOverdue.length})
             </h3>
@@ -810,9 +851,9 @@ export const Reports = () => {
           {filteredOverdue.length === 0 ? (
             <EmptyState icon={CheckCircle2} title="No Overdue Trainings 🎉" description="All employees are currently on schedule with their assigned training courses." />
           ) : (
-            <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-2xl">
-              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-                <thead className="bg-slate-50 dark:bg-slate-950/60 text-slate-400 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-800">
+            <div className="overflow-x-auto border border-slate-200 rounded-xl">
+              <table className="w-full text-left text-xs text-slate-700">
+                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                   <tr>
                     <th className="p-3.5">Employee</th>
                     <th className="p-3.5">Department & Job Role</th>
@@ -823,21 +864,21 @@ export const Reports = () => {
                     <th className="p-3.5 text-right">Assigned By</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                <tbody className="divide-y divide-slate-100">
                   {filteredOverdue.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-rose-50/50 dark:hover:bg-rose-950/30 transition-colors">
-                      <td className="p-3.5 font-bold text-slate-900 dark:text-slate-100">
+                    <tr key={idx} className="hover:bg-rose-50/50 transition-colors">
+                      <td className="p-3.5 font-bold text-slate-900">
                         {item.employeeName}
                         <span className="block text-[10px] text-slate-400 font-normal">{item.employeeEmail}</span>
                       </td>
                       <td className="p-3.5">
-                        <p className="font-semibold text-slate-800 dark:text-slate-200">{item.departmentName}</p>
-                        <p className="text-[10px] text-indigo-600 dark:text-indigo-400">{item.jobRole}</p>
+                        <p className="font-semibold text-slate-800">{item.departmentName}</p>
+                        <p className="text-[10px] text-indigo-600">{item.jobRole}</p>
                       </td>
-                      <td className="p-3.5 font-bold text-rose-600 dark:text-rose-400">{item.trainingTitle}</td>
+                      <td className="p-3.5 font-bold text-rose-600">{item.trainingTitle}</td>
                       <td className="p-3.5 font-mono text-slate-500">{formatDate(item.deadline)}</td>
-                      <td className="p-3.5 text-center font-extrabold text-rose-600 dark:text-rose-400">
-                        <span className="px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">
+                      <td className="p-3.5 text-center font-extrabold text-rose-600">
+                        <span className="px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200">
                           {item.daysOverdue} Days
                         </span>
                       </td>
@@ -858,10 +899,10 @@ export const Reports = () => {
       {activeTab === 'compliance' && (
         <div className="space-y-6 animate-fade-in">
           {/* Department Compliance Leaderboard */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-                <Award className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-slate-900 text-base flex items-center">
+                <Award className="w-5 h-5 mr-2 text-indigo-600" />
                 Department Compliance Rankings Leaderboard
               </h3>
               <span className="text-xs text-slate-500 font-medium">Ranked by Real Compliance %</span>
@@ -875,34 +916,34 @@ export const Reports = () => {
                   <div
                     key={d.departmentId}
                     className={`p-4.5 rounded-2xl border transition-all ${
-                      d.status === 'Fully Compliant' ? 'bg-emerald-500/10 border-emerald-500/30' :
-                      d.status === 'Needs Attention' ? 'bg-indigo-500/10 border-indigo-500/30' :
-                      d.status === 'At Risk' ? 'bg-rose-500/10 border-rose-500/30' :
-                      'bg-slate-50 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800'
+                      d.status === 'Fully Compliant' ? 'bg-emerald-50/50 border-emerald-200' :
+                      d.status === 'Needs Attention' ? 'bg-indigo-50/50 border-indigo-200' :
+                      d.status === 'At Risk' ? 'bg-rose-50/50 border-rose-200' :
+                      'bg-slate-50 border-slate-200'
                     } space-y-3`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-slate-500 dark:text-slate-400 font-mono">Rank #{index + 1}</span>
+                      <span className="font-bold text-xs text-slate-500 font-mono">Rank #{index + 1}</span>
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        d.status === 'Fully Compliant' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' :
-                        d.status === 'Needs Attention' ? 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30' :
-                        d.status === 'At Risk' ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30' :
-                        'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                        d.status === 'Fully Compliant' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        d.status === 'Needs Attention' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                        d.status === 'At Risk' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                        'bg-slate-100 text-slate-600'
                       }`}>
                         {d.status}
                       </span>
                     </div>
 
                     <div>
-                      <h4 className="font-extrabold text-slate-900 dark:text-white text-base">{d.departmentName}</h4>
+                      <h4 className="font-extrabold text-slate-900 text-base">{d.departmentName}</h4>
                       <p className="text-[11px] text-slate-500 font-medium pt-0.5">
                         {d.totalEmployees} Active Employees • {d.totalAssigned} Trainings
                       </p>
                     </div>
 
-                    <div className="flex items-baseline justify-between pt-1 border-t border-slate-200/60 dark:border-slate-800/60">
+                    <div className="flex items-baseline justify-between pt-1 border-t border-slate-200">
                       <span className="text-xs text-slate-500 font-semibold">{d.completed} / {d.totalAssigned} Completed</span>
-                      <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{d.complianceRate}%</span>
+                      <span className="text-xl font-black text-indigo-600">{d.complianceRate}%</span>
                     </div>
                   </div>
                 ))}
@@ -911,10 +952,10 @@ export const Reports = () => {
           </div>
 
           {/* Mandatory / Auto-Assigned Training Performance */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-                <Zap className="w-5 h-5 mr-2 text-amber-500" />
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="font-bold text-slate-900 text-base flex items-center">
+                <Zap className="w-5 h-5 mr-2 text-amber-600" />
                 Compulsory & Auto-Assigned Training Compliance ({mandatoryAnalytics.length})
               </h3>
               <span className="text-xs text-slate-500">Click training card for employee drill-down roster</span>
@@ -928,41 +969,41 @@ export const Reports = () => {
                   <div
                     key={m.trainingId}
                     onClick={() => setSelectedTrainingModal(m)}
-                    className="p-4 rounded-2xl bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/25 transition-all cursor-pointer space-y-3 shadow-sm hover:shadow-md"
+                    className="p-4 rounded-2xl bg-amber-50/60 hover:bg-amber-50 border border-amber-200 transition-all cursor-pointer space-y-3 shadow-xs"
                   >
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h4 className="font-bold text-slate-900 dark:text-white text-sm">{m.trainingTitle}</h4>
-                          <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                          <h4 className="font-bold text-slate-900 text-sm">{m.trainingTitle}</h4>
+                          <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                             Auto Rule
                           </span>
                         </div>
-                        <span className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">{m.categoryName} • Deadline {m.customDeadlineDays} days</span>
+                        <span className="text-[11px] text-amber-700 font-semibold">{m.categoryName} • Deadline {m.customDeadlineDays} days</span>
                       </div>
-                      <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{m.complianceRate}%</span>
+                      <span className="text-2xl font-black text-amber-700">{m.complianceRate}%</span>
                     </div>
 
                     <div className="grid grid-cols-4 gap-2 text-center text-xs pt-1">
-                      <div className="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-800/50">
+                      <div className="p-2 rounded-xl bg-white border border-slate-200">
                         <span className="block text-[10px] text-slate-500">Assigned</span>
-                        <strong className="text-slate-900 dark:text-white">{m.totalAssigned}</strong>
+                        <strong className="text-slate-900">{m.totalAssigned}</strong>
                       </div>
-                      <div className="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-800/50">
-                        <span className="block text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Completed</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400">{m.completed}</strong>
+                      <div className="p-2 rounded-xl bg-white border border-slate-200">
+                        <span className="block text-[10px] text-emerald-700 font-semibold">Completed</span>
+                        <strong className="text-emerald-700">{m.completed}</strong>
                       </div>
-                      <div className="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-800/50">
-                        <span className="block text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">Progress</span>
-                        <strong className="text-indigo-600 dark:text-indigo-400">{m.inProgress}</strong>
+                      <div className="p-2 rounded-xl bg-white border border-slate-200">
+                        <span className="block text-[10px] text-indigo-700 font-semibold">Progress</span>
+                        <strong className="text-indigo-700">{m.inProgress}</strong>
                       </div>
-                      <div className="p-2 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/50 dark:border-slate-800/50">
-                        <span className="block text-[10px] text-rose-600 dark:text-rose-400 font-semibold">Overdue</span>
-                        <strong className="text-rose-600 dark:text-rose-400">{m.overdue}</strong>
+                      <div className="p-2 rounded-xl bg-white border border-slate-200">
+                        <span className="block text-[10px] text-rose-700 font-semibold">Overdue</span>
+                        <strong className="text-rose-700">{m.overdue}</strong>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[10px] text-amber-700 dark:text-amber-300 font-medium pt-1">
+                    <div className="flex items-center justify-between text-[10px] text-amber-800 font-medium pt-1">
                       <span>Click to view employee progress roster</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </div>
@@ -984,16 +1025,16 @@ export const Reports = () => {
         >
           <div className="space-y-6">
             {/* Header info */}
-            <div className="flex items-center space-x-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center space-x-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
               <img
                 src={selectedEmpModal.profilePicture || `https://api.dicebear.com/7.x/initials/svg?seed=${selectedEmpModal.name}`}
                 alt={selectedEmpModal.name}
-                className="w-14 h-14 rounded-2xl object-cover border border-slate-700 bg-slate-800"
+                className="w-14 h-14 rounded-2xl object-cover border border-slate-200 bg-slate-100"
               />
               <div className="space-y-1">
-                <h4 className="font-extrabold text-slate-900 dark:text-white text-lg">{selectedEmpModal.name}</h4>
+                <h4 className="font-extrabold text-slate-900 text-lg">{selectedEmpModal.name}</h4>
                 <p className="text-xs text-slate-500">{selectedEmpModal.email}</p>
-                <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                <p className="text-xs font-semibold text-indigo-600">
                   {selectedEmpModal.departmentName} • {selectedEmpModal.jobRole}
                 </p>
               </div>
@@ -1001,7 +1042,7 @@ export const Reports = () => {
 
             {/* Assigned Courses List */}
             <div className="space-y-3">
-              <h5 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+              <h5 className="font-bold text-slate-900 text-sm">
                 Assigned Training Courses ({selectedEmpModal.assignments.length})
               </h5>
 
@@ -1010,12 +1051,12 @@ export const Reports = () => {
               ) : (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                   {selectedEmpModal.assignments.map((a) => (
-                    <div key={a.assignmentId} className="p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs flex items-center justify-between">
+                    <div key={a.assignmentId} className="p-3.5 rounded-xl bg-white border border-slate-200 text-xs flex items-center justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <h6 className="font-bold text-slate-900 dark:text-slate-100">{a.trainingTitle}</h6>
+                          <h6 className="font-bold text-slate-900">{a.trainingTitle}</h6>
                           {a.isMandatory && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Compulsory</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Compulsory</span>
                           )}
                         </div>
                         <p className="text-[10px] text-slate-400">Deadline: {formatDate(a.deadline)}</p>
@@ -1023,10 +1064,10 @@ export const Reports = () => {
 
                       <div className="flex items-center space-x-3">
                         <div className="text-right">
-                          <span className="font-bold text-indigo-600 dark:text-indigo-400 block">{a.progressPercentage}%</span>
+                          <span className="font-bold text-indigo-600 block">{a.progressPercentage}%</span>
                           <span className={`text-[10px] font-semibold ${
-                            a.status === 'Completed' ? 'text-emerald-500' :
-                            a.status === 'Overdue' ? 'text-rose-500' : 'text-indigo-400'
+                            a.status === 'Completed' ? 'text-emerald-600' :
+                            a.status === 'Overdue' ? 'text-rose-600' : 'text-indigo-600'
                           }`}>{a.status}</span>
                         </div>
                       </div>
@@ -1048,35 +1089,35 @@ export const Reports = () => {
           maxWidth="max-w-3xl"
         >
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
               <div>
-                <p className="font-bold text-slate-900 dark:text-white text-base">{selectedTrainingModal.title}</p>
-                <p className="text-indigo-600 dark:text-indigo-400 font-semibold">{selectedTrainingModal.categoryName}</p>
+                <p className="font-bold text-slate-900 text-base">{selectedTrainingModal.title}</p>
+                <p className="text-indigo-600 font-semibold">{selectedTrainingModal.categoryName}</p>
               </div>
               <div className="text-right">
-                <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 block">{selectedTrainingModal.completionRate}%</span>
+                <span className="text-lg font-black text-indigo-600 block">{selectedTrainingModal.completionRate}%</span>
                 <span className="text-[10px] text-slate-400">Completion Rate</span>
               </div>
             </div>
 
-            <h5 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+            <h5 className="font-bold text-slate-900 text-sm">
               Enrolled Employees ({selectedTrainingModal.enrolledEmployees.length})
             </h5>
 
-            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 border border-slate-200 dark:border-slate-800 rounded-xl">
+            <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
               {selectedTrainingModal.enrolledEmployees.map((e) => (
                 <div key={e.assignmentId} className="p-3 text-xs flex items-center justify-between">
                   <div>
-                    <p className="font-bold text-slate-900 dark:text-slate-100">{e.employeeName}</p>
+                    <p className="font-bold text-slate-900">{e.employeeName}</p>
                     <p className="text-[10px] text-slate-400">{e.departmentName} • {e.jobRole}</p>
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <span className="font-bold text-indigo-600 dark:text-indigo-400">{e.progressPercentage}%</span>
+                    <span className="font-bold text-indigo-600">{e.progressPercentage}%</span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      e.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                      e.status === 'Overdue' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                      'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
+                      e.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                      e.status === 'Overdue' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                      'bg-indigo-50 text-indigo-700 border border-indigo-200'
                     }`}>{e.status}</span>
                   </div>
                 </div>

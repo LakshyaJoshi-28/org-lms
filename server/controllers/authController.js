@@ -413,6 +413,10 @@ const changePassword = async (req, res, next) => {
       throw new ApiError(400, 'Please provide both currentPassword and newPassword');
     }
 
+    if (currentPassword === newPassword) {
+      throw new ApiError(400, 'New password must be different from your current password.');
+    }
+
     if (newPassword.length < 6) {
       throw new ApiError(400, 'New password must be at least 6 characters long');
     }

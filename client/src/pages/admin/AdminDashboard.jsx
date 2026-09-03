@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { getAdminDashboardReports } from '../../services/api';
-import { useTheme } from '../../context/ThemeContext';
 import { useNotification } from '../../context/NotificationContext';
 import { EmptyState } from '../../components/common/EmptyState';
 import {
@@ -14,8 +13,10 @@ import {
   RefreshCw,
   AlertCircle,
   Building2,
+  Clock,
+  Activity,
   TrendingUp,
-  Clock
+  UserCheck
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -29,7 +30,6 @@ import {
 } from 'recharts';
 
 export const AdminDashboard = () => {
-  const { isDark } = useTheme();
   const { addToast } = useNotification();
 
   const [data, setData] = useState(null);
@@ -66,7 +66,6 @@ export const AdminDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // Format Recharts data safely from real backend payload
   const departmentPerformance = data?.departmentPerformance || [];
   const quickStats = data?.quickStats || {};
   const recentLogs = data?.recentLogs || [];
@@ -85,28 +84,39 @@ export const AdminDashboard = () => {
     };
   });
 
+  const overallRateNum = typeof quickStats.overallCompletionRate === 'string'
+    ? parseInt(quickStats.overallCompletionRate.replace('%', ''), 10)
+    : Number(quickStats.overallCompletionRate || 0);
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Top Banner & Refresh Controls */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-indigo-900/80 via-purple-900/50 to-slate-900 dark:from-indigo-950/80 dark:via-purple-950/60 dark:to-slate-950 border border-indigo-500/30 text-white shadow-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1 relative z-10">
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/30 text-indigo-200 text-xs font-semibold">
-            <Award className="w-3.5 h-3.5 mr-1.5 text-indigo-300" /> Executive Analytics Portal
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-16">
+      {/* SECTION 1: Deep Emerald -> Teal Gradient Hero Banner */}
+      <div className="relative overflow-hidden p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-[#064E3B] via-[#0D5C46] to-[#0F766E] border border-emerald-800/60 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+        {/* Subtle Background Glows */}
+        <div className="absolute -top-24 -left-24 w-80 h-80 bg-teal-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-1.5 max-w-2xl">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-400/15 border border-emerald-300/30 text-emerald-100 text-xs font-bold backdrop-blur-xs">
+            <Award className="w-3.5 h-3.5 mr-1.5 text-emerald-300" />
+            Executive Analytics Portal
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Organization Dashboard</h1>
-          <p className="text-xs text-indigo-200/80">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">
+            Organization Dashboard
+          </h1>
+          <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
             Real-time compliance tracking, active user counts, and department performance metrics.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3 relative z-10">
+        <div className="relative z-10 flex items-center space-x-3 shrink-0">
           <button
             onClick={() => fetchDashboardData(true)}
             disabled={refreshing || loading}
-            className="inline-flex items-center px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold transition-all shadow-lg focus:outline-none"
+            className="inline-flex items-center px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold shadow-xs backdrop-blur-md transition-all cursor-pointer disabled:opacity-50"
             title="Refresh statistics"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin text-purple-400' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh Data'}
           </button>
         </div>
@@ -114,17 +124,17 @@ export const AdminDashboard = () => {
 
       {/* ERROR STATE CARD */}
       {error && !loading && (
-        <div className="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 space-y-3 flex items-center justify-between">
+        <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-between gap-4">
           <div className="flex items-center space-x-3">
-            <AlertCircle className="w-6 h-6 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <div>
               <h4 className="font-bold text-sm">Failed to Load Dashboard Analytics</h4>
-              <p className="text-xs opacity-90">{error}</p>
+              <p className="text-xs">{error}</p>
             </div>
           </div>
           <button
             onClick={() => fetchDashboardData(false)}
-            className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold text-xs shadow hover:bg-rose-500 transition-colors"
+            className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold text-xs shadow-xs hover:bg-rose-700 transition-colors cursor-pointer shrink-0"
           >
             Retry
           </button>
@@ -134,201 +144,313 @@ export const AdminDashboard = () => {
       {/* SKELETON LOADING STATE */}
       {loading ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
             {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="p-5 rounded-2xl glass-panel animate-pulse space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800" />
-                <div className="h-4 w-24 bg-slate-200 dark:bg-slate-800 rounded" />
-                <div className="h-8 w-16 bg-slate-300 dark:bg-slate-700 rounded" />
+              <div key={n} className="p-5 rounded-2xl bg-white border border-slate-200 animate-pulse space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-slate-200" />
+                <div className="h-4 w-24 bg-slate-200 rounded" />
+                <div className="h-8 w-16 bg-slate-300 rounded" />
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 p-6 rounded-2xl glass-panel animate-pulse h-80 bg-slate-200/50 dark:bg-slate-800/40" />
-            <div className="p-6 rounded-2xl glass-panel animate-pulse h-80 bg-slate-200/50 dark:bg-slate-800/40" />
-          </div>
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 animate-pulse h-80" />
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 animate-pulse h-64" />
         </div>
       ) : (
         <>
-          {/* QUICK STATS METRICS GRID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-xl">
-              <div className="p-3.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                <Users className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Employees</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+          {/* SECTION 2: 4 QUICK STATS CARDS GRID */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
+            {/* Card 1: Total Employees */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Employees</p>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
                   {quickStats.totalEmployees ?? 0}
                 </h3>
+                <p className="text-xs text-slate-500">Active organization staff</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+                <Users className="w-5 h-5" />
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-xl">
-              <div className="p-3.5 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-                <GraduationCap className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Instructors</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+            {/* Card 2: Instructors */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Instructors</p>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
                   {quickStats.totalInstructors ?? 0}
                 </h3>
+                <p className="text-xs text-slate-500">Course & syllabus authors</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 shrink-0">
+                <GraduationCap className="w-5 h-5" />
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-xl">
-              <div className="p-3.5 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Trainings</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+            {/* Card 3: Active Trainings */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Trainings</p>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
                   {quickStats.activeTrainings ?? 0}
                 </h3>
+                <p className="text-xs text-slate-500">Published active courses</p>
+              </div>
+              <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+                <BookOpen className="w-5 h-5" />
               </div>
             </div>
 
-            <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-xl">
-              <div className="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                <CheckCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Completed Trainings</p>
-                <div className="flex items-baseline space-x-2">
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white">
-                    {quickStats.completedTrainings ?? 0}
-                  </h3>
-                  <span className="text-xs font-bold text-emerald-500">
-                    ({quickStats.overallCompletionRate || '0%'})
-                  </span>
+            {/* Card 4: Completed Trainings & Completion Progress */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed</p>
+                  <div className="flex items-baseline space-x-2">
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+                      {quickStats.completedTrainings ?? 0}
+                    </h3>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      {quickStats.overallCompletionRate || '0%'}
+                    </span>
+                  </div>
                 </div>
+                <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+              </div>
+
+              {/* Mini Completion Progress Bar */}
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(isNaN(overallRateNum) ? 0 : overallRateNum, 100)}%` }}
+                />
               </div>
             </div>
           </div>
 
-          {/* DEPARTMENT COMPLETION ANALYTICS & RECENT AUDIT LOGS */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* DEPARTMENT COMPLETION BAR CHART */}
-            <div className="lg:col-span-2 p-6 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <BarChart3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
+          {/* SECTION 3: DEPARTMENT COMPLETION ANALYTICS CHART (FULL WIDTH) */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base font-heading">
                     Department Completion Analytics
                   </h3>
+                  <p className="text-xs text-slate-500">
+                    Real-time course completion percentage per department
+                  </p>
                 </div>
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Real Time % Completion
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  <TrendingUp className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                  Live Compliance Rates
                 </span>
               </div>
-
-              {chartData.length === 0 ? (
-                <EmptyState
-                  icon={Building2}
-                  title="No Department Analytics Available"
-                  description="Create departments and assign training courses to start tracking department completion rates."
-                />
-              ) : (
-                <div className="space-y-6">
-                  {/* Recharts Bar Chart */}
-                  <div className="h-64 w-full pt-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#e2e8f0'} />
-                        <XAxis dataKey="name" stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={12} />
-                        <YAxis stroke={isDark ? '#94a3b8' : '#64748b'} fontSize={12} unit="%" domain={[0, 100]} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: isDark ? '#0f172a' : '#ffffff',
-                            borderColor: isDark ? '#334155' : '#cbd5e1',
-                            borderRadius: '12px',
-                            color: isDark ? '#f8fafc' : '#0f172a',
-                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
-                          }}
-                          formatter={(value) => [`${value}%`, 'Completion Rate']}
-                        />
-                        <Bar dataKey="completionRate" fill="#6366f1" radius={[6, 6, 0, 0]}>
-                          {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.completionRate >= 80 ? '#10b981' : entry.completionRate >= 40 ? '#6366f1' : '#f59e0b'} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Department Summary Table */}
-                  <div className="overflow-x-auto border-t border-slate-100 dark:border-slate-800/80 pt-4">
-                    <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-                      <thead className="text-slate-400 uppercase font-bold tracking-wider text-[10px]">
-                        <tr>
-                          <th className="pb-2">Department</th>
-                          <th className="pb-2 text-center">Employees</th>
-                          <th className="pb-2 text-center">Assigned</th>
-                          <th className="pb-2 text-center">Completed</th>
-                          <th className="pb-2 text-right">Rate</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                        {departmentPerformance.map((dep) => (
-                          <tr key={dep.departmentId}>
-                            <td className="py-2.5 font-semibold text-slate-900 dark:text-slate-100">
-                              {dep.departmentName}
-                            </td>
-                            <td className="py-2.5 text-center font-medium">{dep.totalEmployees}</td>
-                            <td className="py-2.5 text-center font-medium">{dep.totalAssigned}</td>
-                            <td className="py-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400">{dep.completed}</td>
-                            <td className="py-2.5 text-right font-bold text-indigo-600 dark:text-indigo-400">{dep.completionRate}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* RECENT AUDIT LOGS PANEL */}
-            <div className="p-6 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 space-y-4">
-              <div className="flex items-center space-x-2">
-                <ShieldAlert className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
-                  Recent Audit Trail
-                </h3>
+            {chartData.length === 0 ? (
+              <EmptyState
+                icon={Building2}
+                title="No Department Analytics Available"
+                description="Create departments and assign training courses to start tracking department completion rates."
+              />
+            ) : (
+              <div className="h-72 w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={{ stroke: '#cbd5e1' }} />
+                    <YAxis stroke="#64748b" fontSize={12} unit="%" domain={[0, 100]} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        borderColor: '#e2e8f0',
+                        borderRadius: '12px',
+                        color: '#0f172a',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value) => [`${value}%`, 'Completion Rate']}
+                    />
+                    <Bar dataKey="completionRate" fill="#059669" radius={[8, 8, 0, 0]} maxBarSize={55}>
+                      {chartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.completionRate >= 80 ? '#10b981' : entry.completionRate >= 40 ? '#059669' : '#0f766e'}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 4: DEPARTMENT DETAILS TABLE */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base font-heading">
+                    Department Performance Breakdown
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Detailed summary of employee enrollments and course completions
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {departmentPerformance.length === 0 ? (
+              <p className="text-xs text-slate-500 py-4 text-center">No department data recorded yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-bold tracking-wider border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Department Name</th>
+                      <th className="px-4 py-3 text-center">Total Employees</th>
+                      <th className="px-4 py-3 text-center">Assigned Courses</th>
+                      <th className="px-4 py-3 text-center">Completed Courses</th>
+                      <th className="px-4 py-3 text-center">Completion Rate</th>
+                      <th className="px-4 py-3 text-right">Progress Bar</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {departmentPerformance.map((dep) => {
+                      const rateVal = typeof dep.completionRate === 'string'
+                        ? parseInt(dep.completionRate.replace('%', ''), 10)
+                        : Number(dep.completionRate || 0);
+                      const safeRate = isNaN(rateVal) ? 0 : rateVal;
+
+                      return (
+                        <tr key={dep.departmentId} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="px-4 py-3.5 font-bold text-slate-900">
+                            {dep.departmentName}
+                          </td>
+                          <td className="px-4 py-3.5 text-center font-medium text-slate-700">
+                            {dep.totalEmployees}
+                          </td>
+                          <td className="px-4 py-3.5 text-center font-medium text-slate-700">
+                            {dep.totalAssigned}
+                          </td>
+                          <td className="px-4 py-3.5 text-center font-bold text-emerald-600">
+                            {dep.completed}
+                          </td>
+                          <td className="px-4 py-3.5 text-center font-bold text-indigo-600">
+                            {dep.completionRate}
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
+                            <div className="inline-flex items-center space-x-2">
+                              <div className="w-28 bg-slate-100 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    safeRate >= 80
+                                      ? 'bg-emerald-500'
+                                      : safeRate >= 40
+                                      ? 'bg-indigo-600'
+                                      : 'bg-amber-500'
+                                  }`}
+                                  style={{ width: `${Math.min(safeRate, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-500 w-8 text-right">
+                                {safeRate}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* SECTION 5: RECENT AUDIT TRAIL (FULL-WIDTH BELOW ANALYTICS) */}
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base font-heading">
+                    Recent Audit Activity Trail
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    System administrative and compliance log history
+                  </p>
+                </div>
               </div>
 
-              {recentLogs.length === 0 ? (
-                <EmptyState
-                  icon={Clock}
-                  title="No Audit Activities"
-                  description="Security and system administrative events will be logged here automatically."
-                />
-              ) : (
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                  {recentLogs.map((log) => (
-                    <div
-                      key={log._id}
-                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80 text-xs space-y-1 transition-colors hover:border-slate-300 dark:hover:border-slate-700"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-indigo-600 dark:text-indigo-300">{log.action}</span>
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                          {new Date(log.timestamp || log.createdAt).toLocaleDateString()} {new Date(log.timestamp || log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <p className="text-slate-700 dark:text-slate-300 font-medium truncate">{log.details}</p>
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
-                        <span>By: <strong className="text-slate-800 dark:text-slate-200">{log.userName}</strong></span>
-                        <span className="uppercase px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-semibold">{log.userRole}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <span className="text-xs font-semibold text-slate-500 hidden sm:inline">
+                Showing recent {recentLogs.length} activity records
+              </span>
             </div>
+
+            {recentLogs.length === 0 ? (
+              <EmptyState
+                icon={Clock}
+                title="No Audit Activities"
+                description="Security and system administrative events will be logged here automatically."
+              />
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-bold tracking-wider border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Action</th>
+                      <th className="px-4 py-3">Details / Activity</th>
+                      <th className="px-4 py-3">Performed By</th>
+                      <th className="px-4 py-3 text-right">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {recentLogs.map((log) => (
+                      <tr key={log._id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-4 py-3.5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            {log.action}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 font-medium text-slate-800 max-w-md truncate">
+                          {log.details}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="inline-flex items-center space-x-2">
+                            <span className="font-bold text-slate-900">{log.userName}</span>
+                            <span className="uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
+                              {log.userRole}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-mono text-xs text-slate-500">
+                          {new Date(log.timestamp || log.createdAt).toLocaleDateString()} {new Date(log.timestamp || log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </>
       )}
     </div>
   );
 };
+
+

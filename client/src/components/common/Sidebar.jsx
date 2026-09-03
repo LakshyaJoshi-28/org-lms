@@ -16,11 +16,14 @@ import {
   MessageSquare,
   Bell,
   User,
-  Award
+  UserCog,
+  Award,
+  LogOut,
+  X
 } from 'lucide-react';
 
-export const Sidebar = () => {
-  const { user } = useAuth();
+export const Sidebar = ({ mobileOpen = false, onCloseMobile = () => {} }) => {
+  const { user, logout } = useAuth();
 
   if (!user) return null;
 
@@ -33,7 +36,8 @@ export const Sidebar = () => {
     { to: '/admin/certificates', label: 'Certificates & Designer', icon: Award },
     { to: '/admin/reports', label: 'Org Reports & Analytics', icon: BarChart3 },
     { to: '/admin/notifications', label: 'Notifications', icon: Bell },
-    { to: '/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert }
+    { to: '/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert },
+    { to: '/admin/settings', label: 'Account Settings', icon: UserCog }
   ];
 
   const instructorLinks = [
@@ -42,7 +46,8 @@ export const Sidebar = () => {
     { to: '/instructor/submissions', label: 'Assignment Submissions', icon: FileCheck2 },
     { to: '/instructor/certificates', label: 'Course Certificates', icon: Award },
     { to: '/instructor/deadlines', label: 'Overdue & Lock Controls', icon: Clock },
-    { to: '/instructor/notifications', label: 'Notifications', icon: Bell }
+    { to: '/instructor/notifications', label: 'Notifications', icon: Bell },
+    { to: '/instructor/settings', label: 'Account Settings', icon: UserCog }
   ];
 
   const employeeLinks = [
@@ -51,12 +56,13 @@ export const Sidebar = () => {
     { to: '/employee/certificates', label: 'My Certificates', icon: Award },
     { to: '/employee/notifications', label: 'Notifications', icon: Bell },
     { to: '/employee/feedback', label: 'Feedback', icon: MessageSquare },
-    { to: '/employee/report', label: 'Personal Report & Stats', icon: BarChart3 }
+    { to: '/employee/report', label: 'Personal Report & Stats', icon: BarChart3 },
+    { to: '/employee/settings', label: 'Account Settings', icon: UserCog }
   ];
 
   const superAdminLinks = [
     { to: '/super-admin', label: 'Organizations Console', icon: Building2, end: true },
-    { to: '/super-admin/settings', label: 'Account Settings', icon: User }
+    { to: '/super-admin/settings', label: 'Account Settings', icon: UserCog }
   ];
 
   const links =
@@ -65,11 +71,30 @@ export const Sidebar = () => {
     user.role === 'Instructor' ? instructorLinks :
     employeeLinks;
 
-  return (
-    <aside className="w-64 glass-panel bg-white/70 dark:bg-slate-900/60 border-r border-slate-200 dark:border-slate-800/80 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between transition-colors">
-      <div className="space-y-6">
+  const sidebarContent = (
+    <div className="h-full flex flex-col justify-between p-4 bg-gradient-to-b from-[#064E3B] to-[#0F766E] border-r border-[#0F766E]/40 text-white shadow-xl">
+      {/* Top Header Logo (Always Visible in Sidebar) */}
+      <div className="flex items-center justify-between pb-3.5 mb-2 border-b border-emerald-700/50 flex-shrink-0">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white font-black text-sm shadow-md">
+            <GraduationCap className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-extrabold text-lg tracking-tight text-white font-heading">LMS</span>
+        </div>
+
+        {/* Mobile Header Close */}
+        <button
+          onClick={onCloseMobile}
+          className="md:hidden p-1.5 rounded-lg text-emerald-200 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Navigation Links Area (Internal Scroll if needed) */}
+      <div className="flex-1 overflow-y-auto min-h-0 py-2 space-y-4 pr-1">
         <div>
-          <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+          <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-emerald-200/80 mb-2">
             Navigation Menu
           </p>
           <nav className="space-y-1">
@@ -80,16 +105,17 @@ export const Sidebar = () => {
                   key={link.to}
                   to={link.to}
                   end={link.end}
+                  onClick={onCloseMobile}
                   className={({ isActive }) =>
-                    `flex items-center px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                    `flex items-center px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150 ${
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-lg shadow-indigo-500/25'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                        ? 'bg-emerald-600/90 text-white font-bold shadow-md border-l-4 border-emerald-300'
+                        : 'text-emerald-100/90 hover:text-white hover:bg-white/10'
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4 mr-3" />
-                  <span>{link.label}</span>
+                  <Icon className="w-4 h-4 mr-3 shrink-0" />
+                  <span className="truncate">{link.label}</span>
                 </NavLink>
               );
             })}
@@ -97,10 +123,48 @@ export const Sidebar = () => {
         </div>
       </div>
 
-      <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 text-center">
-        <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">IT360 Enterprise LMS</p>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Version 1.0 • MERN Architecture</p>
+      {/* Bottom Section: Pinned Logout Button at BOTTOM-LEFT */}
+      <div className="flex-shrink-0 pt-4 border-t border-emerald-700/50 space-y-3 mt-auto">
+        <div className="px-3 py-2 rounded-xl bg-[#064E3B]/60 border border-emerald-500/30">
+          <p className="text-[11px] font-semibold text-white truncate">{user.name}</p>
+          <p className="text-[10px] text-emerald-200/80 truncate">{user.email}</p>
+        </div>
+
+        <button
+          onClick={() => {
+            onCloseMobile();
+            logout();
+          }}
+          className="w-full flex items-center justify-start px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-200 hover:text-white hover:bg-rose-900/50 border border-rose-700/40 transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4 mr-3 shrink-0" />
+          <span>Logout</span>
+        </button>
       </div>
-    </aside>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Desktop Sidebar (100vh Sticky Viewport Height) */}
+      <aside className="hidden md:block w-64 shrink-0 h-screen sticky top-0 z-30">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity"
+            onClick={onCloseMobile}
+          />
+          <div className="relative flex-1 max-w-xs w-full h-full z-10 shadow-2xl animate-fade-in">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
+
+

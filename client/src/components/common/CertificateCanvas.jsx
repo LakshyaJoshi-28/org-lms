@@ -150,7 +150,7 @@ export const CertificateCanvas = ({
 }) => {
   const snapshot = certificate?.templateSnapshot || templateSettings || {};
 
-  const orgName = certificate?.organization?.name || snapshot.organizationName || sampleData?.organizationName || 'IT360 Enterprise Organization';
+  const orgName = certificate?.organization?.name || snapshot.organizationName || sampleData?.organizationName || 'Enterprise Organization';
   const empName = certificate?.employee?.name || sampleData?.employeeName || 'John Doe';
   const trainingTitle = certificate?.training?.title || sampleData?.trainingTitle || 'Advanced Corporate Compliance & Security';
   const certId = certificate?.certificateId || sampleData?.certificateId || 'CERT-2026-SAMPLE';
@@ -170,13 +170,23 @@ export const CertificateCanvas = ({
   const orgNameFontSize = getOrgNameFontSize(orgName);
 
   return (
-    <div className={`relative w-full max-w-4xl mx-auto aspect-[1.4117/1] bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-200 text-slate-900 ${className}`}>
+    <div
+      className={`relative bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 text-slate-900 mx-auto transition-all ${className}`}
+      style={{
+        aspectRatio: '1200 / 850',
+        maxWidth: '100%',
+        maxHeight: '100%',
+        width: 'auto',
+        height: 'auto'
+      }}
+    >
       <svg
         id={elementId}
         viewBox="0 0 1200 850"
-        width="100%"
-        height="100%"
-        className="w-full h-full object-contain select-none"
+        width="1200"
+        height="850"
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-full object-contain select-none block"
         style={{ fontFamily }}
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -338,10 +348,10 @@ export const CertificateCanvas = ({
           {/* Center: Verification Seal */}
           <g transform="translate(600, 735)" textAnchor="middle">
             <text x="0" y="0" textAnchor="middle" fill="#64748B" fontSize="12" fontWeight="700" letterSpacing="2">
-              OFFICIAL IT360 LMS CERTIFICATION
+              OFFICIAL LMS CERTIFICATION
             </text>
             <text x="0" y="18" textAnchor="middle" fill="#94A3B8" fontSize="10">
-              Verified & Issued via IT360 Enterprise Learning Platform
+              Verified & Issued via Enterprise Learning Platform
             </text>
           </g>
 

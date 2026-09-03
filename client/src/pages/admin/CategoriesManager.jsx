@@ -91,17 +91,17 @@ export const CategoriesManager = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-white border border-slate-200 shadow-xs">
         <div>
-          <h1 className="text-2xl font-extrabold text-white">Training Categories</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-heading">Training Categories</h1>
+          <p className="text-xs text-slate-500">
             Organize trainings into categories like Compliance, Technical Skills, Security, Onboarding, etc.
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           Add Category
@@ -115,27 +115,27 @@ export const CategoriesManager = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((c) => (
-            <div key={c._id} className="p-6 rounded-2xl glass-panel border border-slate-800 space-y-3 relative flex flex-col justify-between">
+            <div key={c._id} className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3 relative flex flex-col justify-between hover:shadow-md transition-all">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <div className="p-2.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
                       <FolderKanban className="w-5 h-5" />
                     </div>
-                    <h3 className="font-bold text-slate-100 text-base">{c.name}</h3>
+                    <h3 className="font-bold text-slate-900 text-base">{c.name}</h3>
                   </div>
 
                   <div className="flex items-center space-x-1">
-                    <button onClick={() => openEditModal(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-white">
+                    <button onClick={() => openEditModal(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(c._id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400">
+                    <button onClick={() => handleDelete(c._id)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <p className="text-xs text-slate-600 leading-relaxed">
                   {c.description || 'No category description.'}
                 </p>
               </div>
@@ -148,33 +148,33 @@ export const CategoriesManager = () => {
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingCat ? 'Edit Category' : 'Create Category'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Category Name</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Category Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
               placeholder="e.g. Cybersecurity Compliance"
-              className="w-full px-4 py-2 rounded-xl glass-input text-sm"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Description</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               placeholder="Brief description of the category..."
-              className="w-full px-4 py-2 rounded-xl glass-input text-sm resize-none"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none resize-none"
             />
           </div>
 
-          <div className="pt-4 border-t border-slate-800 flex justify-end space-x-3">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-300">
+          <div className="pt-4 border-t border-slate-200 flex justify-end space-x-3">
+            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer">
               Cancel
             </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white inline-flex items-center">
+            <button type="submit" disabled={submitting} className="px-5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs inline-flex items-center cursor-pointer">
               <Check className="w-4 h-4 mr-1.5" />
               {submitting ? 'Saving...' : editingCat ? 'Update Category' : 'Create Category'}
             </button>
@@ -184,3 +184,4 @@ export const CategoriesManager = () => {
     </div>
   );
 };
+

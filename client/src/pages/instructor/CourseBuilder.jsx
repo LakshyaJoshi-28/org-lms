@@ -26,7 +26,6 @@ import {
   FileText,
   Save,
   Send,
-  X,
   Sparkles,
   ChevronRight,
   ChevronLeft
@@ -521,21 +520,21 @@ export const CourseBuilder = () => {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-16">
+    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in pb-16">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate('/instructor/trainings')}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <div className="inline-flex items-center text-[11px] font-bold text-blue-600 dark:text-blue-400">
+            <div className="inline-flex items-center text-[11px] font-bold text-indigo-600">
               <Sparkles className="w-3 h-3 mr-1" /> {isEditMode ? 'Edit Training Course' : 'Create New Training Course'}
             </div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-heading">
               {title || 'Untitled Training Course'}
             </h1>
           </div>
@@ -545,7 +544,7 @@ export const CourseBuilder = () => {
           <button
             onClick={() => handleFinalSubmit('draft')}
             disabled={submitting}
-            className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-sm hover:bg-slate-50 transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-all cursor-pointer"
           >
             Save Draft
           </button>
@@ -553,7 +552,7 @@ export const CourseBuilder = () => {
       </div>
 
       {/* Stepper Navigation */}
-      <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center justify-between relative overflow-x-auto">
           {stepsList.map((st, idx) => {
             const isActive = currentStep === st.step;
@@ -565,23 +564,23 @@ export const CourseBuilder = () => {
                     if (st.step < currentStep || isDone) setCurrentStep(st.step);
                   }}
                   disabled={st.step > currentStep}
-                  className={`flex items-center space-x-2 text-xs font-bold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
+                  className={`flex items-center space-x-2 text-xs font-semibold px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                      ? 'bg-indigo-600 text-white shadow-xs'
                       : isDone
-                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                      : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 opacity-60'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : 'bg-slate-100 text-slate-400 opacity-60'
                   }`}
                 >
-                  <span className={`w-5 h-5 rounded-full text-[11px] font-extrabold flex items-center justify-center ${
-                    isActive ? 'bg-white text-blue-600' : isDone ? 'bg-emerald-500 text-white' : 'bg-slate-300 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  <span className={`w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                    isActive ? 'bg-white text-indigo-600' : isDone ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-600'
                   }`}>
                     {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : st.step}
                   </span>
                   <span className="whitespace-nowrap">{st.label}</span>
                 </button>
                 {idx < stepsList.length - 1 && (
-                  <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-700 flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
                 )}
               </div>
             );
@@ -591,10 +590,10 @@ export const CourseBuilder = () => {
 
       {/* STEP 1 — BASIC INFORMATION */}
       {currentStep === 1 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-6">
-          <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-              <BookOpen className="w-5 h-5 mr-2 text-blue-500" />
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center">
+              <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
               Step 1: Basic Information
             </h2>
             <p className="text-xs text-slate-500">Provide the title, category, description, and thumbnail for this training.</p>
@@ -602,7 +601,7 @@ export const CourseBuilder = () => {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Training Title <span className="text-rose-500">*</span>
               </label>
               <input
@@ -611,12 +610,12 @@ export const CourseBuilder = () => {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 placeholder="e.g. Master React 19 & Next.js Architecture"
-                className="w-full px-4 py-2.5 rounded-xl glass-input text-sm font-semibold"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:border-indigo-600 outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Short Description
               </label>
               <textarea
@@ -624,42 +623,42 @@ export const CourseBuilder = () => {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 placeholder="A concise overview of what learners will gain from this course..."
-                className="w-full px-4 py-2.5 rounded-xl glass-input text-sm resize-none"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-900 focus:border-indigo-600 outline-none resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Select Category <span className="text-rose-500">*</span>
               </label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 rounded-xl glass-input text-sm font-semibold"
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:border-indigo-600 outline-none cursor-pointer"
               >
                 <option value="">-- Choose Category --</option>
                 {categories.map(c => (
-                  <option key={c._id} value={c._id} className="bg-slate-900 text-white">{c.name}</option>
+                  <option key={c._id} value={c._id}>{c.name}</option>
                 ))}
               </select>
             </div>
 
             {/* Thumbnail Upload */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Training Thumbnail Image
               </label>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
                 {thumbnailUrl ? (
-                  <img src={thumbnailUrl} alt="Thumbnail preview" className="w-28 h-20 rounded-xl object-cover border border-slate-700" />
+                  <img src={thumbnailUrl} alt="Thumbnail preview" className="w-28 h-20 rounded-xl object-cover border border-slate-200" />
                 ) : (
-                  <div className="w-28 h-20 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-xs font-bold">
+                  <div className="w-28 h-20 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 text-xs font-bold">
                     No Preview
                   </div>
                 )}
                 <div className="space-y-2">
-                  <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors">
+                  <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-colors">
                     <Upload className="w-4 h-4 mr-1.5" />
                     {uploadingThumb ? 'Uploading...' : 'Upload Thumbnail Image'}
                     <input type="file" accept="image/*" onChange={handleThumbnailUpload} className="hidden" disabled={uploadingThumb} />
@@ -671,7 +670,7 @@ export const CourseBuilder = () => {
 
             {/* Benefits Multi-Input */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Benefits of the Training
               </label>
               <div className="flex items-center space-x-2 mb-3">
@@ -681,12 +680,12 @@ export const CourseBuilder = () => {
                   onChange={(e) => setBenefitInput(e.target.value)}
                   placeholder="e.g. Learn modern React state management"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddBenefit(); } }}
-                  className="flex-1 px-4 py-2 rounded-xl glass-input text-xs"
+                  className="flex-1 px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 focus:border-indigo-600 outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleAddBenefit}
-                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs hover:bg-indigo-500 cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 cursor-pointer"
                 >
                   + Add Benefit
                 </button>
@@ -695,11 +694,11 @@ export const CourseBuilder = () => {
               {benefits.length > 0 && (
                 <div className="space-y-1.5">
                   {benefits.map((b, bIdx) => (
-                    <div key={bIdx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs">
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">• {b}</span>
+                    <div key={bIdx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                      <span className="font-semibold text-slate-800">• {b}</span>
                       <button
                         onClick={() => handleDeleteBenefit(bIdx)}
-                        className="text-slate-400 hover:text-rose-500 p-1 cursor-pointer"
+                        className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -714,18 +713,18 @@ export const CourseBuilder = () => {
 
       {/* STEP 2 — COURSE BUILDER */}
       {currentStep === 2 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-                <Layers className="w-5 h-5 mr-2 text-indigo-500" />
+              <h2 className="text-lg font-bold text-slate-900 flex items-center">
+                <Layers className="w-5 h-5 mr-2 text-indigo-600" />
                 Step 2: Course Builder
               </h2>
               <p className="text-xs text-slate-500">Structure your training into Sections and Add Video Lectures inside each section.</p>
             </div>
             <button
               onClick={openAddSectionModal}
-              className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-500 shadow-md shadow-blue-500/20 cursor-pointer"
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 shadow-xs cursor-pointer"
             >
               <Plus className="w-4 h-4 mr-1.5" />
               Add Section
@@ -733,15 +732,15 @@ export const CourseBuilder = () => {
           </div>
 
           {sections.length === 0 ? (
-            <div className="p-10 text-center rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80 space-y-3">
-              <Layers className="w-10 h-10 text-indigo-500 mx-auto" />
-              <h3 className="font-bold text-slate-900 dark:text-white text-sm">No Sections Added Yet</h3>
+            <div className="p-10 text-center rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <Layers className="w-10 h-10 text-indigo-600 mx-auto" />
+              <h3 className="font-bold text-slate-900 text-sm">No Sections Added Yet</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 Click "+ Add Section" above to create module sections for your course.
               </p>
               <button
                 onClick={openAddSectionModal}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-500 cursor-pointer"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
               >
                 Add Section
               </button>
@@ -749,59 +748,59 @@ export const CourseBuilder = () => {
           ) : (
             <div className="space-y-4">
               {sections.map((sec, sIdx) => (
-                <div key={sIdx} className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-3">
+                <div key={sIdx} className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                     <div>
-                      <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-                        <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center mr-2">
+                      <h3 className="font-bold text-slate-900 text-base flex items-center">
+                        <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 font-extrabold text-xs flex items-center justify-center mr-2">
                           {sIdx + 1}
                         </span>
                         {sec.title}
                       </h3>
-                      {sec.description && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 ml-8">{sec.description}</p>}
+                      {sec.description && <p className="text-xs text-slate-500 mt-0.5 ml-8">{sec.description}</p>}
                     </div>
 
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => openAddLectureModal(sIdx)}
-                        className="px-3 py-1.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-xs font-bold hover:bg-purple-500/20 transition-colors cursor-pointer inline-flex items-center"
+                        className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold hover:bg-purple-100 transition-colors cursor-pointer inline-flex items-center"
                       >
                         <Plus className="w-3.5 h-3.5 mr-1" /> Add Lecture
                       </button>
-                      <button onClick={() => openEditSectionModal(sIdx)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 cursor-pointer">
+                      <button onClick={() => openEditSectionModal(sIdx)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 cursor-pointer">
                         <Edit3 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDeleteSection(sIdx)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 cursor-pointer">
+                      <button onClick={() => handleDeleteSection(sIdx)} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
 
                   {/* Lectures List */}
-                  <div className="space-y-2 pl-4 border-l-2 border-slate-200 dark:border-slate-800">
+                  <div className="space-y-2 pl-4 border-l-2 border-slate-200">
                     {(!sec.lectures || sec.lectures.length === 0) ? (
                       <p className="text-xs text-slate-400 italic py-1">No lectures added to this section yet.</p>
                     ) : (
                       sec.lectures.map((lec, lIdx) => (
-                        <div key={lIdx} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                        <div key={lIdx} className="p-3 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
                           <div className="flex items-center space-x-3">
-                            <Video className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                            <Video className="w-4 h-4 text-indigo-600 flex-shrink-0" />
                             <div>
-                              <p className="font-bold text-slate-900 dark:text-slate-100">{lec.title}</p>
+                              <p className="font-bold text-slate-900">{lec.title}</p>
                               {lec.description && <p className="text-[11px] text-slate-500 line-clamp-1">{lec.description}</p>}
                             </div>
                           </div>
 
                           <div className="flex items-center space-x-2">
                             {lec.videoUrl && (
-                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
                                 Video Attached
                               </span>
                             )}
-                            <button onClick={() => openEditLectureModal(sIdx, lIdx)} className="p-1 text-slate-400 hover:text-blue-500 cursor-pointer">
+                            <button onClick={() => openEditLectureModal(sIdx, lIdx)} className="p-1 text-slate-400 hover:text-indigo-600 cursor-pointer">
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
-                            <button onClick={() => handleDeleteLecture(sIdx, lIdx)} className="p-1 text-slate-400 hover:text-rose-500 cursor-pointer">
+                            <button onClick={() => handleDeleteLecture(sIdx, lIdx)} className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -818,14 +817,14 @@ export const CourseBuilder = () => {
 
       {/* STEP 3 — QUIZ / ASSESSMENT (OPTIONAL) */}
       {currentStep === 3 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-6">
-          <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="border-b border-slate-200 pb-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-                <HelpCircle className="w-5 h-5 mr-2 text-amber-500" />
+              <h2 className="text-lg font-bold text-slate-900 flex items-center">
+                <HelpCircle className="w-5 h-5 mr-2 text-amber-600" />
                 Step 3: Quiz / Assessment (Optional)
               </h2>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                 Optional Step
               </span>
             </div>
@@ -833,31 +832,31 @@ export const CourseBuilder = () => {
           </div>
 
           <div className="space-y-4">
-            <label className="flex items-center space-x-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 cursor-pointer">
+            <label className="flex items-center space-x-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 cursor-pointer">
               <input
                 type="checkbox"
                 checked={addQuizEnabled}
                 onChange={(e) => setAddQuizEnabled(e.target.checked)}
-                className="w-5 h-5 text-amber-500 rounded"
+                className="w-5 h-5 text-amber-600 rounded cursor-pointer"
               />
               <div>
-                <span className="font-bold text-slate-900 dark:text-white text-sm">Add Quiz to this Training</span>
+                <span className="font-bold text-slate-900 text-sm">Add Quiz to this Training</span>
                 <p className="text-xs text-slate-500">Enable multiple choice questions to evaluate learner knowledge.</p>
               </div>
             </label>
 
             {addQuizEnabled && (
-              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Select Section for Quiz</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Select Section for Quiz</label>
                     <select
                       value={quizSectionIdx}
                       onChange={(e) => setQuizSectionIdx(Number(e.target.value))}
-                      className="w-full px-4 py-2 rounded-xl glass-input text-xs font-bold"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 outline-none cursor-pointer"
                     >
                       {sections.map((sec, idx) => (
-                        <option key={idx} value={idx} className="bg-slate-900 text-white">
+                        <option key={idx} value={idx}>
                           Section {idx + 1}: {sec.title}
                         </option>
                       ))}
@@ -865,52 +864,52 @@ export const CourseBuilder = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Quiz Title</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Quiz Title</label>
                     <input
                       type="text"
                       value={quizTitle}
                       onChange={(e) => setQuizTitle(e.target.value)}
                       placeholder="e.g. Fundamentals MCQ Quiz"
-                      className="w-full px-4 py-2 rounded-xl glass-input text-xs font-semibold"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Quiz Duration (Minutes)</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Quiz Duration (Minutes)</label>
                     <input
                       type="number"
                       value={quizDurationMinutes}
                       onChange={(e) => setQuizDurationMinutes(e.target.value)}
                       min={1}
-                      className="w-full px-4 py-2 rounded-xl glass-input text-xs"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Passing Score (%)</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Passing Score (%)</label>
                     <input
                       type="number"
                       value={quizPassingScorePercent}
                       onChange={(e) => setQuizPassingScorePercent(e.target.value)}
                       min={1}
                       max={100}
-                      className="w-full px-4 py-2 rounded-xl glass-input text-xs"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none"
                     />
                   </div>
                 </div>
 
                 {/* Questions Builder */}
-                <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+                <div className="space-y-4 pt-4 border-t border-slate-200">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">
+                    <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
                       Quiz Questions ({quizQuestions.length})
                     </h4>
                     <button
                       type="button"
                       onClick={handleAddQuestion}
-                      className="px-3 py-1 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold text-xs hover:bg-amber-500/20 cursor-pointer"
+                      className="px-3 py-1 rounded-xl bg-amber-50 text-amber-700 font-semibold text-xs hover:bg-amber-100 border border-amber-200 cursor-pointer"
                     >
                       + Add Question
                     </button>
@@ -920,9 +919,9 @@ export const CourseBuilder = () => {
                     const currentType = q.questionType || 'MCQ';
 
                     return (
-                      <div key={qIdx} className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-3">
+                      <div key={qIdx} className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">Question #{qIdx + 1}</span>
+                          <span className="font-bold text-xs text-amber-700 whitespace-nowrap">Question #{qIdx + 1}</span>
                           <div className="flex items-center space-x-2">
                             <select
                               value={currentType}
@@ -947,14 +946,14 @@ export const CourseBuilder = () => {
                                 }
                                 setQuizQuestions(updated);
                               }}
-                              className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+                              className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 cursor-pointer"
                             >
                               <option value="MCQ">MCQ (Multiple Choice)</option>
                               <option value="TRUE_FALSE">True / False</option>
                               <option value="FILL_IN_BLANK">Fill in the Blank</option>
                             </select>
                             {quizQuestions.length > 1 && (
-                              <button onClick={() => handleDeleteQuestion(qIdx)} className="text-slate-400 hover:text-rose-500 cursor-pointer p-1">
+                              <button onClick={() => handleDeleteQuestion(qIdx)} className="text-slate-400 hover:text-rose-600 cursor-pointer p-1">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
@@ -970,14 +969,14 @@ export const CourseBuilder = () => {
                             setQuizQuestions(updated);
                           }}
                           placeholder="Enter question text..."
-                          className="w-full px-3 py-2 rounded-lg glass-input text-xs font-semibold"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
                         />
 
                         {/* MCQ Field Rendering */}
                         {currentType === 'MCQ' && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {(q.options || ['', '', '', '']).map((opt, optIdx) => (
-                              <div key={optIdx} className="flex items-center space-x-2 p-1.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                              <div key={optIdx} className="flex items-center space-x-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200">
                                 <input
                                   type="radio"
                                   name={`correct_${qIdx}`}
@@ -987,7 +986,7 @@ export const CourseBuilder = () => {
                                     updated[qIdx].correctAnswerIndex = optIdx;
                                     setQuizQuestions(updated);
                                   }}
-                                  className="text-amber-500 cursor-pointer"
+                                  className="text-amber-600 cursor-pointer"
                                 />
                                 <input
                                   type="text"
@@ -999,7 +998,7 @@ export const CourseBuilder = () => {
                                     setQuizQuestions(updated);
                                   }}
                                   placeholder={`Option ${String.fromCharCode(65 + optIdx)}`}
-                                  className="flex-1 bg-transparent border-none text-xs focus:ring-0"
+                                  className="flex-1 bg-transparent border-none text-xs text-slate-900 focus:ring-0"
                                 />
                               </div>
                             ))}
@@ -1008,10 +1007,10 @@ export const CourseBuilder = () => {
 
                         {/* True / False Field Rendering */}
                         {currentType === 'TRUE_FALSE' && (
-                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-2">
                             <span className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Select Correct Answer:</span>
                             <div className="flex space-x-4">
-                              <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                              <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer">
                                 <input
                                   type="radio"
                                   name={`tf_correct_${qIdx}`}
@@ -1022,11 +1021,11 @@ export const CourseBuilder = () => {
                                     updated[qIdx].correctAnswerText = 'True';
                                     setQuizQuestions(updated);
                                   }}
-                                  className="text-amber-500 cursor-pointer"
+                                  className="text-amber-600 cursor-pointer"
                                 />
                                 <span>True</span>
                               </label>
-                              <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                              <label className="flex items-center space-x-2 text-xs font-bold text-slate-700 cursor-pointer">
                                 <input
                                   type="radio"
                                   name={`tf_correct_${qIdx}`}
@@ -1037,7 +1036,7 @@ export const CourseBuilder = () => {
                                     updated[qIdx].correctAnswerText = 'False';
                                     setQuizQuestions(updated);
                                   }}
-                                  className="text-amber-500 cursor-pointer"
+                                  className="text-amber-600 cursor-pointer"
                                 />
                                 <span>False</span>
                               </label>
@@ -1047,7 +1046,7 @@ export const CourseBuilder = () => {
 
                         {/* Fill in the Blank Field Rendering */}
                         {currentType === 'FILL_IN_BLANK' && (
-                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1.5">
+                          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1.5">
                             <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Correct Answer Text:</label>
                             <input
                               type="text"
@@ -1058,7 +1057,7 @@ export const CourseBuilder = () => {
                                 setQuizQuestions(updated);
                               }}
                               placeholder="Enter expected correct text (evaluation is case-insensitive)..."
-                              className="w-full px-3 py-1.5 rounded-md glass-input text-xs font-semibold"
+                              className="w-full px-3 py-1.5 rounded-md border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
                             />
                           </div>
                         )}
@@ -1074,14 +1073,14 @@ export const CourseBuilder = () => {
 
       {/* STEP 4 — ASSIGNMENT & RESOURCES (OPTIONAL) */}
       {currentStep === 4 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-6">
-          <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="border-b border-slate-200 pb-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-                <FileCheck2 className="w-5 h-5 mr-2 text-emerald-500" />
+              <h2 className="text-lg font-bold text-slate-900 flex items-center">
+                <FileCheck2 className="w-5 h-5 mr-2 text-emerald-600" />
                 Step 4: Assignment & Resources (Optional)
               </h2>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                 Optional Step
               </span>
             </div>
@@ -1091,40 +1090,40 @@ export const CourseBuilder = () => {
           <div className="space-y-6">
             {/* Section A: Assignment */}
             <div className="space-y-4">
-              <label className="flex items-center space-x-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 cursor-pointer">
+              <label className="flex items-center space-x-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={addAssignmentEnabled}
                   onChange={(e) => setAddAssignmentEnabled(e.target.checked)}
-                  className="w-5 h-5 text-emerald-500 rounded"
+                  className="w-5 h-5 text-emerald-600 rounded cursor-pointer"
                 />
                 <div>
-                  <span className="font-bold text-slate-900 dark:text-white text-sm">Add Project Assignment</span>
+                  <span className="font-bold text-slate-900 text-sm">Add Project Assignment</span>
                   <p className="text-xs text-slate-500">Require students to submit practical project work for review.</p>
                 </div>
               </label>
 
               {addAssignmentEnabled && (
-                <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Assignment Title</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Assignment Title</label>
                     <input
                       type="text"
                       value={assignmentTitle}
                       onChange={(e) => setAssignmentTitle(e.target.value)}
                       placeholder="e.g. Build a Full Stack React & Node Application"
-                      className="w-full px-4 py-2 rounded-xl glass-input text-xs font-semibold"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Assignment Question / Instructions</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Assignment Question / Instructions</label>
                     <textarea
                       value={assignmentInstructions}
                       onChange={(e) => setAssignmentInstructions(e.target.value)}
                       rows={4}
                       placeholder="Detailed project guidelines and requirements..."
-                      className="w-full px-4 py-2 rounded-xl glass-input text-xs resize-none"
+                      className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none resize-none"
                     />
                   </div>
                 </div>
@@ -1133,23 +1132,23 @@ export const CourseBuilder = () => {
 
             {/* Section B: Resources */}
             <div className="space-y-4">
-              <label className="flex items-center space-x-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 cursor-pointer">
+              <label className="flex items-center space-x-3 p-4 rounded-2xl bg-slate-50 border border-slate-200 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={addResourcesEnabled}
                   onChange={(e) => setAddResourcesEnabled(e.target.checked)}
-                  className="w-5 h-5 text-blue-500 rounded"
+                  className="w-5 h-5 text-indigo-600 rounded cursor-pointer"
                 />
                 <div>
-                  <span className="font-bold text-slate-900 dark:text-white text-sm">Add Downloadable PDF Resources</span>
+                  <span className="font-bold text-slate-900 text-sm">Add Downloadable PDF Resources</span>
                   <p className="text-xs text-slate-500">Attach course guides, cheat sheets, or reference documentation.</p>
                 </div>
               </label>
 
               {addResourcesEnabled && (
-                <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-4">
+                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
                   <div>
-                    <label className="cursor-pointer inline-flex items-center px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition-colors shadow">
+                    <label className="cursor-pointer inline-flex items-center px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors shadow-xs">
                       <Upload className="w-4 h-4 mr-2" />
                       {uploadingPdf ? 'Uploading PDFs...' : 'Upload PDF Files'}
                       <input
@@ -1165,14 +1164,14 @@ export const CourseBuilder = () => {
 
                   {resources.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="font-bold text-xs text-slate-700 dark:text-slate-300">Selected PDF Resources:</h4>
+                      <h4 className="font-bold text-xs text-slate-700">Selected PDF Resources:</h4>
                       {resources.map((res, rIdx) => (
-                        <div key={rIdx} className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+                        <div key={rIdx} className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 text-xs">
                           <div className="flex items-center space-x-2">
-                            <FileText className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                            <span className="font-bold text-slate-900 dark:text-slate-100">{res.title}</span>
+                            <FileText className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                            <span className="font-bold text-slate-900">{res.title}</span>
                           </div>
-                          <button onClick={() => handleDeleteResource(rIdx)} className="text-slate-400 hover:text-rose-500 cursor-pointer">
+                          <button onClick={() => handleDeleteResource(rIdx)} className="text-slate-400 hover:text-rose-600 cursor-pointer">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -1188,10 +1187,10 @@ export const CourseBuilder = () => {
 
       {/* STEP 5 — FINAL STEP — REVIEW & PUBLISH */}
       {currentStep === 5 && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-6">
-          <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-              <CheckCircle2 className="w-5 h-5 mr-2 text-emerald-500" />
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="border-b border-slate-200 pb-3">
+            <h2 className="text-lg font-bold text-slate-900 flex items-center">
+              <CheckCircle2 className="w-5 h-5 mr-2 text-emerald-600" />
               Step 5: Final Review & Publish
             </h2>
             <p className="text-xs text-slate-500">Review your course summary before saving as draft or publishing.</p>
@@ -1199,20 +1198,20 @@ export const CourseBuilder = () => {
 
           <div className="space-y-6 text-xs">
             {/* Overview Summary */}
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-bold text-blue-600 dark:text-blue-400">
+                <span className="font-bold text-indigo-600">
                   {categories.find(c => String(c._id) === String(categoryId))?.name || 'Category'}
                 </span>
-                <span className="font-bold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <span className="font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                   Step 1 Verified
                 </span>
               </div>
-              <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">{title}</h3>
-              <p className="text-slate-600 dark:text-slate-400">{description || 'No description provided.'}</p>
+              <h3 className="text-lg font-extrabold text-slate-900">{title}</h3>
+              <p className="text-slate-600">{description || 'No description provided.'}</p>
               {benefits.length > 0 && (
                 <div className="pt-2">
-                  <span className="font-bold text-slate-700 dark:text-slate-300">Course Benefits:</span>
+                  <span className="font-bold text-slate-700">Course Benefits:</span>
                   <ul className="list-disc list-inside mt-1 space-y-0.5 text-slate-500">
                     {benefits.map((b, i) => <li key={i}>{b}</li>)}
                   </ul>
@@ -1221,14 +1220,14 @@ export const CourseBuilder = () => {
             </div>
 
             {/* Sections & Lectures Summary */}
-            <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
-              <h4 className="font-bold text-slate-900 dark:text-white text-sm flex items-center">
-                <Layers className="w-4 h-4 mr-1.5 text-indigo-500" /> Course Structure ({sections.length} Sections)
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <h4 className="font-bold text-slate-900 text-sm flex items-center">
+                <Layers className="w-4 h-4 mr-1.5 text-indigo-600" /> Course Structure ({sections.length} Sections)
               </h4>
               <div className="space-y-2">
                 {sections.map((sec, sIdx) => (
-                  <div key={sIdx} className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                    <p className="font-bold text-slate-900 dark:text-slate-100">Section {sIdx + 1}: {sec.title}</p>
+                  <div key={sIdx} className="p-3 rounded-xl bg-white border border-slate-200">
+                    <p className="font-bold text-slate-900">Section {sIdx + 1}: {sec.title}</p>
                     <p className="text-[11px] text-slate-500">{sec.lectures?.length || 0} Lectures attached</p>
                   </div>
                 ))}
@@ -1237,7 +1236,7 @@ export const CourseBuilder = () => {
 
             {/* Quiz Summary */}
             {addQuizEnabled && (
-              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 space-y-1">
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 space-y-1">
                 <h4 className="font-bold text-xs flex items-center">
                   <HelpCircle className="w-4 h-4 mr-1.5" /> MCQ Quiz Included: {quizTitle || 'Assessment Quiz'}
                 </h4>
@@ -1247,7 +1246,7 @@ export const CourseBuilder = () => {
 
             {/* Assignment Summary */}
             {addAssignmentEnabled && (
-              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 space-y-1">
+              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-1">
                 <h4 className="font-bold text-xs flex items-center">
                   <FileCheck2 className="w-4 h-4 mr-1.5" /> Project Assignment Included
                 </h4>
@@ -1257,7 +1256,7 @@ export const CourseBuilder = () => {
 
             {/* Resources Summary */}
             {addResourcesEnabled && resources.length > 0 && (
-              <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 space-y-1">
+              <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-800 space-y-1">
                 <h4 className="font-bold text-xs flex items-center">
                   <FileText className="w-4 h-4 mr-1.5" /> {resources.length} Downloadable PDF Resources Attached
                 </h4>
@@ -1268,11 +1267,11 @@ export const CourseBuilder = () => {
       )}
 
       {/* Footer Controls (Prev, Next, Save Draft, Publish) */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
         <button
           onClick={handlePrevStep}
           disabled={currentStep === 1 || submitting}
-          className="inline-flex items-center px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-bold disabled:opacity-40 cursor-pointer"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold disabled:opacity-40 cursor-pointer hover:bg-slate-50 transition-colors"
         >
           <ChevronLeft className="w-4 h-4 mr-1" /> Previous Step
         </button>
@@ -1281,7 +1280,7 @@ export const CourseBuilder = () => {
           {currentStep < 5 ? (
             <button
               onClick={handleNextStep}
-              className="inline-flex items-center px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-500/20 cursor-pointer"
+              className="inline-flex items-center px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
             >
               Next Step <ChevronRight className="w-4 h-4 ml-1" />
             </button>
@@ -1290,7 +1289,7 @@ export const CourseBuilder = () => {
               <button
                 onClick={() => handleFinalSubmit('draft')}
                 disabled={submitting}
-                className="inline-flex items-center px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold cursor-pointer"
+                className="inline-flex items-center px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold cursor-pointer transition-colors"
               >
                 <Save className="w-4 h-4 mr-1.5" />
                 {submitting ? 'Saving...' : 'Save as Draft'}
@@ -1299,7 +1298,7 @@ export const CourseBuilder = () => {
               <button
                 onClick={() => handleFinalSubmit('published')}
                 disabled={submitting}
-                className="inline-flex items-center px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold shadow-lg shadow-emerald-500/25 cursor-pointer"
+                className="inline-flex items-center px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
               >
                 <Send className="w-4 h-4 mr-1.5" />
                 {submitting ? 'Saving Changes...' : (isEditMode ? 'Save Changes' : 'Publish Training')}
@@ -1313,33 +1312,33 @@ export const CourseBuilder = () => {
       <Modal isOpen={showSectionModal} onClose={() => setShowSectionModal(false)} title={editingSectionIdx !== null ? 'Edit Section' : 'Add Section Module'}>
         <form onSubmit={handleSaveSection} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Section Title *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Section Title *</label>
             <input
               type="text"
               value={sectionTitle}
               onChange={(e) => setSectionTitle(e.target.value)}
               required
               placeholder="e.g. Module 1: Introduction & Environment Setup"
-              className="w-full px-4 py-2 rounded-xl glass-input text-xs font-semibold"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Optional Section Description</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Optional Section Description</label>
             <textarea
               value={sectionDesc}
               onChange={(e) => setSectionDesc(e.target.value)}
               rows={2}
               placeholder="Section goals and objectives..."
-              className="w-full px-4 py-2 rounded-xl glass-input text-xs resize-none"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none resize-none"
             />
           </div>
 
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-3">
-            <button type="button" onClick={() => setShowSectionModal(false)} className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+          <div className="pt-4 border-t border-slate-200 flex justify-end space-x-3">
+            <button type="button" onClick={() => setShowSectionModal(false)} className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white">
+            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700">
               Save Section
             </button>
           </div>
@@ -1350,38 +1349,38 @@ export const CourseBuilder = () => {
       <Modal isOpen={showLectureModal} onClose={() => setShowLectureModal(false)} title={editingLectureIdx !== null ? 'Edit Lecture' : 'Add Lecture Video'}>
         <form onSubmit={handleSaveLecture} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Lecture Title *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Lecture Title *</label>
             <input
               type="text"
               value={lectureTitle}
               onChange={(e) => setLectureTitle(e.target.value)}
               required
               placeholder="e.g. Lecture 1.1: What is React?"
-              className="w-full px-4 py-2 rounded-xl glass-input text-xs font-semibold"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-semibold text-slate-900 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Lecture Description</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Lecture Description</label>
             <textarea
               value={lectureDesc}
               onChange={(e) => setLectureDesc(e.target.value)}
               rows={2}
               placeholder="Lecture notes and summary..."
-              className="w-full px-4 py-2 rounded-xl glass-input text-xs resize-none"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs text-slate-900 outline-none resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Lecture Video *</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Lecture Video *</label>
             <div className="flex items-center space-x-3 mb-2">
-              <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 text-white hover:bg-slate-700">
-                <Upload className="w-4 h-4 mr-1.5 text-blue-400" />
+              <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800">
+                <Upload className="w-4 h-4 mr-1.5 text-indigo-400" />
                 {uploadingVideo ? 'Uploading Video...' : 'Upload Video File'}
                 <input type="file" accept="video/*" onChange={handleVideoUpload} className="hidden" disabled={uploadingVideo} />
               </label>
               {lectureVideoUrl && (
-                <span className="text-xs text-emerald-500 font-mono truncate max-w-xs">Video Attached</span>
+                <span className="text-xs text-emerald-600 font-mono font-bold truncate max-w-xs">Video Attached</span>
               )}
             </div>
 
@@ -1390,15 +1389,15 @@ export const CourseBuilder = () => {
               value={lectureVideoUrl}
               onChange={(e) => setLectureVideoUrl(e.target.value)}
               placeholder="Or paste video URL directly (e.g. Cloudinary, MP4 URL)..."
-              className="w-full px-4 py-2 rounded-xl glass-input text-xs font-mono"
+              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 outline-none"
             />
           </div>
 
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-3">
-            <button type="button" onClick={() => setShowLectureModal(false)} className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+          <div className="pt-4 border-t border-slate-200 flex justify-end space-x-3">
+            <button type="button" onClick={() => setShowLectureModal(false)} className="px-4 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 cursor-pointer">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-bold bg-purple-600 text-white">
+            <button type="submit" className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white cursor-pointer hover:bg-indigo-700">
               Save Lecture
             </button>
           </div>

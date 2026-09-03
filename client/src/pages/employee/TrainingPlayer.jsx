@@ -36,9 +36,7 @@ import {
   Code2,
   Upload,
   AlertTriangle,
-  RotateCcw,
-  Check,
-  X
+  RotateCcw
 } from 'lucide-react';
 
 export const TrainingPlayer = () => {
@@ -149,353 +147,239 @@ export const TrainingPlayer = () => {
 
   // Extract flat list of syllabus items (Lessons, Quizzes, Assignments placed at very end)
   const extractSyllabusItems = (payload) => {
-    if (!payload?.assignment?.trainingId?.sections) return [];
-    const sections = payload.assignment.trainingId.sections;
+    if (!payload || !payload.assignment || !payload.assignment.trainingId) return [];
+    const training = payload.assignment.trainingId;
     const items = [];
-    let foundAssignment = null;
 
-    sections.forEach((sec) => {
-      if (sec.subSections) {
-        sec.subSections.forEach((sub) => {
-          items.push({
-            type: 'lesson',
-            id: sub._id,
-            sectionId: sec._id,
-            sectionTitle: sec.title,
-            title: sub.title,
-            description: sub.description,
-            videoUrl: sub.videoUrl,
-            videoDuration: sub.videoDuration,
-            pdfResources: sub.pdfResources || [],
-            hasQuiz: sub.hasQuiz,
-            quizId: sub.quizId?._id || sub.quizId
-          });
-
-          if (sub.hasQuiz && sub.quizId) {
-            items.push({
-              type: 'quiz',
-              id: sub.quizId?._id || sub.quizId,
-              subSectionId: sub._id,
-              sectionId: sec._id,
-              sectionTitle: sec.title,
-              title: `${sub.title} Quiz`
-            });
-          }
-
-          if (sub.hasAssignment && sub.assignmentId) {
-            foundAssignment = {
-              type: 'assignment',
-              id: sub.assignmentId?._id || sub.assignmentId,
-              subSectionId: sub._id,
-              sectionTitle: 'ASSIGNMENT',
-              title: `${sub.title} Assignment`
-            };
-          }
-        });
-      }
-    });
-
-    if (!foundAssignment && payload?.assignment?.trainingId?.assignmentId) {
-      const aObj = payload.assignment.trainingId.assignmentId;
-      foundAssignment = {
-        type: 'assignment',
-        id: aObj._id || aObj,
-        sectionTitle: 'ASSIGNMENT',
-        title: aObj.title || 'Course Project Assignment'
-      };
-    }
-
-    if (foundAssignment) {
-      items.push(foundAssignment);
-    }
-
-    return items;
-  };
-
-  // Collect all PDF resources across the course for the sidebar (deduplicated by URL)
-  const extractAllCourseResources = (payload) => {
-    if (!payload?.assignment?.trainingId?.sections) return [];
-    const resources = [];
-    const seenUrls = new Set();
-
-    payload.assignment.trainingId.sections.forEach(sec => {
-      sec.subSections?.forEach(sub => {
-        if (sub.pdfResources && sub.pdfResources.length > 0) {
-          sub.pdfResources.forEach(res => {
-            const url = res.fileUrl || res.pdfUrl || res.url;
-            if (url && !seenUrls.has(url)) {
-              seenUrls.add(url);
-              resources.push({
-                ...res,
-                fileUrl: url,
-                lessonTitle: sub.title
+    if (training.sections && Array.isArray(training.sections)) {
+      training.sections.forEach((sec, sIdx) => {
+        if (sec.subSections && Array.isArray(sec.subSections)) {
+          sec.subSections.forEach((sub, lIdx) => {
+            if (sub.quizId) {
+              items.push({
+                type: 'quiz',
+                id: sub.quizId._id || sub.quizId,
+                title: sub.quizId.title || `Quiz ${sIdx + 1}`,
+                sectionTitle: sec.title,
+                timeLimitMinutes: sub.quizId.timeLimitMinutes || 15,
+                passingScorePercent: sub.quizId.passingScorePercent || 70,
+                questionsCount: sub.quizId.questions?.length || 0
+              });
+            } else {
+              items.push({
+                type: 'lesson',
+                id: sub._id || sub.id,
+                title: sub.title,
+                description: sub.description,
+                videoUrl: sub.videoUrl,
+                sectionTitle: sec.title,
+                durationMinutes: sub.durationMinutes || 10,
+                pdfResources: sub.pdfResources || []
               });
             }
           });
         }
       });
-    });
+    }
+
+    // Append Assignment at very end of all modules if present
+    if (training.assignment) {
+      items.push({
+        type: 'assignment',
+        id: training.assignment._id || training.assignment.id,
+        title: training.assignment.title || 'Course Project Assignment',
+        instructions: training.assignment.instructions,
+        sectionTitle: 'Course Project'
+      });
+    } else if (training.sections) {
+      const firstAss = training.sections.flatMap(s => s.subSections || []).find(sub => sub.assignmentId)?.assignmentId;
+      if (firstAss) {
+        items.push({
+          type: 'assignment',
+          id: firstAss._id || firstAss,
+          title: firstAss.title || 'Course Project Assignment',
+          instructions: firstAss.instructions,
+          sectionTitle: 'Course Project'
+        });
+      }
+    }
+
+    return items;
+  };
+
+  const extractAllCourseResources = (payload) => {
+    if (!payload || !payload.assignment || !payload.assignment.trainingId) return [];
+    const training = payload.assignment.trainingId;
+    const resources = [];
+
+    if (training.resources && Array.isArray(training.resources)) {
+      resources.push(...training.resources);
+    }
+
+    if (training.sections && Array.isArray(training.sections)) {
+      training.sections.forEach(sec => {
+        if (sec.subSections && Array.isArray(sec.subSections)) {
+          sec.subSections.forEach(sub => {
+            if (sub.pdfResources && Array.isArray(sub.pdfResources)) {
+              sub.pdfResources.forEach(pdf => {
+                resources.push({
+                  title: pdf.title || 'Resource PDF',
+                  fileUrl: pdf.fileUrl || pdf.pdfUrl || pdf.url,
+                  lessonTitle: sub.title
+                });
+              });
+            }
+          });
+        }
+      });
+    }
+
     return resources;
   };
 
-  // Determine completion and locked status for each item
+  // Helper to determine status & lock state of a item
   const getItemStatus = (item) => {
-    if (!data || !data.progress) return { isCompleted: false, isLocked: true };
-    const completedSubSectionIds = new Set(data.progress.completedSubSectionIds?.map(id => id.toString()) || []);
-    const passedQuizIds = new Set(data.quizAttempts?.filter(a => a.passed).map(a => (a.quizId?._id || a.quizId)?.toString()) || []);
-    const submittedAssignmentIds = new Set(data.assignmentSubmissions?.map(s => (s.assignmentId?._id || s.assignmentId)?.toString()) || []);
+    if (!data || !item) return { isCompleted: false, isLocked: false };
+    const { progress, quizAttempts, assignmentSubmissions } = data;
 
-    const allItems = extractSyllabusItems(data);
-    const itemIndex = allItems.findIndex(i => i.id === item.id && i.type === item.type);
+    const items = extractSyllabusItems(data);
+    const itemIdx = items.findIndex(i => i.id === item.id && i.type === item.type);
 
     let isCompleted = false;
-    if (item.type === 'lesson') isCompleted = completedSubSectionIds.has(item.id.toString());
-    if (item.type === 'quiz') isCompleted = passedQuizIds.has(item.id.toString());
-    if (item.type === 'assignment') isCompleted = submittedAssignmentIds.has(item.id.toString());
 
-    // Item is locked if any preceding item in the syllabus is incomplete
+    if (item.type === 'lesson') {
+      const completedIds = new Set(progress?.completedSubSectionIds?.map(id => id.toString()) || []);
+      isCompleted = completedIds.has(item.id.toString());
+    } else if (item.type === 'quiz') {
+      const passedQuiz = quizAttempts?.find(a => (a.quizId?._id || a.quizId)?.toString() === item.id.toString() && a.passed);
+      isCompleted = Boolean(passedQuiz);
+    } else if (item.type === 'assignment') {
+      const submittedAss = assignmentSubmissions?.find(s => (s.assignmentId?._id || s.assignmentId)?.toString() === item.id.toString());
+      isCompleted = Boolean(submittedAss);
+    }
+
+    // Lock Enforcement: Item is locked if ANY previous item is not completed
     let isLocked = false;
-    for (let k = 0; k < itemIndex; k++) {
-      const prev = allItems[k];
-      let prevDone = false;
-      if (prev.type === 'lesson') prevDone = completedSubSectionIds.has(prev.id.toString());
-      if (prev.type === 'quiz') prevDone = passedQuizIds.has(prev.id.toString());
-      if (prev.type === 'assignment') prevDone = submittedAssignmentIds.has(prev.id.toString());
-
-      if (!prevDone) {
-        isLocked = true;
-        break;
+    if (itemIdx > 0) {
+      for (let i = 0; i < itemIdx; i++) {
+        const prevItem = items[i];
+        const prevStatus = getItemStatus(prevItem);
+        if (!prevStatus.isCompleted) {
+          isLocked = true;
+          break;
+        }
       }
     }
 
     return { isCompleted, isLocked };
   };
 
-  // Load Active Quiz details & persistent start time
+  // Load Quiz Data when activeItem changes to 'quiz'
   useEffect(() => {
     if (activeItem && activeItem.type === 'quiz') {
+      setQuizStarted(false);
+      setQuizSubmitted(false);
+      setQuizResult(null);
+      setSelectedAnswers({});
+      setCurrentQuestionIdx(0);
+
       getQuizById(activeItem.id)
-        .then(async res => {
-          const q = res.data.data.quiz;
-          setQuizData(q);
-          setSelectedAnswers({});
-          setCurrentQuestionIdx(0);
-          isSubmittingQuizRef.current = false;
+        .then(res => {
+          setQuizData(res.data.data.quiz);
 
-          // Check if employee has existing attempts for this quiz
-          const existingAttempts = (data?.quizAttempts || []).filter(att => {
-            const attQuizId = att.quizId?._id ? att.quizId._id.toString() : att.quizId?.toString();
-            return attQuizId === q._id.toString();
-          });
-
-          const completedAttempts = existingAttempts.filter(att => att.status === 'completed' || (att.passed !== undefined && att.status !== 'in_progress'));
-          const inProgressAttempt = existingAttempts.find(att => att.status === 'in_progress');
-
-          if (completedAttempts.length > 0) {
-            const latestAtt = completedAttempts[0];
+          // Check if already attempted & passed
+          const existingAttempts = data?.quizAttempts || [];
+          const passedAtt = existingAttempts.find(a => (a.quizId?._id || a.quizId)?.toString() === activeItem.id.toString() && a.passed);
+          if (passedAtt) {
             setQuizResult({
-              passed: latestAtt.passed,
-              percentage: latestAtt.percentage,
-              passingScorePercent: q.passingScorePercent,
-              evaluatedAnswers: latestAtt.answers
+              passed: true,
+              percentage: passedAtt.percentage,
+              passingScorePercent: passedAtt.quizId?.passingScorePercent || 70,
+              evaluatedAnswers: passedAtt.evaluatedAnswers || []
             });
             setQuizSubmitted(true);
             setQuizStarted(true);
-          } else if (inProgressAttempt) {
-            // Active attempt found (e.g. employee refreshed mid-quiz) -> Auto-resume!
-            setQuizSubmitted(false);
-            setQuizResult(null);
-            setQuizStarted(true);
-
-            activeQuizAttemptIdRef.current = inProgressAttempt._id;
-            const startTime = new Date(inProgressAttempt.startTime);
-            quizStartTimeRef.current = startTime;
-
-            const limitMs = (q.timeLimitMinutes || 15) * 60 * 1000;
-            const remaining = Math.max(0, Math.floor((startTime.getTime() + limitMs - Date.now()) / 1000));
-
-            if (remaining <= 0) {
-              setQuizTimeRemaining(0);
-              handleAutoSubmitQuiz();
-            } else {
-              setQuizTimeRemaining(remaining);
-            }
-          } else {
-            // Fallback check against server API directly for completed/in-progress attempts
-            try {
-              const attemptsRes = await getQuizAttempts(q._id);
-              const serverAttempts = attemptsRes.data.data.attempts || [];
-              const serverCompleted = serverAttempts.filter(att => att.status === 'completed' || (att.passed !== undefined && att.status !== 'in_progress'));
-              const serverInProgress = serverAttempts.find(att => att.status === 'in_progress');
-
-              if (serverCompleted.length > 0) {
-                const latest = serverCompleted[0];
-                setQuizResult({
-                  passed: latest.passed,
-                  percentage: latest.percentage,
-                  passingScorePercent: q.passingScorePercent,
-                  evaluatedAnswers: latest.answers
-                });
-                setQuizSubmitted(true);
-                setQuizStarted(true);
-                return;
-              } else if (serverInProgress) {
-                setQuizSubmitted(false);
-                setQuizResult(null);
-                setQuizStarted(true);
-
-                activeQuizAttemptIdRef.current = serverInProgress._id;
-                const startTime = new Date(serverInProgress.startTime);
-                quizStartTimeRef.current = startTime;
-
-                const limitMs = (q.timeLimitMinutes || 15) * 60 * 1000;
-                const remaining = Math.max(0, Math.floor((startTime.getTime() + limitMs - Date.now()) / 1000));
-
-                if (remaining <= 0) {
-                  setQuizTimeRemaining(0);
-                  handleAutoSubmitQuiz();
-                } else {
-                  setQuizTimeRemaining(remaining);
-                }
-                return;
-              }
-            } catch (err) {
-              console.warn('Failed to fetch quiz attempts fallback:', err);
-            }
-
-            // Fresh quiz start -> Show Quiz Details Screen (Timer NOT started yet!)
-            setQuizSubmitted(false);
-            setQuizResult(null);
-            setQuizStarted(false);
-            setQuizTimeRemaining(null);
           }
         })
         .catch(err => {
-          addToast('error', err.response?.data?.message || 'Failed to load quiz');
+          addToast('error', err.response?.data?.message || 'Failed to load quiz details');
         });
     }
-    return () => {
-      if (quizTimerRef.current) clearInterval(quizTimerRef.current);
-    };
-  }, [activeItem, data]);
+  }, [activeItem]);
 
-  // Handle explicit Start Quiz button click
+  // Quiz Timer Effect
+  useEffect(() => {
+    if (quizStarted && !quizSubmitted && quizTimeRemaining !== null) {
+      if (quizTimeRemaining <= 0) {
+        clearInterval(quizTimerRef.current);
+        submitQuizAnswers(true); // Auto-submit when time expires
+      } else {
+        quizTimerRef.current = setInterval(() => {
+          setQuizTimeRemaining(prev => {
+            if (prev <= 1) {
+              clearInterval(quizTimerRef.current);
+              submitQuizAnswers(true);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    }
+    return () => clearInterval(quizTimerRef.current);
+  }, [quizStarted, quizSubmitted, quizTimeRemaining]);
+
   const handleStartQuiz = async () => {
     if (!quizData) return;
     setStartingQuiz(true);
     try {
-      const startRes = await startQuiz(quizData._id, { trainingAssignmentId: assignmentId });
-      const { attempt, startTime, remainingSeconds } = startRes.data.data;
-
+      const res = await startQuiz(quizData._id, { trainingAssignmentId: assignmentId });
+      const attempt = res.data.data.attempt;
       activeQuizAttemptIdRef.current = attempt._id;
-      quizStartTimeRef.current = new Date(startTime);
-      isSubmittingQuizRef.current = false;
+      quizStartTimeRef.current = new Date();
 
+      const timeLimitSecs = (quizData.timeLimitMinutes || 15) * 60;
+      setQuizTimeRemaining(timeLimitSecs);
+      setQuizStarted(true);
+      setQuizSubmitted(false);
       setSelectedAnswers({});
       setCurrentQuestionIdx(0);
-      setQuizStarted(true);
-
-      if (remainingSeconds <= 0) {
-        setQuizTimeRemaining(0);
-        handleAutoSubmitQuiz();
-      } else {
-        setQuizTimeRemaining(remainingSeconds);
-      }
+      addToast('success', 'Quiz timer started! Good luck.');
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to start quiz');
-    } finally {
+    } font-semibold; {
       setStartingQuiz(false);
     }
   };
 
-  // Quiz Timer Countdown (Driven by quizStartTimeRef to survive re-renders & refreshes)
-  useEffect(() => {
-    if (activeItem?.type === 'quiz' && quizData && quizStarted && !quizSubmitted && quizTimeRemaining !== null && quizTimeRemaining > 0) {
-      if (quizTimerRef.current) clearInterval(quizTimerRef.current);
-
-      quizTimerRef.current = setInterval(() => {
-        if (!quizStartTimeRef.current || !quizData) return;
-        const now = Date.now();
-        const startMs = quizStartTimeRef.current.getTime();
-        const limitMs = (quizData.timeLimitMinutes || 15) * 60 * 1000;
-        const remaining = Math.max(0, Math.floor((startMs + limitMs - now) / 1000));
-
-        setQuizTimeRemaining(remaining);
-
-        if (remaining <= 0) {
-          clearInterval(quizTimerRef.current);
-          handleAutoSubmitQuiz();
-        }
-      }, 1000);
-
-      return () => {
-        if (quizTimerRef.current) clearInterval(quizTimerRef.current);
-      };
-    }
-  }, [activeItem, quizData, quizStarted, quizSubmitted]);
-
-  const handleAutoSubmitQuiz = () => {
-    if (isSubmittingQuizRef.current) return;
-    addToast('warning', 'Time is up. Your quiz has been submitted automatically.');
-    submitQuizAnswers(true);
-  };
-
   const submitQuizAnswers = async (isAutoSubmit = false) => {
-    if (!quizData) return;
-    if (isSubmittingQuizRef.current && !isAutoSubmit) return;
-
-    // Validate required questions for manual submit
-    let unansweredCount = 0;
-    quizData.questions.forEach((q, idx) => {
-      const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
-      const val = selectedAnswers[idx];
-      if (qType === 'FILL_IN_BLANK') {
-        if (val === undefined || val === null || String(val).trim().length === 0) unansweredCount++;
-      } else {
-        if (val === undefined || val === null) unansweredCount++;
-      }
-    });
-
-    if (!isAutoSubmit && unansweredCount > 0 && quizTimeRemaining > 0) {
-      addToast('warning', `Please answer all questions before submitting. (${unansweredCount} unanswered)`);
-      return;
-    }
-
+    if (isSubmittingQuizRef.current || quizSubmitted) return;
     isSubmittingQuizRef.current = true;
-    if (quizTimerRef.current) clearInterval(quizTimerRef.current);
     setSubmittingQuiz(true);
+    clearInterval(quizTimerRef.current);
 
     try {
-      const userAnswersPayload = quizData.questions.map((q, qIdx) => {
-        const qType = q.questionType || (q.options && q.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
-        const ansVal = selectedAnswers[qIdx];
+      const formattedAnswers = Object.entries(selectedAnswers).map(([qIdx, ansVal]) => {
+        const qObj = quizData.questions[Number(qIdx)];
+        const qType = qObj.questionType || (qObj.options && qObj.options.length > 0 ? 'MCQ' : 'FILL_IN_BLANK');
+
         if (qType === 'FILL_IN_BLANK') {
           return {
-            questionIndex: qIdx,
-            selectedOptionIndex: null,
-            selectedAnswerText: ansVal !== undefined && ansVal !== null ? String(ansVal) : ''
-          };
-        } else if (qType === 'TRUE_FALSE') {
-          const idx = ansVal !== undefined && ansVal !== null ? Number(ansVal) : null;
-          return {
-            questionIndex: qIdx,
-            selectedOptionIndex: idx,
-            selectedAnswerText: idx === 0 ? 'True' : (idx === 1 ? 'False' : '')
+            questionIndex: Number(qIdx),
+            selectedAnswerText: (ansVal || '').toString().trim()
           };
         } else {
-          const idx = ansVal !== undefined && ansVal !== null ? Number(ansVal) : null;
           return {
-            questionIndex: qIdx,
-            selectedOptionIndex: idx,
-            selectedAnswerText: (q.options && idx !== null && q.options[idx]) ? q.options[idx] : ''
+            questionIndex: Number(qIdx),
+            selectedOptionIndex: Number(ansVal)
           };
         }
       });
 
       const res = await submitQuiz(quizData._id, {
-        userAnswers: userAnswersPayload,
         trainingAssignmentId: assignmentId,
-        attemptId: activeQuizAttemptIdRef.current
+        quizAttemptId: activeQuizAttemptIdRef.current,
+        answers: formattedAnswers
       });
 
       const resData = res.data.data;
@@ -698,21 +582,8 @@ export const TrainingPlayer = () => {
     if (!videoRef.current) return;
     if (activeStatus.isCompleted) return;
 
-    const targetTime = videoRef.current.currentTime;
-    if (targetTime > maxWatchedTime + 0.5) {
-      const allowed = maxWatchedTime;
-      videoRef.current.currentTime = allowed;
-      setCurrentTime(allowed);
-      addToast('warning', 'Forward seeking is disabled until you watch the full video.');
-    }
-  };
-
-  const handleVolumeChange = (e) => {
-    const v = Number(e.target.value);
-    setVolume(v);
-    if (videoRef.current) {
-      videoRef.current.volume = v;
-      setIsMuted(v === 0);
+    if (videoRef.current.currentTime > maxWatchedTime + 0.5) {
+      videoRef.current.currentTime = maxWatchedTime;
     }
   };
 
@@ -723,29 +594,39 @@ export const TrainingPlayer = () => {
     }
   };
 
-  const handleSpeedChange = (speed) => {
-    setPlaybackSpeed(speed);
-    if (videoRef.current) videoRef.current.playbackRate = speed;
-  };
-
-  const toggleFullscreen = () => {
-    if (videoRef.current && videoRef.current.requestFullscreen) {
-      videoRef.current.requestFullscreen();
+  const handleVolumeChange = (e) => {
+    const val = Number(e.target.value);
+    setVolume(val);
+    if (videoRef.current) {
+      videoRef.current.volume = val;
+      if (val === 0) setIsMuted(true);
+      else setIsMuted(false);
     }
   };
 
-  const formatVideoTime = (seconds) => {
-    if (isNaN(seconds)) return '00:00';
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
+  const handleSpeedChange = (speed) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+  };
+
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen();
+      }
+    }
+  };
+
+  const formatVideoTime = (secs) => {
+    if (!secs || isNaN(secs)) return '00:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  if (loading) return <LoadingSpinner text="Loading interactive learning player..." />;
-
-  if (!data || !data.assignment) {
-    return <p className="text-center text-slate-400 py-12">Training assignment not found.</p>;
-  }
+  if (loading || !data) return <LoadingSpinner text="Initializing training workspace..." />;
 
   const { assignment, progress } = data;
   const training = assignment.trainingId;
@@ -765,31 +646,31 @@ export const TrainingPlayer = () => {
     : 0;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-16">
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-16">
       {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate('/employee/my-trainings')}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
-            <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
+            <span className="text-[11px] font-bold text-emerald-700">
               {training.categoryId?.name || 'Course Training'}
             </span>
-            <h1 className="text-lg font-black text-slate-900 dark:text-white line-clamp-1">{training.title}</h1>
+            <h1 className="text-lg font-extrabold text-slate-900 line-clamp-1 font-heading">{training.title}</h1>
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+            <p className="text-xs font-bold text-slate-700">
               {calculatedPercentage}% Completed
             </p>
             <p className="text-[11px] text-slate-500 flex items-center justify-end">
-              <Clock className="w-3 h-3 mr-1" /> Due: {formatDate(assignment.deadline)}
+              <Clock className="w-3 h-3 mr-1 text-slate-400" /> Due: {formatDate(assignment.deadline)}
             </p>
           </div>
         </div>
@@ -802,22 +683,22 @@ export const TrainingPlayer = () => {
 
           {/* LOCKED ASSIGNMENT SCREEN */}
           {assignment.lockStatus?.isLocked || assignment.status === 'Locked' ? (
-            <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-rose-500/30 text-center space-y-6 animate-scale-up">
-              <div className="w-20 h-20 rounded-3xl bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center justify-center mx-auto shadow-xl shadow-rose-500/10">
+            <div className="bg-white p-8 sm:p-12 rounded-2xl border border-rose-200 text-center space-y-6 animate-scale-up shadow-xs">
+              <div className="w-20 h-20 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-xs">
                 <Lock className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <span className="px-3 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-extrabold border border-rose-500/20">
+                <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-extrabold border border-rose-200">
                   🔒 Training Temporarily Locked
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                   Access Suspended
                 </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                <p className="text-sm text-slate-600 max-w-md mx-auto">
                   This training module has been temporarily locked by your instructor. Please contact your instructor or administrator to request access.
                 </p>
                 {assignment.lockStatus?.lockedReason && (
-                  <p className="text-xs text-rose-500 italic pt-1">
+                  <p className="text-xs text-rose-600 italic pt-1">
                     Reason: "{assignment.lockStatus.lockedReason}"
                   </p>
                 )}
@@ -825,48 +706,48 @@ export const TrainingPlayer = () => {
               <div className="pt-4">
                 <button
                   onClick={() => navigate('/employee/my-trainings')}
-                  className="px-6 py-3 rounded-2xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-all cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800 transition-all cursor-pointer"
                 >
                   Back to Assigned Trainings
                 </button>
               </div>
             </div>
           ) : activeItem?.type === 'completed' ? (
-            <div className="glass-panel p-8 sm:p-12 rounded-3xl border border-slate-200 dark:border-slate-800/80 text-center space-y-6 animate-scale-up">
-              <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
+            <div className="bg-white p-8 sm:p-12 rounded-2xl border border-slate-200 shadow-xs text-center space-y-6 animate-scale-up">
+              <div className="w-20 h-20 rounded-2xl bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-xs">
                 <Award className="w-10 h-10" />
               </div>
               <div className="space-y-2">
-                <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-extrabold border border-emerald-500/20">
+                <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-extrabold border border-emerald-200">
                   🎉 Course 100% Completed
                 </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
                   Congratulations!
                 </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+                <p className="text-sm text-slate-600 max-w-md mx-auto">
                   You have successfully finished all required lessons, quizzes, and assignments for <strong>"{training.title}"</strong>.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto text-xs pt-4">
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <p className="text-slate-400">Progress</p>
-                  <p className="text-lg font-black text-emerald-500">100%</p>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-slate-500 font-semibold">Progress</p>
+                  <p className="text-lg font-black text-emerald-700">100%</p>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <p className="text-slate-400">Quiz Status</p>
-                  <p className="text-lg font-black text-blue-500">Passed ✓</p>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-slate-500 font-semibold">Quiz Status</p>
+                  <p className="text-lg font-black text-emerald-700">Passed ✓</p>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
-                  <p className="text-slate-400">Assignment</p>
-                  <p className="text-lg font-black text-purple-500">{data.assignmentSubmissions?.length ? 'Submitted ✓' : 'Completed'}</p>
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <p className="text-slate-500 font-semibold">Assignment</p>
+                  <p className="text-lg font-black text-teal-700">{data.assignmentSubmissions?.length ? 'Submitted ✓' : 'Completed'}</p>
                 </div>
               </div>
 
               <div className="pt-4">
                 <button
                   onClick={() => navigate('/employee/my-trainings')}
-                  className="px-6 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-indigo-500 transition-all cursor-pointer"
+                  className="px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold text-xs shadow-xs hover:bg-emerald-700 transition-all cursor-pointer"
                 >
                   Back to Assigned Trainings
                 </button>
@@ -874,17 +755,17 @@ export const TrainingPlayer = () => {
             </div>
           ) : activeItem?.type === 'lesson' ? (
             /* LESSON VIEW (VIDEO / CONTENT) */
-            <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-5">
-              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-3">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div>
-                  <span className="text-[11px] font-bold text-slate-400">{activeItem.sectionTitle}</span>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center">
-                    {activeItem.videoUrl ? <PlayCircle className="w-5 h-5 text-blue-500 mr-2" /> : <FileText className="w-5 h-5 text-emerald-500 mr-2" />}
+                  <span className="text-[11px] font-semibold text-slate-500">{activeItem.sectionTitle}</span>
+                  <h2 className="text-lg font-bold text-slate-900 flex items-center">
+                    {activeItem.videoUrl ? <PlayCircle className="w-5 h-5 text-emerald-600 mr-2" /> : <FileText className="w-5 h-5 text-emerald-600 mr-2" />}
                     {activeItem.title}
                   </h2>
                 </div>
                 {activeStatus.isCompleted && (
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-500/20 flex items-center">
+                  <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 flex items-center">
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Completed
                   </span>
                 )}
@@ -892,7 +773,7 @@ export const TrainingPlayer = () => {
 
               {/* VIDEO PLAYER */}
               {activeItem.videoUrl ? (
-                <div className="relative rounded-2xl overflow-hidden bg-slate-950 aspect-video border border-slate-800 group">
+                <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video border border-slate-800 group">
                   {videoError ? (
                     <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-3 bg-slate-950 text-slate-300">
                       <AlertTriangle className="w-10 h-10 text-amber-500" />
@@ -905,7 +786,7 @@ export const TrainingPlayer = () => {
                             videoRef.current.load();
                           }
                         }}
-                        className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all cursor-pointer"
                       >
                         Retry Playback
                       </button>
@@ -928,7 +809,7 @@ export const TrainingPlayer = () => {
                         <div className="relative w-full flex items-center group/timeline">
                           <div className="w-full bg-slate-800/80 h-1.5 rounded-lg overflow-hidden relative">
                             <div
-                              className="bg-blue-500 h-full rounded-lg transition-all duration-75"
+                              className="bg-emerald-500 h-full rounded-lg transition-all duration-75"
                               style={{
                                 width: `${
                                   duration > 0
@@ -953,7 +834,7 @@ export const TrainingPlayer = () => {
 
                         <div className="flex items-center justify-between text-white text-xs">
                           <div className="flex items-center space-x-3">
-                            <button onClick={togglePlay} className="p-1 hover:text-blue-400 transition-colors cursor-pointer">
+                            <button onClick={togglePlay} className="p-1 hover:text-emerald-400 transition-colors cursor-pointer">
                               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
                             </button>
 
@@ -962,7 +843,7 @@ export const TrainingPlayer = () => {
                             </span>
 
                             <div className="flex items-center space-x-1">
-                              <button onClick={toggleMute} className="p-1 hover:text-blue-400 cursor-pointer">
+                              <button onClick={toggleMute} className="p-1 hover:text-emerald-400 cursor-pointer">
                                 {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                               </button>
                               <input
@@ -972,7 +853,7 @@ export const TrainingPlayer = () => {
                                 step={0.1}
                                 value={isMuted ? 0 : volume}
                                 onChange={handleVolumeChange}
-                                className="w-16 accent-blue-500 h-1 cursor-pointer"
+                                className="w-16 accent-emerald-500 h-1 cursor-pointer"
                               />
                             </div>
                           </div>
@@ -984,7 +865,7 @@ export const TrainingPlayer = () => {
                                   key={speed}
                                   onClick={() => handleSpeedChange(speed)}
                                   className={`px-1.5 py-0.5 rounded cursor-pointer ${
-                                    playbackSpeed === speed ? 'bg-blue-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
+                                    playbackSpeed === speed ? 'bg-emerald-600 text-white font-bold' : 'hover:bg-slate-800 text-slate-300'
                                   }`}
                                 >
                                   {speed}x
@@ -992,7 +873,7 @@ export const TrainingPlayer = () => {
                               ))}
                             </div>
 
-                            <button onClick={toggleFullscreen} className="p-1 hover:text-blue-400 cursor-pointer">
+                            <button onClick={toggleFullscreen} className="p-1 hover:text-emerald-400 cursor-pointer">
                               <Maximize className="w-4 h-4" />
                             </button>
                           </div>
@@ -1004,28 +885,28 @@ export const TrainingPlayer = () => {
               ) : null}
 
               {/* LESSON NOTES / TEXT CONTENT */}
-              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/80 space-y-2">
-                <h4 className="font-bold text-xs text-slate-700 dark:text-slate-300">Lesson Description</h4>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <h4 className="font-bold text-xs text-slate-700">Lesson Description</h4>
+                <p className="text-xs text-slate-600 leading-relaxed">
                   {activeItem.description || 'Watch the video lesson and complete the interactive materials.'}
                 </p>
               </div>
             </div>
           ) : activeItem?.type === 'quiz' ? (
             /* INTEGRATED QUIZ VIEW */
-            <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-6">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
               {!quizData ? (
                 <LoadingSpinner text="Loading section quiz..." />
               ) : quizSubmitted && quizResult ? (
                 /* QUIZ RESULT SCREEN */
                 <div className="space-y-6">
-                  <div className={`p-6 rounded-3xl border text-center space-y-2 ${
+                  <div className={`p-6 rounded-2xl border text-center space-y-2 ${
                     quizResult.passed
-                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                      : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border-rose-200'
                   }`}>
-                    <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                      quizResult.passed ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      quizResult.passed ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
                     }`}>
                       {quizResult.passed ? '✓ PASSED' : '✕ FAILED'}
                     </span>
@@ -1034,7 +915,7 @@ export const TrainingPlayer = () => {
                       Passing Score Required: <strong>{quizResult.passingScorePercent}%</strong>
                     </p>
                     {!quizResult.passed && (
-                      <p className="text-xs pt-2 font-bold text-rose-600 dark:text-rose-400">
+                      <p className="text-xs pt-2 font-bold text-rose-700">
                         ✕ You did not pass this quiz. Please retake to unlock subsequent content.
                       </p>
                     )}
@@ -1042,29 +923,29 @@ export const TrainingPlayer = () => {
 
                   {/* QUESTION-LEVEL REVIEW */}
                   <div className="space-y-3">
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">Question Performance Breakdown</h4>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-slate-700">Question Performance Breakdown</h4>
                     {quizResult.evaluatedAnswers?.map((ans, idx) => {
                       const userAnsText = ans.selectedAnswerText || (ans.options && ans.selectedOptionIndex !== null && ans.selectedOptionIndex !== undefined ? ans.options[ans.selectedOptionIndex] : (ans.status === 'data_unavailable' ? 'Answer data unavailable' : 'Not Answered'));
                       const corrAnsText = ans.correctAnswerText || (ans.options && ans.correctAnswerIndex !== null && ans.correctAnswerIndex !== undefined ? ans.options[ans.correctAnswerIndex] : 'N/A');
                       const isUnanswered = (ans.selectedOptionIndex === null || ans.selectedOptionIndex === undefined) && (!ans.selectedAnswerText || !ans.selectedAnswerText.trim());
 
                       return (
-                        <div key={idx} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                        <div key={idx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
                           <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-900 dark:text-white">Question {idx + 1}: {ans.questionText}</span>
-                            <span className={`px-2.5 py-0.5 rounded font-extrabold text-[10px] ${
+                            <span className="font-bold text-slate-900">Question {idx + 1}: {ans.questionText}</span>
+                            <span className={`px-2.5 py-0.5 rounded font-bold text-[10px] ${
                               ans.isCorrect
-                                ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                 : isUnanswered
-                                ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                                : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200'
                             }`}>
                               {ans.isCorrect ? '✓ Correct' : isUnanswered ? '○ Not Answered' : '✕ Incorrect'}
                             </span>
                           </div>
-                          <p className="text-slate-500">Your Answer: <strong className={ans.isCorrect ? 'text-emerald-500' : 'text-rose-500'}>{userAnsText || 'Not Answered'}</strong></p>
+                          <p className="text-slate-500">Your Answer: <strong className={ans.isCorrect ? 'text-emerald-700' : 'text-rose-700'}>{userAnsText || 'Not Answered'}</strong></p>
                           {!ans.isCorrect && (
-                            <p className="text-slate-500">Correct Answer: <strong className="text-emerald-500">{corrAnsText}</strong></p>
+                            <p className="text-slate-500">Correct Answer: <strong className="text-emerald-700">{corrAnsText}</strong></p>
                           )}
                         </div>
                       );
@@ -1082,7 +963,7 @@ export const TrainingPlayer = () => {
                           setSelectedAnswers({});
                           setCurrentQuestionIdx(0);
                         }}
-                        className="px-6 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg shadow-amber-500/20 cursor-pointer"
+                        className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
                       >
                         Retake Quiz
                       </button>
@@ -1091,7 +972,7 @@ export const TrainingPlayer = () => {
                         onClick={() => {
                           if (canGoNext) setActiveItem(allItems[currentIdx + 1]);
                         }}
-                        className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-500/20 cursor-pointer"
+                        className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
                       >
                         Continue Learning →
                       </button>
@@ -1101,59 +982,59 @@ export const TrainingPlayer = () => {
               ) : !quizStarted && !quizSubmitted ? (
                 /* QUIZ INTRODUCTION / DETAILS SCREEN */
                 <div className="space-y-6">
-                  <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-                    <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[11px] font-extrabold uppercase tracking-wider">
+                  <div className="border-b border-slate-200 pb-4">
+                    <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold uppercase tracking-wider">
                       Quiz Assessment
                     </span>
-                    <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-2.5">
+                    <h2 className="text-2xl font-extrabold text-slate-900 mt-2.5 font-heading">
                       {quizData.title}
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                       Test your knowledge on key concepts from this section. Complete all questions before submitting or before the timer runs out.
                     </p>
                   </div>
 
                   {/* STATS & METRICS GRID */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                      <HelpCircle className="w-5 h-5 mx-auto text-amber-500" />
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                      <HelpCircle className="w-5 h-5 mx-auto text-amber-600" />
                       <span className="block text-[11px] text-slate-500 font-bold uppercase tracking-wider">Questions</span>
-                      <strong className="block text-base font-extrabold text-slate-900 dark:text-white">
+                      <strong className="block text-base font-extrabold text-slate-900">
                         {quizData.questions?.length || 0}
                       </strong>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                      <Clock className="w-5 h-5 mx-auto text-blue-500" />
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                      <Clock className="w-5 h-5 mx-auto text-emerald-600" />
                       <span className="block text-[11px] text-slate-500 font-bold uppercase tracking-wider">Duration</span>
-                      <strong className="block text-base font-extrabold text-slate-900 dark:text-white">
+                      <strong className="block text-base font-extrabold text-slate-900">
                         {quizData.timeLimitMinutes || 15} Min{quizData.timeLimitMinutes === 1 ? '' : 's'}
                       </strong>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                      <Award className="w-5 h-5 mx-auto text-emerald-500" />
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                      <Award className="w-5 h-5 mx-auto text-emerald-600" />
                       <span className="block text-[11px] text-slate-500 font-bold uppercase tracking-wider">Passing Score</span>
-                      <strong className="block text-base font-extrabold text-slate-900 dark:text-white">
+                      <strong className="block text-base font-extrabold text-slate-900">
                         {quizData.passingScorePercent || 50}%
                       </strong>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-center space-y-1">
-                      <RotateCcw className="w-5 h-5 mx-auto text-purple-500" />
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                      <RotateCcw className="w-5 h-5 mx-auto text-teal-600" />
                       <span className="block text-[11px] text-slate-500 font-bold uppercase tracking-wider">Attempts</span>
-                      <strong className="block text-base font-extrabold text-slate-900 dark:text-white">
+                      <strong className="block text-base font-extrabold text-slate-900">
                         Unlimited
                       </strong>
                     </div>
                   </div>
 
                   {/* INSTRUCTIONS BOX */}
-                  <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs space-y-2">
-                    <h4 className="font-extrabold text-amber-700 dark:text-amber-400 flex items-center">
-                      <Sparkles className="w-4 h-4 mr-1.5" /> Important Instructions:
+                  <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs space-y-2 text-emerald-950">
+                    <h4 className="font-extrabold flex items-center">
+                      <Sparkles className="w-4 h-4 mr-1.5 text-emerald-600" /> Important Instructions:
                     </h4>
-                    <ul className="list-disc list-inside text-slate-600 dark:text-slate-300 space-y-1 pl-1">
+                    <ul className="list-disc list-inside text-slate-700 space-y-1 pl-1">
                       <li>The timer will start immediately when you click <strong>Start Quiz</strong>.</li>
                       <li>You can navigate between questions freely using Previous / Next buttons.</li>
                       <li>If the timer reaches 00:00, your selected answers will be automatically submitted.</li>
@@ -1166,7 +1047,7 @@ export const TrainingPlayer = () => {
                     <button
                       onClick={handleStartQuiz}
                       disabled={startingQuiz}
-                      className="px-8 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-extrabold text-sm shadow-xl shadow-amber-500/25 cursor-pointer transition-all duration-300 hover:scale-[1.02] disabled:opacity-50"
+                      className="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm shadow-xs cursor-pointer transition-all disabled:opacity-50"
                     >
                       {startingQuiz ? 'Initializing Quiz...' : 'Start Quiz →'}
                     </button>
@@ -1175,14 +1056,14 @@ export const TrainingPlayer = () => {
               ) : (
                 /* ACTIVE QUIZ QUESTIONNAIRE */
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                     <div>
-                      <span className="text-[11px] font-bold text-amber-500">Quiz Assessment</span>
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">{quizData.title}</h2>
+                      <span className="text-[11px] font-bold text-emerald-700">Quiz Assessment</span>
+                      <h2 className="text-lg font-bold text-slate-900">{quizData.title}</h2>
                       <p className="text-xs text-slate-500">{quizData.questions?.length} Questions • Passing Threshold: {quizData.passingScorePercent}%</p>
                     </div>
                     {quizTimeRemaining !== null && (
-                      <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-xs font-bold">
+                      <div className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-mono text-xs font-bold">
                         ⏱ Timer: {formatVideoTime(quizTimeRemaining)}
                       </div>
                     )}
@@ -1195,20 +1076,20 @@ export const TrainingPlayer = () => {
 
                     return (
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center text-xs font-extrabold text-slate-700 dark:text-slate-300">
+                        <div className="flex justify-between items-center text-xs font-bold text-slate-700">
                           <div className="flex items-center space-x-2">
                             <span>Question {currentQuestionIdx + 1} of {quizData.questions.length}</span>
-                            <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] uppercase font-bold text-slate-600 border border-slate-200">
                               {qType === 'TRUE_FALSE' ? 'True / False' : qType === 'FILL_IN_BLANK' ? 'Fill in the Blank' : 'MCQ'}
                             </span>
                           </div>
-                          <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[11px]">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px]">
                             {Math.round(((currentQuestionIdx + 1) / quizData.questions.length) * 100)}% Completed
                           </span>
                         </div>
 
-                        <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-4">
-                          <p className="font-bold text-slate-900 dark:text-white text-sm">
+                        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4">
+                          <p className="font-bold text-slate-900 text-sm">
                             {currentQ.questionText}
                           </p>
 
@@ -1220,8 +1101,8 @@ export const TrainingPlayer = () => {
                                   key={optIdx}
                                   className={`flex items-center space-x-3 p-3.5 rounded-xl border text-xs cursor-pointer transition-all ${
                                     selectedAnswers[currentQuestionIdx] === optIdx
-                                      ? 'bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-300 font-bold'
-                                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+                                      ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold'
+                                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                                   }`}
                                 >
                                   <input
@@ -1229,7 +1110,7 @@ export const TrainingPlayer = () => {
                                     name={`q_${currentQuestionIdx}`}
                                     checked={selectedAnswers[currentQuestionIdx] === optIdx}
                                     onChange={() => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: optIdx })}
-                                    className="text-amber-500 cursor-pointer"
+                                    className="text-emerald-600 cursor-pointer"
                                   />
                                   <span>{opt}</span>
                                 </label>
@@ -1243,10 +1124,10 @@ export const TrainingPlayer = () => {
                               <button
                                 type="button"
                                 onClick={() => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: 0 })}
-                                className={`p-4 rounded-xl border text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center space-x-2 ${
+                                className={`p-4 rounded-xl border text-xs font-bold cursor-pointer transition-all flex items-center justify-center space-x-2 ${
                                   selectedAnswers[currentQuestionIdx] === 0
-                                    ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/30'
-                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500/40'
+                                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-2 ring-emerald-200'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:border-emerald-300'
                                 }`}
                               >
                                 <span className="text-base">✓</span>
@@ -1255,10 +1136,10 @@ export const TrainingPlayer = () => {
                               <button
                                 type="button"
                                 onClick={() => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: 1 })}
-                                className={`p-4 rounded-xl border text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center space-x-2 ${
+                                className={`p-4 rounded-xl border text-xs font-bold cursor-pointer transition-all flex items-center justify-center space-x-2 ${
                                   selectedAnswers[currentQuestionIdx] === 1
-                                    ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/30'
-                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-rose-500/40'
+                                    ? 'bg-rose-50 border-rose-300 text-rose-800 ring-2 ring-rose-200'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:border-rose-300'
                                 }`}
                               >
                                 <span className="text-base">✕</span>
@@ -1270,13 +1151,13 @@ export const TrainingPlayer = () => {
                           {/* Fill in the Blank Text Input */}
                           {qType === 'FILL_IN_BLANK' && (
                             <div className="space-y-2 pt-1">
-                              <label className="block text-xs font-bold text-slate-600 dark:text-slate-400">Type Your Answer:</label>
+                              <label className="block text-xs font-semibold text-slate-600">Type Your Answer:</label>
                               <input
                                 type="text"
                                 value={selectedAnswers[currentQuestionIdx] !== undefined && selectedAnswers[currentQuestionIdx] !== null ? selectedAnswers[currentQuestionIdx] : ''}
                                 onChange={(e) => setSelectedAnswers({ ...selectedAnswers, [currentQuestionIdx]: e.target.value })}
                                 placeholder="Type answer text here..."
-                                className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                                className="w-full px-4 py-3 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-900 outline-none focus:border-emerald-600"
                               />
                             </div>
                           )}
@@ -1286,7 +1167,7 @@ export const TrainingPlayer = () => {
                           <button
                             onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
                             disabled={currentQuestionIdx === 0}
-                            className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold disabled:opacity-30 cursor-pointer"
+                            className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
                           >
                             Previous Question
                           </button>
@@ -1294,7 +1175,7 @@ export const TrainingPlayer = () => {
                           {currentQuestionIdx < quizData.questions.length - 1 ? (
                             <button
                               onClick={() => setCurrentQuestionIdx(prev => Math.min(quizData.questions.length - 1, prev + 1))}
-                              className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold cursor-pointer"
+                              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer"
                             >
                               Next Question →
                             </button>
@@ -1302,7 +1183,7 @@ export const TrainingPlayer = () => {
                             <button
                               onClick={() => submitQuizAnswers(false)}
                               disabled={submittingQuiz}
-                              className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/20 cursor-pointer"
+                              className="px-6 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
                             >
                               {submittingQuiz ? 'Evaluating...' : 'Submit Quiz'}
                             </button>
@@ -1316,33 +1197,33 @@ export const TrainingPlayer = () => {
             </div>
           ) : activeItem?.type === 'assignment' ? (
             /* INTEGRATED ASSIGNMENT VIEW */
-            <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800/80 space-y-6">
+            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
               {!assignmentDetails ? (
                 <LoadingSpinner text="Loading assignment requirements..." />
               ) : (
                 <div className="space-y-6">
-                  <div className="border-b border-slate-200 dark:border-slate-800 pb-3">
-                    <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400">Course Project Assignment</span>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">{assignmentDetails.title}</h2>
+                  <div className="border-b border-slate-200 pb-3">
+                    <span className="text-[11px] font-bold text-teal-700">Course Project Assignment</span>
+                    <h2 className="text-lg font-bold text-slate-900">{assignmentDetails.title}</h2>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
-                    <h4 className="font-bold text-slate-900 dark:text-white">Project Instructions & Requirements:</h4>
-                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{assignmentDetails.instructions}</p>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                    <h4 className="font-bold text-slate-900">Project Instructions & Requirements:</h4>
+                    <p className="text-slate-600 leading-relaxed whitespace-pre-line">{assignmentDetails.instructions}</p>
                   </div>
 
                   {/* Submission Form */}
                   <form onSubmit={handleAssignmentSubmit} className="space-y-5">
                     <div className="space-y-2">
-                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Select Submission Format (Choose EITHER GitHub OR File Upload)</label>
+                      <label className="block text-xs font-semibold text-slate-700">Select Submission Format (Choose EITHER GitHub OR File Upload)</label>
                       <div className="flex space-x-4">
                         <button
                           type="button"
                           onClick={() => setSubmissionType('github')}
-                          className={`flex-1 p-3 rounded-2xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                          className={`flex-1 p-3 rounded-xl border text-xs font-semibold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
                             submissionType === 'github'
-                              ? 'bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-400'
-                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500'
+                              ? 'bg-teal-50 border-teal-300 text-teal-700'
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                           }`}
                         >
                           <Code2 className="w-4 h-4" />
@@ -1351,10 +1232,10 @@ export const TrainingPlayer = () => {
                         <button
                           type="button"
                           onClick={() => setSubmissionType('file')}
-                          className={`flex-1 p-3 rounded-2xl border text-xs font-bold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
+                          className={`flex-1 p-3 rounded-xl border text-xs font-semibold flex items-center justify-center space-x-2 transition-all cursor-pointer ${
                             submissionType === 'file'
-                              ? 'bg-purple-500/10 border-purple-500 text-purple-600 dark:text-purple-400'
-                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-500'
+                              ? 'bg-teal-50 border-teal-300 text-teal-700'
+                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                           }`}
                         >
                           <Upload className="w-4 h-4" />
@@ -1365,7 +1246,7 @@ export const TrainingPlayer = () => {
 
                     {submissionType === 'github' ? (
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           GitHub Repository URL <span className="text-rose-500">*</span>
                         </label>
                         <input
@@ -1374,36 +1255,36 @@ export const TrainingPlayer = () => {
                           onChange={(e) => setGithubUrl(e.target.value)}
                           required
                           placeholder="https://github.com/username/repository"
-                          className="w-full px-4 py-2.5 rounded-xl glass-input text-xs font-mono"
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 outline-none focus:border-teal-600"
                         />
                       </div>
                     ) : (
                       <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Upload Assignment File / PDF <span className="text-rose-500">*</span>
                         </label>
                         <div className="flex items-center space-x-3">
-                          <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl bg-purple-600 text-white font-bold text-xs hover:bg-purple-500">
+                          <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700">
                             <Upload className="w-4 h-4 mr-1.5" />
                             {uploadingFile ? 'Uploading...' : 'Choose File'}
                             <input type="file" onChange={handleFileUpload} className="hidden" disabled={uploadingFile} />
                           </label>
-                          {uploadedFileUrl && <span className="text-xs text-emerald-500 font-mono truncate max-w-xs">{uploadedFileUrl}</span>}
+                          {uploadedFileUrl && <span className="text-xs text-emerald-700 font-mono font-bold truncate max-w-xs">{uploadedFileUrl}</span>}
                         </div>
                       </div>
                     )}
 
                     {existingSubmission && (
-                      <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold flex items-center text-slate-900 dark:text-white">
-                            <CheckCircle2 className="w-4 h-4 mr-1.5 text-emerald-500" />
+                          <span className="font-bold flex items-center text-slate-900">
+                            <CheckCircle2 className="w-4 h-4 mr-1.5 text-emerald-600" />
                             Assignment Submitted
                           </span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                             existingSubmission.status === 'reviewed'
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}>
                             {existingSubmission.status === 'reviewed' ? '✓ Reviewed' : 'Pending Review'}
                           </span>
@@ -1414,17 +1295,17 @@ export const TrainingPlayer = () => {
                         </p>
 
                         {existingSubmission.status === 'reviewed' ? (
-                          <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-1.5 mt-2">
+                          <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 space-y-1.5 mt-2">
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-slate-900 dark:text-white">Instructor Grade:</span>
-                              <span className="px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-purple-600 text-white shadow-sm">
+                              <span className="font-bold text-slate-900">Instructor Grade:</span>
+                              <span className="px-2.5 py-0.5 rounded-full font-extrabold text-[11px] bg-teal-600 text-white shadow-xs">
                                 {existingSubmission.grade || 'Good'}
                               </span>
                             </div>
                             {existingSubmission.feedback && (
                               <div>
-                                <span className="font-bold text-slate-700 dark:text-slate-300 text-[11px]">Instructor Feedback:</span>
-                                <p className="text-slate-600 dark:text-slate-300 italic pt-0.5">{existingSubmission.feedback}</p>
+                                <span className="font-bold text-slate-700 text-[11px]">Instructor Feedback:</span>
+                                <p className="text-slate-600 italic pt-0.5">{existingSubmission.feedback}</p>
                               </div>
                             )}
                             {existingSubmission.reviewedAt && (
@@ -1434,7 +1315,7 @@ export const TrainingPlayer = () => {
                             )}
                           </div>
                         ) : (
-                          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300">
+                          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800">
                             Grade & Feedback: <strong>Pending instructor review</strong>
                           </div>
                         )}
@@ -1445,7 +1326,7 @@ export const TrainingPlayer = () => {
                       <button
                         type="submit"
                         disabled={submittingAssignment || uploadingFile}
-                        className="px-6 py-2.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-500/20 cursor-pointer"
+                        className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
                       >
                         {submittingAssignment ? 'Submitting...' : existingSubmission ? 'Update Submission' : 'Submit Assignment'}
                       </button>
@@ -1457,13 +1338,13 @@ export const TrainingPlayer = () => {
           ) : null}
 
           {/* FIXED BOTTOM NAVIGATION BAR */}
-          <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
             <button
               onClick={() => {
                 if (canGoPrev) setActiveItem(allItems[currentIdx - 1]);
               }}
               disabled={!canGoPrev}
-              className="inline-flex items-center px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-bold disabled:opacity-40 cursor-pointer"
+              className="inline-flex items-center px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4 mr-1" /> Previous
             </button>
@@ -1478,12 +1359,12 @@ export const TrainingPlayer = () => {
                 <button
                   onClick={handleMarkComplete}
                   disabled={isBtnDisabled}
-                  className={`px-5 py-2 rounded-xl text-xs font-bold shadow-md transition-all inline-flex items-center ${
+                  className={`px-5 py-2 rounded-xl text-xs font-semibold transition-all inline-flex items-center ${
                     activeStatus.isCompleted
-                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-default'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default font-bold'
                       : isVideoIncomplete
-                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 cursor-pointer'
+                      ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer'
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4 mr-1.5" />
@@ -1507,7 +1388,7 @@ export const TrainingPlayer = () => {
                 }
               }}
               disabled={!canGoNext && !(currentIdx === allItems.length - 1 && activeStatus.isCompleted)}
-              className="inline-flex items-center px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold disabled:opacity-40 disabled:bg-slate-300 dark:disabled:bg-slate-800 cursor-pointer"
+              className="inline-flex items-center px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold disabled:opacity-40 disabled:bg-slate-200 cursor-pointer shadow-xs"
             >
               {currentIdx === allItems.length - 1 && activeStatus.isCompleted ? (
                 <>
@@ -1523,20 +1404,20 @@ export const TrainingPlayer = () => {
         </div>
 
         {/* RIGHT SIDEBAR: COURSE CONTENTS / SYLLABUS & RESOURCES */}
-        <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800/80 flex flex-col justify-between max-h-[85vh] overflow-y-auto space-y-6">
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between max-h-[85vh] overflow-y-auto space-y-6">
           <div className="space-y-4">
             <div>
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Course Contents</h3>
+              <h3 className="font-extrabold text-slate-900 text-base font-heading">Course Contents</h3>
 
               {/* Progress Summary */}
               <div className="space-y-1.5 pt-3">
-                <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
+                <div className="flex justify-between text-xs font-bold text-slate-700">
                   <span>Progress: {completedCount} / {totalItemsCount} completed</span>
-                  <span className="text-blue-600 dark:text-blue-400">{calculatedPercentage}%</span>
+                  <span className="text-emerald-700">{calculatedPercentage}%</span>
                 </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
                   <div
-                    className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500"
+                    className="bg-emerald-600 h-full rounded-full transition-all duration-500"
                     style={{ width: `${calculatedPercentage}%` }}
                   />
                 </div>
@@ -1544,10 +1425,10 @@ export const TrainingPlayer = () => {
             </div>
 
             {/* Modules & Content Items Tree */}
-            <div className="space-y-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="space-y-4 pt-2 border-t border-slate-200">
               {training.sections?.map((sec, sIdx) => (
                 <div key={sec._id || sIdx} className="space-y-2">
-                  <h4 className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                  <h4 className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
                     MODULE {sIdx + 1}: {sec.title}
                   </h4>
 
@@ -1567,25 +1448,25 @@ export const TrainingPlayer = () => {
                             disabled={status.isLocked}
                             className={`w-full text-left p-3 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
                               isCurrent
-                                ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20'
+                                ? 'bg-emerald-600 text-white font-bold shadow-xs'
                                 : status.isCompleted
-                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold'
                                 : status.isLocked
-                                ? 'bg-slate-100 dark:bg-slate-950/40 text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
-                                : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800'
+                                ? 'bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed border border-slate-200'
+                                : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-200'
                             }`}
                           >
                             <div className="flex items-center space-x-2.5 truncate">
                               {status.isCompleted ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                               ) : isCurrent ? (
                                 <PlayCircle className="w-4 h-4 text-white flex-shrink-0" />
                               ) : status.isLocked ? (
                                 <Lock className="w-4 h-4 text-slate-400 flex-shrink-0" />
                               ) : item.type === 'quiz' ? (
-                                <HelpCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                <HelpCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
                               ) : (
-                                <PlayCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                <PlayCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                               )}
                               <span className="truncate">{item.title}</span>
                             </div>
@@ -1607,8 +1488,8 @@ export const TrainingPlayer = () => {
                 const isCurrent = activeItem && activeItem.id === assignmentItem.id && activeItem.type === 'assignment';
 
                 return (
-                  <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                    <h4 className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                  <div className="space-y-2 pt-2 border-t border-slate-200">
+                    <h4 className="text-[11px] font-bold text-teal-700 uppercase tracking-wider">
                       COURSE ASSIGNMENT
                     </h4>
                     <button
@@ -1619,23 +1500,23 @@ export const TrainingPlayer = () => {
                       disabled={status.isLocked}
                       className={`w-full text-left p-3 rounded-xl text-xs flex items-center justify-between transition-all cursor-pointer ${
                         isCurrent
-                          ? 'bg-purple-600 text-white font-bold shadow-md shadow-purple-500/20'
+                          ? 'bg-teal-600 text-white font-bold shadow-xs'
                           : status.isCompleted
-                          ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold'
                           : status.isLocked
-                          ? 'bg-slate-100 dark:bg-slate-950/40 text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
-                          : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800'
+                          ? 'bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed border border-slate-200'
+                          : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-200'
                       }`}
                     >
                       <div className="flex items-center space-x-2.5 truncate">
                         {status.isCompleted ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                         ) : isCurrent ? (
                           <FileCheck2 className="w-4 h-4 text-white flex-shrink-0" />
                         ) : status.isLocked ? (
                           <Lock className="w-4 h-4 text-slate-400 flex-shrink-0" />
                         ) : (
-                          <FileCheck2 className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                          <FileCheck2 className="w-4 h-4 text-teal-600 flex-shrink-0" />
                         )}
                         <span className="truncate">{assignmentItem.title}</span>
                       </div>
@@ -1652,22 +1533,22 @@ export const TrainingPlayer = () => {
 
           {/* RESOURCES AT BOTTOM OF SIDEBAR */}
           {allCourseResources.length > 0 && (
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
-              <h4 className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center">
-                <FileText className="w-3.5 h-3.5 mr-1.5 text-emerald-500" /> RESOURCES
+            <div className="pt-4 border-t border-slate-200 space-y-3">
+              <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider flex items-center">
+                <FileText className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> RESOURCES
               </h4>
               <div className="space-y-2">
                 {allCourseResources.map((res, rIdx) => (
-                  <div key={rIdx} className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <div key={rIdx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
                     <div className="truncate pr-2">
-                      <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{res.title}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{res.lessonTitle}</p>
+                      <p className="font-bold text-slate-900 truncate">{res.title}</p>
+                      <p className="text-[10px] text-slate-500 truncate">{res.lessonTitle}</p>
                     </div>
                     <a
                       href={formatMediaUrl(res.fileUrl || res.pdfUrl || res.url)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-500/20 cursor-pointer inline-flex items-center text-[11px] flex-shrink-0"
+                      className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 hover:bg-emerald-100 cursor-pointer inline-flex items-center text-[11px] flex-shrink-0"
                     >
                       <Download className="w-3 h-3 mr-1" /> Download
                     </a>

@@ -17,8 +17,21 @@ import {
   Activity,
   CheckCircle2,
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  BarChart3,
+  TrendingUp,
+  Award
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Cell
+} from 'recharts';
 
 export const InstructorDashboard = () => {
   const { addToast } = useNotification();
@@ -62,49 +75,62 @@ export const InstructorDashboard = () => {
   const overdueEmployees = data?.overdueEmployees || [];
   const recentActivity = data?.recentActivity || [];
 
+  // Prepare chart data for trainings completion & enrollment
+  const chartData = myTrainings.slice(0, 6).map((t) => ({
+    name: t.title.length > 18 ? `${t.title.substring(0, 18)}...` : t.title,
+    completed: t.completedCount || 0,
+    inProgress: t.inProgressCount || 0,
+    enrolled: t.enrolledCount || 0,
+    rate: t.completionRate || 0
+  }));
+
   if (loading) {
     return (
-      <div className="space-y-8 animate-fade-in">
-        <div className="h-20 bg-slate-200 dark:bg-slate-800 rounded-3xl animate-pulse" />
+      <div className="space-y-8 animate-fade-in max-w-7xl mx-auto">
+        <div className="h-28 bg-slate-200 rounded-2xl animate-pulse" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-28 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+            <div key={i} className="h-28 bg-slate-200 rounded-2xl animate-pulse" />
           ))}
         </div>
-        <div className="h-64 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+        <div className="h-72 bg-slate-200 rounded-2xl animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header & Quick Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5 text-blue-500" /> Instructor Portal
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-16">
+      {/* SECTION 1: Deep Emerald -> Teal Gradient Hero Banner */}
+      <div className="relative overflow-hidden p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-[#064E3B] via-[#0D5C46] to-[#0F766E] border border-emerald-800/60 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="absolute -top-24 -left-24 w-80 h-80 bg-teal-400/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-1.5 max-w-2xl">
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-400/15 border border-emerald-300/30 text-emerald-100 text-xs font-bold backdrop-blur-xs">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5 text-emerald-300" />
+            Instructor Portal
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Instructor Studio
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">
+            Instructor Studio & Content Hub
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Manage your trainings, monitor learner progress, and review assignments.
+          <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+            Manage your training courses, monitor learner completion progress, review assignment submissions, and track course compliance.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="relative z-10 flex flex-wrap items-center gap-3 shrink-0">
           <button
             onClick={() => fetchDashboard(true)}
             disabled={refreshing || loading}
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-sm hover:shadow-md cursor-pointer"
+            className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold border border-white/20 backdrop-blur-md transition-all cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            {refreshing ? 'Refreshing...' : 'Refresh Studio'}
           </button>
 
           <Link
             to="/instructor/trainings"
-            className="inline-flex items-center justify-center px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold shadow-lg shadow-blue-500/25 hover:from-blue-500 hover:to-indigo-500 transition-all cursor-pointer"
+            className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             Create Training
@@ -114,9 +140,9 @@ export const InstructorDashboard = () => {
 
       {/* ERROR STATE */}
       {error && (
-        <div className="p-6 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-between">
+        <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <AlertTriangle className="w-6 h-6 flex-shrink-0" />
+            <AlertTriangle className="w-6 h-6 flex-shrink-0 text-rose-600" />
             <div>
               <h4 className="font-bold text-sm">Failed to Load Dashboard Data</h4>
               <p className="text-xs opacity-90">{error}</p>
@@ -124,72 +150,137 @@ export const InstructorDashboard = () => {
           </div>
           <button
             onClick={() => fetchDashboard(false)}
-            className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold text-xs shadow hover:bg-rose-500 transition-colors"
+            className="px-4 py-2 rounded-xl bg-rose-600 text-white font-semibold text-xs shadow hover:bg-rose-700 transition-colors cursor-pointer"
           >
             Retry
           </button>
         </div>
       )}
 
-      {/* Top Instructor Metric Cards */}
+      {/* SECTION 2: Top 4 Instructor Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-lg">
-          <div className="p-3.5 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Created Trainings</p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white">{stats.createdTrainings || 0}</h3>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-lg">
-          <div className="p-3.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Enrolled</p>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white">{stats.totalEnrolled || 0}</h3>
+        {/* Created Trainings */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between transition-all hover:border-slate-300">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-3 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 shrink-0">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Created Trainings</p>
+              <h3 className="text-2xl font-black text-slate-900 font-heading">{stats.createdTrainings || 0}</h3>
+            </div>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-lg">
-          <div className="p-3.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            <FileCheck2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Pending Reviews</p>
-            <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400">{stats.pendingReviews || 0}</h3>
+        {/* Total Enrolled */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between transition-all hover:border-slate-300">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Total Enrolled</p>
+              <h3 className="text-2xl font-black text-slate-900 font-heading">{stats.totalEnrolled || 0}</h3>
+            </div>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800/80 flex items-center space-x-4 transition-all hover:shadow-lg">
-          <div className="p-3.5 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-            <Clock className="w-6 h-6" />
+        {/* Pending Reviews */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between transition-all hover:border-slate-300">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-3 rounded-xl bg-amber-50 text-amber-600 border border-amber-100 shrink-0">
+              <FileCheck2 className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Pending Reviews</p>
+              <h3 className="text-2xl font-black text-amber-600 font-heading">{stats.pendingReviews || 0}</h3>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Overdue</p>
-            <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400">{stats.overdueEnrollments || 0}</h3>
+          {stats.pendingReviews > 0 && (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-200">
+              Action Needed
+            </span>
+          )}
+        </div>
+
+        {/* Overdue */}
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center justify-between transition-all hover:border-slate-300">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-3 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 shrink-0">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-slate-500">Overdue Enrollments</p>
+              <h3 className="text-2xl font-black text-rose-600 font-heading">{stats.overdueEnrollments || 0}</h3>
+            </div>
           </div>
+          {stats.overdueEnrollments > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+              Overdue
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Main Grid Content */}
+      {/* SECTION 3: Course Completion Chart Visualization Card */}
+      {chartData.length > 0 && (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-2">
+            <div>
+              <h3 className="font-bold text-slate-900 text-base flex items-center font-heading">
+                <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
+                Training Completion Analysis
+              </h3>
+              <p className="text-xs text-slate-500">Learner completion vs in-progress counts across top training courses</p>
+            </div>
+            <span className="text-xs font-semibold text-slate-500">
+              Top {chartData.length} Courses
+            </span>
+          </div>
+
+          <div className="h-64 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
+                <YAxis stroke="#64748b" fontSize={11} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    borderColor: '#cbd5e1',
+                    borderRadius: '12px',
+                    color: '#0f172a',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value, name) => [
+                    value,
+                    name === 'completed' ? 'Completed Learners' : name === 'inProgress' ? 'In Progress Learners' : 'Enrolled'
+                  ]}
+                />
+                <Bar dataKey="completed" fill="#10b981" radius={[6, 6, 0, 0]} name="completed" />
+                <Bar dataKey="inProgress" fill="#4f46e5" radius={[6, 6, 0, 0]} name="inProgress" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 4: Main Grid Content (Left 2 Columns / Right 1 Column) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: My Training Overview & Pending Reviews */}
         <div className="lg:col-span-2 space-y-6">
           {/* My Training Overview */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-                <BookOpen className="w-5 h-5 mr-2 text-blue-600 dark:text-blue-400" />
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-900 text-base flex items-center font-heading">
+                <BookOpen className="w-5 h-5 mr-2 text-indigo-600" />
                 My Training Overview
               </h3>
               <Link
                 to="/instructor/trainings"
-                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center"
+                className="text-xs font-semibold text-indigo-600 hover:underline inline-flex items-center"
               >
-                View All Trainings <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                View All Courses <ChevronRight className="w-3.5 h-3.5 ml-1" />
               </Link>
             </div>
 
@@ -199,34 +290,44 @@ export const InstructorDashboard = () => {
                 title="No Trainings Created"
                 description="You haven't created any training courses yet."
                 action={
-                  <Link to="/instructor/trainings" className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white">
+                  <Link to="/instructor/trainings" className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-xs">
                     Create Training
                   </Link>
                 }
               />
             ) : (
-              <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
-                <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-                  <thead className="bg-slate-50 dark:bg-slate-950/60 text-slate-400 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-800">
+              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-bold text-[11px] border-b border-slate-200">
                     <tr>
-                      <th className="p-3">Training Name</th>
-                      <th className="p-3 text-center">Enrolled</th>
-                      <th className="p-3 text-center">Completed</th>
-                      <th className="p-3 text-center">In Progress</th>
-                      <th className="p-3 text-center">Pending</th>
-                      <th className="p-3 text-right">Completion %</th>
+                      <th className="p-3.5">Training Title</th>
+                      <th className="p-3.5 text-center">Enrolled</th>
+                      <th className="p-3.5 text-center">Completed</th>
+                      <th className="p-3.5 text-center">In Progress</th>
+                      <th className="p-3.5 text-center">Pending</th>
+                      <th className="p-3.5 text-right">Completion Rate</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                    {myTrainings.slice(0, 5).map((t) => (
-                      <tr key={t._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                        <td className="p-3 font-bold text-slate-900 dark:text-slate-100">{t.title}</td>
-                        <td className="p-3 text-center font-semibold">{t.enrolledCount}</td>
-                        <td className="p-3 text-center font-bold text-emerald-600 dark:text-emerald-400">{t.completedCount}</td>
-                        <td className="p-3 text-center font-semibold text-indigo-600 dark:text-indigo-400">{t.inProgressCount}</td>
-                        <td className="p-3 text-center font-semibold text-slate-400">{t.pendingCount}</td>
-                        <td className="p-3 text-right font-extrabold text-blue-600 dark:text-blue-400">
-                          {t.completionRate}%
+                  <tbody className="divide-y divide-slate-100">
+                    {myTrainings.slice(0, 6).map((t) => (
+                      <tr key={t._id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3.5 font-bold text-slate-900">
+                          <div>{t.title}</div>
+                          {t.categoryName && (
+                            <span className="text-[10px] text-indigo-600 font-medium">{t.categoryName}</span>
+                          )}
+                        </td>
+                        <td className="p-3.5 text-center font-semibold text-slate-800">{t.enrolledCount}</td>
+                        <td className="p-3.5 text-center font-bold text-emerald-700">{t.completedCount}</td>
+                        <td className="p-3.5 text-center font-semibold text-indigo-700">{t.inProgressCount}</td>
+                        <td className="p-3.5 text-center font-semibold text-slate-400">{t.pendingCount}</td>
+                        <td className="p-3.5 text-right">
+                          <div className="flex items-center justify-end space-x-2">
+                            <div className="w-14 bg-slate-200 rounded-full h-1.5 overflow-hidden hidden sm:block">
+                              <div className="bg-indigo-600 h-full rounded-full" style={{ width: `${t.completionRate}%` }} />
+                            </div>
+                            <span className="font-extrabold text-indigo-600">{t.completionRate}%</span>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -237,56 +338,56 @@ export const InstructorDashboard = () => {
           </div>
 
           {/* Pending Assignment Reviews */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center">
-                <FileCheck2 className="w-5 h-5 mr-2 text-amber-500" />
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-900 text-base flex items-center font-heading">
+                <FileCheck2 className="w-5 h-5 mr-2 text-amber-600" />
                 Pending Assignment Reviews ({pendingSubmissions.length})
               </h3>
               <Link
                 to="/instructor/submissions"
-                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline inline-flex items-center"
+                className="text-xs font-semibold text-amber-700 hover:underline inline-flex items-center"
               >
                 View All Reviews <ChevronRight className="w-3.5 h-3.5 ml-1" />
               </Link>
             </div>
 
             {pendingSubmissions.length === 0 ? (
-              <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800/80 text-center space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                <h4 className="font-bold text-slate-900 dark:text-white text-sm">You're all caught up!</h4>
-                <p className="text-xs text-slate-500">No submissions currently need review.</p>
+              <div className="p-6 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-2">
+                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
+                <h4 className="font-bold text-slate-900 text-sm">You're all caught up!</h4>
+                <p className="text-xs text-slate-500">No submissions currently require instructor review.</p>
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {pendingSubmissions.map((sub) => (
                   <div
                     key={sub._id}
-                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs transition-all hover:border-amber-500/40"
+                    className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between text-xs transition-all hover:border-amber-300 gap-3"
                   >
                     <div className="flex items-center space-x-3">
                       <img
                         src={sub.employeeAvatar || `https://api.dicebear.com/7.x/initials/svg?seed=${sub.employeeName}`}
                         alt={sub.employeeName}
-                        className="w-8 h-8 rounded-lg object-cover bg-slate-800 border border-slate-700"
+                        className="w-9 h-9 rounded-lg object-cover bg-white border border-slate-200 shrink-0"
                       />
                       <div>
-                        <p className="font-bold text-slate-900 dark:text-slate-100">{sub.employeeName}</p>
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                        <p className="font-bold text-slate-900">{sub.employeeName}</p>
+                        <p className="text-xs text-amber-700 font-medium">
                           {sub.assignmentTitle} • <span className="text-slate-500">{sub.trainingTitle}</span>
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-3 self-end sm:self-auto">
                       <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
                         Submitted: {formatDate(sub.submittedAt)}
                       </span>
                       <Link
                         to="/instructor/submissions"
-                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-[11px] shadow-sm hover:from-amber-600 hover:to-orange-600 transition-colors inline-flex items-center"
+                        className="px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-xs transition-colors inline-flex items-center"
                       >
-                        Review
+                        Review Submission
                         <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                       </Link>
                     </div>
@@ -300,42 +401,51 @@ export const InstructorDashboard = () => {
         {/* Right Column: Quick Actions, Deadline Alerts & Recent Activity */}
         <div className="space-y-6">
           {/* Quick Actions */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-3">
-            <h3 className="font-bold text-slate-900 dark:text-white text-sm uppercase tracking-wider text-[11px]">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="font-bold text-slate-900 text-xs uppercase tracking-wider font-heading">
               Quick Actions
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <Link
                 to="/instructor/trainings"
-                className="w-full flex items-center justify-between p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-500/20 transition-colors"
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold text-xs hover:bg-indigo-100 transition-colors"
               >
-                <span>+ Create Training Course</span>
+                <span className="flex items-center">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Training Course
+                </span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/instructor/submissions"
-                className="w-full flex items-center justify-between p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs hover:bg-amber-500/20 transition-colors"
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 font-semibold text-xs hover:bg-amber-100 transition-colors"
               >
-                <span>Review Assignments</span>
+                <span className="flex items-center">
+                  <FileCheck2 className="w-4 h-4 mr-2" />
+                  Review Assignments
+                </span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
               <Link
                 to="/instructor/deadlines"
-                className="w-full flex items-center justify-between p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs hover:bg-rose-500/20 transition-colors"
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-semibold text-xs hover:bg-rose-100 transition-colors"
               >
-                <span>Manage Deadlines</span>
+                <span className="flex items-center">
+                  <Clock className="w-4 h-4 mr-2" />
+                  Manage Deadlines
+                </span>
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
 
           {/* Deadline Alerts */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-              <h3 className="font-bold text-rose-600 dark:text-rose-400 text-sm flex items-center">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="font-bold text-rose-700 text-sm flex items-center font-heading">
                 <Clock className="w-4 h-4 mr-1.5" /> Deadline Alerts
               </h3>
-              <Link to="/instructor/deadlines" className="text-[11px] font-bold text-rose-500 hover:underline">
+              <Link to="/instructor/deadlines" className="text-xs font-semibold text-rose-600 hover:underline">
                 Manage Deadlines
               </Link>
             </div>
@@ -343,39 +453,39 @@ export const InstructorDashboard = () => {
             {overdueEmployees.length === 0 ? (
               <p className="text-xs text-slate-500 italic p-1">No active deadline alerts for your courses.</p>
             ) : (
-              <div className="space-y-2">
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-700 dark:text-rose-300 flex items-center justify-between">
+              <div className="space-y-2.5">
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center justify-between">
                   <span className="font-semibold">{stats.overdueEnrollments} Overdue Enrollments</span>
-                  <span className="px-2 py-0.5 rounded bg-rose-500 text-white font-bold text-[10px]">Action Needed</span>
+                  <span className="px-2 py-0.5 rounded bg-rose-600 text-white font-bold text-[10px]">Action Needed</span>
                 </div>
-                {overdueEmployees.slice(0, 3).map((item, idx) => (
-                  <div key={idx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-[11px] flex items-center justify-between">
+                {overdueEmployees.slice(0, 4).map((item, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs flex items-center justify-between">
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-slate-100">{item.employeeName}</p>
-                      <p className="text-[10px] text-slate-400">{item.trainingTitle}</p>
+                      <p className="font-bold text-slate-900">{item.employeeName}</p>
+                      <p className="text-[10px] text-slate-500">{item.trainingTitle}</p>
                     </div>
-                    <span className="text-rose-500 font-bold">{item.daysOverdue}d overdue</span>
+                    <span className="text-rose-600 font-bold text-xs">{item.daysOverdue}d overdue</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Recent Activity */}
-          <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800/80 space-y-3">
-            <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center">
-              <Activity className="w-4 h-4 mr-1.5 text-indigo-500" /> Recent Activity
+          {/* Recent Activity Timeline */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="font-bold text-slate-900 text-sm flex items-center font-heading">
+              <Activity className="w-4 h-4 mr-1.5 text-indigo-600" /> Recent Activity Timeline
             </h3>
 
             {recentActivity.length === 0 ? (
               <p className="text-xs text-slate-500 italic p-1">No recent activity recorded.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {recentActivity.slice(0, 5).map((act) => (
-                  <div key={act.id} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-xs space-y-0.5">
-                    <p className="font-bold text-slate-900 dark:text-slate-100 text-[11px]">{act.title}</p>
-                    <p className="text-slate-600 dark:text-slate-400 text-[11px]">{act.description}</p>
-                    <span className="text-[9px] text-slate-400 block font-mono">{formatDate(act.timestamp)}</span>
+                  <div key={act.id} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-0.5">
+                    <p className="font-bold text-slate-900 text-xs">{act.title}</p>
+                    <p className="text-slate-600 text-xs">{act.description}</p>
+                    <span className="text-[10px] text-slate-400 block font-mono">{formatDate(act.timestamp)}</span>
                   </div>
                 ))}
               </div>
@@ -386,3 +496,4 @@ export const InstructorDashboard = () => {
     </div>
   );
 };
+

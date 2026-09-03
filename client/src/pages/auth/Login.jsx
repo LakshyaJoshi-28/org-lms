@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Mail, Lock, ArrowRight, Shield } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export const Login = () => {
   const { login } = useAuth();
@@ -11,6 +11,7 @@ export const Login = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -32,65 +33,72 @@ export const Login = () => {
   };
 
   return (
-    <div className="glass-panel p-8 sm:p-10 rounded-3xl border border-slate-800 shadow-2xl space-y-6 animate-fade-in">
+    <div className="bg-white p-8 sm:p-10 rounded-3xl border border-slate-200 shadow-xl space-y-6 animate-fade-in">
       <div className="space-y-2">
-        <h2 className="text-2xl font-black text-white tracking-tight">Sign In to IT360 LMS</h2>
-        <p className="text-xs text-slate-400 leading-relaxed">
+        <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Sign In to LMS</h2>
+        <p className="text-xs text-slate-500 leading-relaxed">
           Enter your organizational credentials to access your personalized learning dashboard.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-bold text-slate-300 mb-1.5">Work Email Address</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Work Email Address</label>
           <div className="relative">
-            <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+            <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="name@company.com"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-300 mb-1.5">Password</label>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
           <div className="relative">
-            <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+            <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="••••••••"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 px-4 rounded-xl text-sm font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+          className="w-full py-3 px-4 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 mt-2"
         >
           {loading ? (
             <span>Signing in...</span>
           ) : (
             <>
-              <span>Sign In to Platform</span>
+              <span>Login</span>
               <ArrowRight className="w-4 h-4" />
             </>
           )}
         </button>
       </form>
 
-      <div className="pt-5 border-t border-slate-800/80 text-center text-xs">
-        <p className="text-slate-400">
+      <div className="pt-5 border-t border-slate-100 text-center text-xs">
+        <p className="text-slate-500">
           New employee?{' '}
-          <Link to="/register-employee" className="text-blue-400 hover:text-blue-300 font-bold underline transition-colors">
+          <Link to="/register-employee" className="text-emerald-600 hover:text-emerald-800 font-bold underline transition-colors">
             Register Employee Account
           </Link>
         </p>
@@ -98,3 +106,4 @@ export const Login = () => {
     </div>
   );
 };
+

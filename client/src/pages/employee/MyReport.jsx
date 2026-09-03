@@ -14,12 +14,8 @@ import {
   FileCheck2,
   ChevronDown,
   ChevronUp,
-  Clock,
-  User,
   Layers,
   Sparkles,
-  AlertTriangle,
-  FileText,
   ExternalLink,
   X
 } from 'lucide-react';
@@ -227,33 +223,33 @@ export const MyReport = () => {
 
   const pieData = [
     { name: 'Completed', value: overview.completedCourses || 0, color: '#10b981' },
-    { name: 'In Progress', value: overview.inProgressAssignments || 0, color: '#6366f1' },
-    { name: 'Not Started', value: overview.notStartedAssignments || 0, color: '#64748b' },
-    { name: 'Overdue', value: overview.overdueAssignments || 0, color: '#f43f5e' }
+    { name: 'In Progress', value: overview.inProgressAssignments || 0, color: '#0f766e' },
+    { name: 'Not Started', value: overview.notStartedAssignments || 0, color: '#94a3b8' },
+    { name: 'Overdue', value: overview.overdueAssignments || 0, color: '#e11d48' }
   ].filter(d => d.value > 0);
 
   return (
-    <div className="space-y-8 animate-fade-in pb-16">
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-16">
       {/* Full Text View Modal for Long Questions / Answers */}
       {modalContent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-2xl w-full shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-base">{modalContent.title}</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-2xl w-full shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+              <h3 className="font-extrabold text-slate-900 text-base font-heading">{modalContent.title}</h3>
               <button
                 onClick={() => setModalContent(null)}
-                className="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="max-h-96 overflow-y-auto p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-mono whitespace-pre-wrap break-words leading-relaxed">
+            <div className="max-h-96 overflow-y-auto p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-mono whitespace-pre-wrap break-words leading-relaxed">
               {modalContent.text}
             </div>
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setModalContent(null)}
-                className="px-5 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-slate-100 text-slate-700 font-semibold text-xs hover:bg-slate-200 cursor-pointer"
               >
                 Close
               </button>
@@ -263,20 +259,20 @@ export const MyReport = () => {
       )}
 
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-2">
-            <Sparkles className="w-3.5 h-3.5 mr-1.5 text-blue-500" /> Employee Performance Hub
+          <div className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700 mb-2">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> Employee Performance Hub
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Personal Training Report & Stats</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-heading">Personal Training Report & Stats</h1>
+          <p className="text-xs text-slate-500">
             View your training progress, completion history, quiz performance, and learning activity.
           </p>
         </div>
 
         <button
           onClick={handleDownloadPDF}
-          className="inline-flex items-center px-5 py-2.5 rounded-2xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+          className="inline-flex items-center px-5 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer"
         >
           <Download className="w-4 h-4 mr-2" /> Download Report PDF
         </button>
@@ -284,43 +280,43 @@ export const MyReport = () => {
 
       {/* Top Overview Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800 flex items-center space-x-4">
-          <div className="p-3.5 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-4">
+          <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <GraduationCap className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Assigned</p>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{overview.totalAssigned || 0}</h3>
+            <p className="text-xs font-medium text-slate-500">Total Assigned</p>
+            <h3 className="text-2xl font-bold text-slate-900">{overview.totalAssigned || 0}</h3>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800 flex items-center space-x-4">
-          <div className="p-3.5 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-4">
+          <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Completed Courses</p>
-            <h3 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{overview.completedCourses || 0}</h3>
+            <p className="text-xs font-medium text-slate-500">Completed Courses</p>
+            <h3 className="text-2xl font-bold text-emerald-700">{overview.completedCourses || 0}</h3>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800 flex items-center space-x-4">
-          <div className="p-3.5 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-4">
+          <div className="p-3.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100">
             <BarChart3 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Overall Progress</p>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{overview.overallProgress || 0}%</h3>
+            <p className="text-xs font-medium text-slate-500">Overall Progress</p>
+            <h3 className="text-2xl font-bold text-slate-900">{overview.overallProgress || 0}%</h3>
           </div>
         </div>
 
-        <div className="p-5 rounded-2xl glass-panel border border-slate-200 dark:border-slate-800 flex items-center space-x-4">
-          <div className="p-3.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex items-center space-x-4">
+          <div className="p-3.5 rounded-xl bg-amber-50 text-amber-600 border border-amber-100">
             <Award className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Average Quiz Score</p>
-            <h3 className="text-2xl font-bold text-amber-600 dark:text-amber-400">{overview.averageQuizScore || 0}%</h3>
+            <p className="text-xs font-medium text-slate-500">Average Quiz Score</p>
+            <h3 className="text-2xl font-bold text-amber-700">{overview.averageQuizScore || 0}%</h3>
           </div>
         </div>
       </div>
@@ -328,9 +324,9 @@ export const MyReport = () => {
       {/* Progress Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Training Progress Chart */}
-        <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
-          <h3 className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center">
-            <BarChart3 className="w-4 h-4 mr-2 text-blue-500" /> Course Progress Breakdown
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <h3 className="font-extrabold text-slate-900 text-sm flex items-center">
+            <BarChart3 className="w-4 h-4 mr-2 text-emerald-600" /> Course Progress Breakdown
           </h3>
           {progressChartData.length === 0 ? (
             <p className="text-center text-xs text-slate-400 py-12">No training progress recorded yet.</p>
@@ -338,11 +334,11 @@ export const MyReport = () => {
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={progressChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} />
-                  <YAxis domain={[0, 100]} stroke="#94a3b8" fontSize={10} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
+                  <YAxis domain={[0, 100]} stroke="#64748b" fontSize={10} />
                   <Tooltip />
-                  <Bar dataKey="Progress" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Progress" fill="#059669" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -350,9 +346,9 @@ export const MyReport = () => {
         </div>
 
         {/* Training Status Distribution Pie Chart */}
-        <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
-          <h3 className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center">
-            <Layers className="w-4 h-4 mr-2 text-indigo-500" /> Status Distribution
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <h3 className="font-extrabold text-slate-900 text-sm flex items-center">
+            <Layers className="w-4 h-4 mr-2 text-emerald-600" /> Status Distribution
           </h3>
           {pieData.length === 0 ? (
             <p className="text-center text-xs text-slate-400 py-12">No active training status data.</p>
@@ -374,15 +370,15 @@ export const MyReport = () => {
       </div>
 
       {/* Course Transcript & History Table */}
-      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden space-y-4 p-6">
-        <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Course Transcript & History</h3>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden space-y-4 p-6">
+        <h3 className="font-extrabold text-slate-900 text-base font-heading">Course Transcript & History</h3>
 
         {assignments.length === 0 ? (
           <EmptyState title="No Course History" description="Your assigned courses and transcript will appear here." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-              <thead className="bg-slate-100 dark:bg-slate-950/60 text-slate-500 uppercase tracking-wider font-bold border-b border-slate-200 dark:border-slate-800">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                 <tr>
                   <th className="p-3.5">Training Title</th>
                   <th className="p-3.5">Category</th>
@@ -396,27 +392,27 @@ export const MyReport = () => {
                   <th className="p-3.5 text-right">Assignment</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+              <tbody className="divide-y divide-slate-200">
                 {assignments.map((a) => (
-                  <tr key={a._id} className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors">
-                    <td className="p-3.5 font-bold text-slate-900 dark:text-white">{a.title}</td>
-                    <td className="p-3.5 text-blue-600 dark:text-blue-400 font-semibold">{a.category}</td>
+                  <tr key={a._id} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-3.5 font-bold text-slate-900">{a.title}</td>
+                    <td className="p-3.5 text-emerald-700 font-semibold">{a.category}</td>
                     <td className="p-3.5">{a.instructorName}</td>
                     <td className="p-3.5 font-mono text-[11px] text-slate-500">{formatDate(a.assignedDate)}</td>
                     <td className="p-3.5 font-mono text-[11px] text-slate-500">{formatDate(a.deadline)}</td>
-                    <td className="p-3.5 font-bold text-blue-600 dark:text-blue-400">{a.progressPercentage}%</td>
+                    <td className="p-3.5 font-bold text-emerald-700">{a.progressPercentage}%</td>
                     <td className="p-3.5">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                        a.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' :
-                        a.status === 'Overdue' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20' :
-                        'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        a.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        a.status === 'Overdue' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                        'bg-emerald-50 text-emerald-700 border border-emerald-200'
                       }`}>
                         {a.status}
                       </span>
                     </td>
                     <td className="p-3.5 font-mono text-[11px] text-slate-500">{a.completedDate ? formatDate(a.completedDate) : '-'}</td>
-                    <td className="p-3.5 font-bold text-amber-500">{a.quizScore}</td>
-                    <td className="p-3.5 text-right font-bold text-purple-500">{a.assignmentStatus}</td>
+                    <td className="p-3.5 font-bold text-amber-600">{a.quizScore}</td>
+                    <td className="p-3.5 text-right font-bold text-teal-700">{a.assignmentStatus}</td>
                   </tr>
                 ))}
               </tbody>
@@ -426,10 +422,10 @@ export const MyReport = () => {
       </div>
 
       {/* Quiz Performance & Detailed Attempt History */}
-      <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-5">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
         <div>
-          <h3 className="font-extrabold text-slate-900 dark:text-white text-base flex items-center">
-            <HelpCircle className="w-4 h-4 mr-2 text-amber-500" /> Quiz Performance & Attempt History
+          <h3 className="font-extrabold text-slate-900 text-base flex items-center font-heading">
+            <HelpCircle className="w-4 h-4 mr-2 text-amber-600" /> Quiz Performance & Attempt History
           </h3>
           <p className="text-xs text-slate-500">All quiz attempts, score breakdowns, and question-level evaluation records.</p>
         </div>
@@ -447,16 +443,16 @@ export const MyReport = () => {
               const notAnsweredCount = answersList.filter(a => a.status === 'not_answered').length;
 
               return (
-                <div key={att._id} className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-50 dark:bg-slate-950/40">
+                <div key={att._id} className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
                   {/* Top Accordion Header Bar */}
                   <div
                     onClick={() => setExpandedQuizAttemptId(isExpanded ? null : att._id)}
-                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900/60 transition-colors"
+                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-100 transition-colors"
                   >
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-sm">{att.quizTitle}</span>
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        <span className="font-bold text-slate-900 text-sm">{att.quizTitle}</span>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           Attempt {att.attemptNumber}
                         </span>
                       </div>
@@ -465,21 +461,21 @@ export const MyReport = () => {
                         <span>•</span>
                         <span>Passing Threshold: {att.passingScorePercent}%</span>
                         <span>•</span>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">{correctCount} Correct</span>
+                        <span className="text-emerald-700 font-bold">{correctCount} Correct</span>
                         <span>•</span>
-                        <span className="text-rose-600 dark:text-rose-400 font-bold">{incorrectCount} Incorrect</span>
+                        <span className="text-rose-600 font-bold">{incorrectCount} Incorrect</span>
                         {notAnsweredCount > 0 && (
                           <>
                             <span>•</span>
-                            <span className="text-amber-600 dark:text-amber-400 font-bold">{notAnsweredCount} Unanswered</span>
+                            <span className="text-amber-700 font-bold">{notAnsweredCount} Unanswered</span>
                           </>
                         )}
                       </div>
                     </div>
 
                     <div className="flex items-center space-x-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                        att.passed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        att.passed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
                       }`}>
                         {att.percentage}% ({att.passed ? '✓ PASSED' : '✕ FAILED'})
                       </span>
@@ -492,7 +488,7 @@ export const MyReport = () => {
 
                   {/* Expanded Question Evaluation Breakdown */}
                   {isExpanded && (
-                    <div className="p-5 border-t border-slate-200 dark:border-slate-800 space-y-4 bg-white dark:bg-slate-900">
+                    <div className="p-5 border-t border-slate-200 space-y-4 bg-white">
                       <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-500">Question Evaluation Breakdown</h4>
                       {answersList.length > 0 ? (
                         <div className="space-y-3">
@@ -514,29 +510,29 @@ export const MyReport = () => {
                             const isUserAnsUrl = userAnsText.startsWith('http://') || userAnsText.startsWith('https://');
 
                             return (
-                              <div key={aIdx} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3 text-xs">
+                              <div key={aIdx} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
                                 {/* Question Header */}
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                  <div className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-snug">
+                                  <div className="font-bold text-slate-900 text-xs sm:text-sm leading-snug">
                                     <span>Q{aIdx + 1}: {questionDisplay}</span>
                                     {isQuestionLong && (
                                       <button
                                         onClick={() => setModalContent({ title: `Question ${aIdx + 1}`, text: ans.questionText })}
-                                        className="ml-2 text-blue-500 font-semibold hover:underline text-[11px] cursor-pointer"
+                                        className="ml-2 text-emerald-700 font-semibold hover:underline text-[11px] cursor-pointer"
                                       >
                                         [View full question]
                                       </button>
                                     )}
                                   </div>
 
-                                  <span className={`px-2.5 py-1 rounded-lg font-black text-[10px] uppercase tracking-wider self-start sm:self-auto ${
+                                  <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider self-start sm:self-auto ${
                                     ans.isCorrect
-                                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                       : ans.status === 'not_answered'
-                                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                       : ans.status === 'data_unavailable'
-                                      ? 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
-                                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                                      ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                                      : 'bg-rose-50 text-rose-700 border border-rose-200'
                                   }`}>
                                     {ans.isCorrect
                                       ? '✓ Correct'
@@ -550,9 +546,9 @@ export const MyReport = () => {
 
                                 {/* Your Answer vs Correct Answer Grid */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                                  <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-1">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Answer</p>
-                                    <div className={`font-bold ${ans.isCorrect ? 'text-emerald-600 dark:text-emerald-400' : ans.status === 'not_answered' ? 'text-amber-500' : ans.status === 'data_unavailable' ? 'text-slate-400' : 'text-rose-500'}`}>
+                                    <div className={`font-bold ${ans.isCorrect ? 'text-emerald-700' : ans.status === 'not_answered' ? 'text-amber-600' : ans.status === 'data_unavailable' ? 'text-slate-400' : 'text-rose-600'}`}>
                                       {isUserAnsUrl ? (
                                         <a href={userAnsText} target="_blank" rel="noreferrer" className="underline font-mono inline-flex items-center hover:opacity-80">
                                           {userAnsText.slice(0, 35)}... <ExternalLink className="w-3 h-3 ml-1" />
@@ -562,7 +558,7 @@ export const MyReport = () => {
                                           <span>{userAnsText.slice(0, 120)}...</span>
                                           <button
                                             onClick={() => setModalContent({ title: `Q${aIdx + 1} - Your Answer`, text: userAnsText })}
-                                            className="ml-2 text-blue-500 text-[11px] font-semibold hover:underline cursor-pointer block pt-0.5"
+                                            className="ml-2 text-emerald-700 text-[11px] font-semibold hover:underline cursor-pointer block pt-0.5"
                                           >
                                             [View full answer]
                                           </button>
@@ -573,15 +569,15 @@ export const MyReport = () => {
                                     </div>
                                   </div>
 
-                                  <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1">
+                                  <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-1">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Correct Answer</p>
-                                    <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                                    <div className="font-bold text-emerald-700">
                                       {isCorrAnsLong ? (
                                         <div>
                                           <span>{corrAnsText.slice(0, 120)}...</span>
                                           <button
                                             onClick={() => setModalContent({ title: `Q${aIdx + 1} - Correct Answer`, text: corrAnsText })}
-                                            className="ml-2 text-blue-500 text-[11px] font-semibold hover:underline cursor-pointer block pt-0.5"
+                                            className="ml-2 text-emerald-700 text-[11px] font-semibold hover:underline cursor-pointer block pt-0.5"
                                           >
                                             [View full answer]
                                           </button>
@@ -609,10 +605,10 @@ export const MyReport = () => {
       </div>
 
       {/* Assignment History Section */}
-      <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <div>
-          <h3 className="font-extrabold text-slate-900 dark:text-white text-base flex items-center">
-            <FileCheck2 className="w-4 h-4 mr-2 text-purple-500" /> Project Assignment History
+          <h3 className="font-extrabold text-slate-900 text-base flex items-center font-heading">
+            <FileCheck2 className="w-4 h-4 mr-2 text-teal-600" /> Project Assignment History
           </h3>
           <p className="text-xs text-slate-500">Submitted project assignments, URLs, and instructor review status.</p>
         </div>
@@ -622,25 +618,25 @@ export const MyReport = () => {
         ) : (
           <div className="space-y-3">
             {assignmentSubmissions.map((sub) => (
-              <div key={sub._id} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div key={sub._id} className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">{sub.assignmentTitle}</h4>
+                  <h4 className="font-bold text-slate-900 text-sm">{sub.assignmentTitle}</h4>
                   <p className="text-slate-500 pt-0.5">
                     Format: <strong>{sub.submissionType === 'github' ? 'GitHub Repository Link' : 'File Upload'}</strong> • Submitted: {formatDate(sub.submittedAt)}
                   </p>
                   {sub.githubUrl && (
-                    <a href={sub.githubUrl} target="_blank" rel="noreferrer" className="text-blue-500 font-mono underline hover:text-blue-400 pt-1 block">
+                    <a href={sub.githubUrl} target="_blank" rel="noreferrer" className="text-teal-600 font-mono underline hover:text-teal-700 pt-1 block">
                       {sub.githubUrl}
                     </a>
                   )}
                   {sub.fileUrl && (
-                    <a href={sub.fileUrl} target="_blank" rel="noreferrer" className="text-purple-500 font-mono underline hover:text-purple-400 pt-1 block">
+                    <a href={sub.fileUrl} target="_blank" rel="noreferrer" className="text-teal-600 font-mono underline hover:text-teal-700 pt-1 block">
                       {sub.fileUrl}
                     </a>
                   )}
                 </div>
 
-                <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 self-start sm:self-auto">
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-700 border border-teal-200 self-start sm:self-auto">
                   {sub.status === 'reviewed' ? 'Reviewed' : 'Submitted'}
                 </span>
               </div>

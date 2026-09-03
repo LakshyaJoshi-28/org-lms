@@ -10,8 +10,6 @@ import {
   Download,
   Eye,
   X,
-  Calendar,
-  Building2,
   BookOpen,
   FileText
 } from 'lucide-react';
@@ -51,31 +49,31 @@ export const InstructorCertificates = () => {
   if (loading) return <LoadingSpinner text="Loading course completion certificates..." />;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-12">
       {/* Header Bar */}
-      <div className="glass-panel p-6 rounded-3xl border border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-[11px] font-bold text-amber-500 uppercase tracking-wider">Instructor Portal</span>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white mt-1">Course Certificates</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Instructor Portal</span>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight font-heading mt-1">Course Certificates</h1>
+          <p className="text-xs text-slate-500 mt-1">
             View and download official completion certificates issued to learners in your training courses.
           </p>
         </div>
-        <div className="flex items-center space-x-2 px-4 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">
+        <div className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
           <BookOpen className="w-4 h-4" />
           <span>{certificates.length} Certificate{certificates.length === 1 ? '' : 's'} Issued</span>
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="glass-panel p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center space-x-3">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center space-x-3">
         <Search className="w-4 h-4 text-slate-400" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by learner name, course title, or certificate ID..."
-          className="w-full bg-transparent text-xs text-slate-800 dark:text-slate-200 outline-none"
+          className="w-full bg-transparent text-xs text-slate-900 outline-none"
         />
         {search && (
           <button onClick={() => setSearch('')} className="text-xs text-slate-400 hover:text-slate-600">
@@ -85,11 +83,11 @@ export const InstructorCertificates = () => {
       </div>
 
       {/* Certificates Table */}
-      <div className="glass-panel rounded-3xl border border-slate-200 dark:border-slate-800/80 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-100 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase font-extrabold tracking-wider">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold tracking-wider text-[11px]">
                 <th className="p-4">Certificate ID</th>
                 <th className="p-4">Learner Name</th>
                 <th className="p-4">Department</th>
@@ -98,7 +96,7 @@ export const InstructorCertificates = () => {
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100">
               {filteredCertificates.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-slate-400">
@@ -107,17 +105,17 @@ export const InstructorCertificates = () => {
                 </tr>
               ) : (
                 filteredCertificates.map((cert) => (
-                  <tr key={cert.id} className="hover:bg-slate-50 dark:hover:bg-slate-950/40 transition-colors">
-                    <td className="p-4 font-mono font-bold text-amber-600 dark:text-amber-400">
+                  <tr key={cert.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-4 font-mono font-bold text-amber-700">
                       {cert.certificateId}
                     </td>
-                    <td className="p-4 font-bold text-slate-900 dark:text-white">
+                    <td className="p-4 font-bold text-slate-900">
                       {cert.employee?.name}
                     </td>
                     <td className="p-4 text-slate-500">
                       {cert.employee?.department?.name || 'N/A'}
                     </td>
-                    <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">
+                    <td className="p-4 font-semibold text-slate-800">
                       {cert.training?.title}
                     </td>
                     <td className="p-4 text-slate-500 font-mono">
@@ -126,7 +124,7 @@ export const InstructorCertificates = () => {
                     <td className="p-4 text-right space-x-2">
                       <button
                         onClick={() => setSelectedCert(cert)}
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                         title="View Certificate"
                       >
                         <Eye className="w-4 h-4" />
@@ -138,7 +136,7 @@ export const InstructorCertificates = () => {
                             exportCertificatePNG(`inst_cert_${cert.id}`, `Certificate_${cert.certificateId}.png`);
                           }, 150);
                         }}
-                        className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 transition-colors cursor-pointer"
+                        className="p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors cursor-pointer"
                         title="Download PNG"
                       >
                         <Download className="w-4 h-4" />
@@ -150,7 +148,7 @@ export const InstructorCertificates = () => {
                             exportCertificatePDF(`inst_cert_${cert.id}`, `Certificate_${cert.certificateId}.pdf`);
                           }, 150);
                         }}
-                        className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                        className="p-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition-colors cursor-pointer"
                         title="Download PDF"
                       >
                         <FileText className="w-4 h-4" />
@@ -166,41 +164,48 @@ export const InstructorCertificates = () => {
 
       {/* FULL VIEW MODAL */}
       {selectedCert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-5xl bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-6 max-h-[92vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div>
-                <span className="text-[11px] font-bold text-amber-500 font-mono">{selectedCert.certificateId}</span>
-                <h2 className="text-xl font-bold text-white mt-0.5">{selectedCert.employee?.name} • {selectedCert.training?.title}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-900/75 backdrop-blur-md animate-fade-in">
+          <div className="relative w-full max-w-5xl h-[88vh] max-h-[850px] bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-3 shrink-0">
+              <div className="min-w-0 pr-2">
+                <span className="text-[11px] font-bold text-amber-600 font-mono">{selectedCert.certificateId}</span>
+                <h2
+                  className="text-base sm:text-lg font-bold text-slate-900 mt-0.5 truncate"
+                  title={`${selectedCert.employee?.name ? `${selectedCert.employee.name} • ` : ''}${selectedCert.training?.title || ''}`}
+                >
+                  {selectedCert.employee?.name ? `${selectedCert.employee.name} • ` : ''}
+                  {selectedCert.training?.title}
+                </h2>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 shrink-0">
                 <button
                   onClick={() => exportCertificatePNG(`inst_cert_${selectedCert.id}`, `Certificate_${selectedCert.certificateId}.png`)}
-                  className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-lg shadow-amber-500/20 inline-flex items-center cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs inline-flex items-center cursor-pointer"
                 >
                   <Download className="w-4 h-4 mr-1.5" /> Download PNG
                 </button>
 
                 <button
                   onClick={() => exportCertificatePDF(`inst_cert_${selectedCert.id}`, `Certificate_${selectedCert.certificateId}.pdf`)}
-                  className="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-500/20 inline-flex items-center cursor-pointer"
+                  className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs inline-flex items-center cursor-pointer"
                 >
                   <FileText className="w-4 h-4 mr-1.5" /> Download PDF
                 </button>
 
                 <button
                   onClick={() => setSelectedCert(null)}
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="py-2">
+            <div className="flex-1 min-h-0 min-w-0 p-3 sm:p-5 flex items-center justify-center bg-slate-50 border border-slate-200/80 rounded-2xl overflow-hidden mt-4">
               <CertificateCanvas
                 certificate={selectedCert}
                 elementId={`inst_cert_${selectedCert.id}`}
+                className="max-h-full max-w-full"
               />
             </div>
           </div>
@@ -209,3 +214,4 @@ export const InstructorCertificates = () => {
     </div>
   );
 };
+

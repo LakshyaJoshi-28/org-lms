@@ -8,7 +8,6 @@ import {
   Users,
   Search,
   CheckCircle2,
-  XCircle,
   Edit3,
   ShieldCheck,
   RefreshCw,
@@ -20,7 +19,9 @@ import {
   User,
   FileText,
   Hash,
-  X
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export const SuperAdminDashboard = () => {
@@ -29,6 +30,7 @@ export const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   // Server-side pagination states
   const [page, setPage] = useState(1);
@@ -170,202 +172,199 @@ export const SuperAdminDashboard = () => {
   });
 
   return (
-    <div className="space-y-8 animate-fade-in p-2 sm:p-6 max-w-7xl mx-auto">
-      {/* Hero Header Section */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel border border-slate-200 dark:border-slate-800 bg-gradient-to-r from-blue-900/10 via-slate-900/5 to-indigo-900/10 dark:from-slate-900/90 dark:via-blue-950/40 dark:to-slate-900/90 p-6 sm:p-8 shadow-xl">
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Super Admin Management Suite</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight font-heading">
-              Platform Governance Console
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-              Provision multi-tenant client organizations, manage administrative roles, monitor global system utilization, and govern access across the IT360 LMS platform.
-            </p>
+    <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-16">
+      {/* Header Banner */}
+      <div className="p-6 sm:p-7 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+        <div className="space-y-1.5 max-w-2xl">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>Super Admin Console</span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-heading">
+            Platform Governance Console
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+            Provision multi-tenant client organizations, manage administrative roles, and govern access across the LMS platform.
+          </p>
+        </div>
 
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-5 py-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-500/25 flex items-center space-x-2 transition-all transform hover:-translate-y-0.5 cursor-pointer"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Provision New Organization</span>
-            </button>
-          </div>
+        <div className="flex items-center space-x-3 shrink-0">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm shadow-xs flex items-center space-x-2 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Provision New Organization</span>
+          </button>
         </div>
       </div>
 
       {/* Platform Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4.5">
         {/* Card 1: Total Organizations */}
-        <div className="rounded-3xl glass-panel border border-slate-200 dark:border-slate-800 p-6 transition-all hover:shadow-xl hover:border-blue-500/30 flex items-center justify-between group bg-white/70 dark:bg-slate-900/70">
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              <span>Total Organizations</span>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Total Organizations
             </div>
             <div className="flex items-baseline space-x-2">
-              <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
                 {platformStats.totalOrganizations || totalOrgs || organizations.length}
               </h3>
-              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
                 Tenants
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500">
               Provisioned LMS enterprise tenants
             </p>
           </div>
-          <div className="p-4 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
-            <Building2 className="w-6 h-6" />
+          <div className="p-3.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 flex-shrink-0">
+            <Building2 className="w-5 h-5" />
           </div>
         </div>
 
         {/* Card 2: Active Organizations */}
-        <div className="rounded-3xl glass-panel border border-slate-200 dark:border-slate-800 p-6 transition-all hover:shadow-xl hover:border-emerald-500/30 flex items-center justify-between group bg-white/70 dark:bg-slate-900/70">
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              <span>Active Organizations</span>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Active Organizations
             </div>
             <div className="flex items-baseline space-x-2">
-              <h3 className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+              <h3 className="text-2xl font-black text-emerald-600 tracking-tight font-heading">
                 {platformStats.activeOrganizations}
               </h3>
-              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 Operational
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Currently active and operational orgs
+            <p className="text-xs text-slate-500">
+              Currently operational tenants
             </p>
           </div>
-          <div className="p-4 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-            <CheckCircle2 className="w-6 h-6" />
+          <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex-shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
           </div>
         </div>
 
         {/* Card 3: Total Platform Users */}
-        <div className="rounded-3xl glass-panel border border-slate-200 dark:border-slate-800 p-6 transition-all hover:shadow-xl hover:border-indigo-500/30 flex items-center justify-between group bg-white/70 dark:bg-slate-900/70">
+        <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <div className="flex items-center space-x-2 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-              <span>Total Platform Users</span>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Total Platform Users
             </div>
             <div className="flex items-baseline space-x-2">
-              <h3 className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">
+              <h3 className="text-2xl font-black text-emerald-600 tracking-tight font-heading">
                 {platformStats.totalPlatformUsers}
               </h3>
-              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 Global
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500">
               Registered users across all tenants
             </p>
           </div>
-          <div className="p-4 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 group-hover:scale-110 transition-transform">
-            <Users className="w-6 h-6" />
+          <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex-shrink-0">
+            <Users className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* Organizations Directory & Control Panel */}
-      <div className="rounded-3xl glass-panel border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 shadow-lg overflow-hidden space-y-4">
-        {/* Controls Toolbar */}
-        <div className="p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800/80 flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-slate-50/50 dark:bg-slate-950/40">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search organization by name or code..."
-                className="w-full pl-10 pr-9 py-2 rounded-xl glass-input text-xs sm:text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Status Filter Toggle */}
-            <div className="inline-flex rounded-xl bg-slate-200/70 dark:bg-slate-800/70 p-1 border border-slate-300/50 dark:border-slate-700/50 text-xs font-bold">
+      {/* Directory Controls Toolbar */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search organization by name or code..."
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-slate-300 bg-white text-xs sm:text-sm font-medium focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+            />
+            {searchTerm && (
               <button
-                onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  statusFilter === 'ALL'
-                    ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
-                All
+                <X className="w-4 h-4" />
               </button>
-              <button
-                onClick={() => setStatusFilter('ACTIVE')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  statusFilter === 'ACTIVE'
-                    ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
-                }`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setStatusFilter('INACTIVE')}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  statusFilter === 'INACTIVE'
-                    ? 'bg-rose-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400'
-                }`}
-              >
-                Inactive
-              </button>
-            </div>
+            )}
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end space-x-3">
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold hidden lg:inline">
-              Showing <span className="text-slate-900 dark:text-white font-bold">{filteredOrgs.length}</span> orgs
-            </span>
-
+          {/* Status Filter Tabs */}
+          <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold border border-slate-200">
             <button
-              onClick={() => fetchOrganizations()}
-              className="py-2 px-3.5 rounded-xl glass-input text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center space-x-2 transition-all cursor-pointer border border-slate-200 dark:border-slate-800"
+              onClick={() => setStatusFilter('ALL')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                statusFilter === 'ALL'
+                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-indigo-500' : ''}`} />
-              <span>Refresh</span>
+              All ({organizations.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('ACTIVE')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                statusFilter === 'ACTIVE'
+                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-emerald-700'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => setStatusFilter('INACTIVE')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                statusFilter === 'INACTIVE'
+                  ? 'bg-rose-600 text-white shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-rose-700'
+              }`}
+            >
+              Inactive
             </button>
           </div>
         </div>
 
-        {/* Organizations Data Table */}
+        <div className="flex items-center justify-between sm:justify-end space-x-3 shrink-0">
+          <span className="text-xs text-slate-500 font-semibold hidden lg:inline">
+            Showing <span className="text-slate-900 font-bold">{filteredOrgs.length}</span> orgs
+          </span>
+
+          <button
+            onClick={() => fetchOrganizations()}
+            className="py-2 px-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 flex items-center space-x-2 transition-all cursor-pointer shadow-xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-indigo-600' : ''}`} />
+            <span>Refresh Directory</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Organizations Table Container */}
+      <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-            <thead className="text-[11px] uppercase bg-slate-100/70 dark:bg-slate-950/60 text-slate-500 dark:text-slate-400 font-extrabold tracking-wider border-b border-slate-200 dark:border-slate-800">
+          <table className="w-full text-left text-sm text-slate-700">
+            <thead className="text-[11px] uppercase bg-slate-50 text-slate-500 font-bold tracking-wider border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4">Organization Name</th>
-                <th className="px-6 py-4">Code</th>
-                <th className="px-6 py-4">Members</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Created Date</th>
-                <th className="px-6 py-4 text-right">Actions</th>
+                <th className="px-6 py-3.5">Organization</th>
+                <th className="px-6 py-3.5">Org Code</th>
+                <th className="px-6 py-3.5">Members</th>
+                <th className="px-6 py-3.5">Status</th>
+                <th className="px-6 py-3.5">Created Date</th>
+                <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td colSpan="6" className="text-center py-12">
                     <div className="flex flex-col items-center justify-center space-y-3">
-                      <RefreshCw className="w-6 h-6 text-indigo-500 animate-spin" />
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      <RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" />
+                      <p className="text-xs font-semibold text-slate-500">
                         Fetching organization directory...
                       </p>
                     </div>
@@ -375,11 +374,11 @@ export const SuperAdminDashboard = () => {
                 <tr>
                   <td colSpan="6" className="text-center py-12">
                     <div className="flex flex-col items-center justify-center space-y-2">
-                      <Building2 className="w-10 h-10 text-slate-300 dark:text-slate-700" />
-                      <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                      <Building2 className="w-10 h-10 text-slate-300" />
+                      <h4 className="text-sm font-bold text-slate-800">
                         No Organizations Found
                       </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+                      <p className="text-xs text-slate-500 max-w-sm">
                         No tenant organizations match your current search query or filter criteria.
                       </p>
                     </div>
@@ -393,19 +392,19 @@ export const SuperAdminDashboard = () => {
                   return (
                     <tr
                       key={orgId}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group"
+                      className="hover:bg-slate-50/80 transition-colors"
                     >
                       {/* Organization Name & Details */}
-                      <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
+                      <td className="px-6 py-4">
                         <div className="flex items-center space-x-3.5">
-                          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-blue-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold text-sm shadow-sm group-hover:scale-105 transition-transform">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                             {org.name ? org.name.substring(0, 2).toUpperCase() : 'OG'}
                           </div>
-                          <div>
-                            <div className="font-bold text-sm text-slate-900 dark:text-slate-100 line-clamp-1">
+                          <div className="min-w-0">
+                            <div className="font-bold text-sm text-slate-900 truncate">
                               {org.name}
                             </div>
-                            <div className="text-xs font-normal text-slate-500 dark:text-slate-400 line-clamp-1">
+                            <div className="text-xs font-normal text-slate-500 truncate">
                               {org.description || 'Enterprise Tenant'}
                             </div>
                           </div>
@@ -414,15 +413,15 @@ export const SuperAdminDashboard = () => {
 
                       {/* Code */}
                       <td className="px-6 py-4 font-mono text-xs">
-                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-bold uppercase tracking-wider">
+                        <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 font-bold uppercase tracking-wider">
                           {org.code}
                         </span>
                       </td>
 
                       {/* Users Count */}
-                      <td className="px-6 py-4 font-bold text-xs text-slate-700 dark:text-slate-300">
-                        <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
-                          <Users className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
+                      <td className="px-6 py-4 text-xs">
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-medium">
+                          <Users className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
                           <span>{org.userCount || 0} members</span>
                         </div>
                       </td>
@@ -430,20 +429,20 @@ export const SuperAdminDashboard = () => {
                       {/* Status */}
                       <td className="px-6 py-4">
                         {isActive ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mr-1.5 animate-pulse" />
                             ACTIVE
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mr-1.5" />
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 mr-1.5" />
                             INACTIVE
                           </span>
                         )}
                       </td>
 
                       {/* Created Date */}
-                      <td className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                      <td className="px-6 py-4 text-xs font-medium text-slate-500 font-mono">
                         {new Date(org.createdAt).toLocaleDateString(undefined, {
                           year: 'numeric',
                           month: 'short',
@@ -452,25 +451,27 @@ export const SuperAdminDashboard = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4 text-right space-x-2">
-                        <button
-                          onClick={() => openEditModal(org)}
-                          className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer inline-flex items-center"
-                          title="Edit Details"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                      <td className="px-6 py-4 text-right">
+                        <div className="inline-flex items-center space-x-2">
+                          <button
+                            onClick={() => openEditModal(org)}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
+                            title="Edit Details"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
 
-                        <button
-                          onClick={() => handleToggleStatus(org)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center border ${
-                            isActive
-                              ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-                          }`}
-                        >
-                          {isActive ? 'Deactivate' : 'Activate'}
-                        </button>
+                          <button
+                            onClick={() => handleToggleStatus(org)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
+                              isActive
+                                ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -480,32 +481,32 @@ export const SuperAdminDashboard = () => {
           </table>
         </div>
 
-        {/* Server-Side Pagination Footer */}
+        {/* Pagination Footer */}
         {totalPages > 0 && (
-          <div className="p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Showing page <span className="font-bold text-slate-900 dark:text-white">{page}</span> of{' '}
-              <span className="font-bold text-slate-900 dark:text-white">{totalPages}</span> ({totalOrgs} total organizations)
+          <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-slate-500 font-medium">
+              Showing page <span className="font-bold text-slate-900">{page}</span> of{' '}
+              <span className="font-bold text-slate-900">{totalPages}</span> ({totalOrgs} total organizations)
             </div>
 
             <div className="flex items-center space-x-2">
               <button
                 disabled={page <= 1 || loading}
                 onClick={() => fetchOrganizations(page - 1)}
-                className="py-1.5 px-3 rounded-xl glass-input text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-800"
+                className="py-1.5 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 transition-all cursor-pointer shadow-xs"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Previous</span>
               </button>
 
-              <div className="px-3 py-1 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+              <div className="px-3 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700">
                 {page} / {totalPages}
               </div>
 
               <button
                 disabled={page >= totalPages || loading}
                 onClick={() => fetchOrganizations(page + 1)}
-                className="py-1.5 px-3 rounded-xl glass-input text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 transition-all cursor-pointer border border-slate-200 dark:border-slate-800"
+                className="py-1.5 px-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 transition-all cursor-pointer shadow-xs"
               >
                 <span>Next</span>
                 <ChevronRight className="w-4 h-4" />
@@ -524,14 +525,14 @@ export const SuperAdminDashboard = () => {
       >
         <form onSubmit={handleCreateSubmit} className="space-y-5">
           <div className="space-y-4">
-            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
               <Building className="w-4 h-4" />
               <span>1. Organization Information</span>
             </div>
 
             {/* Org Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Organization Name *
               </label>
               <div className="relative">
@@ -542,7 +543,7 @@ export const SuperAdminDashboard = () => {
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                   required
                   placeholder="Acme Corporation"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                 />
               </div>
             </div>
@@ -550,7 +551,7 @@ export const SuperAdminDashboard = () => {
             {/* Code & Description Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Org Code (Optional)
                 </label>
                 <div className="relative">
@@ -560,13 +561,13 @@ export const SuperAdminDashboard = () => {
                     value={createForm.code}
                     onChange={(e) => setCreateForm({ ...createForm, code: e.target.value })}
                     placeholder="ACME-101"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-mono uppercase tracking-wider focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Description
                 </label>
                 <div className="relative">
@@ -576,20 +577,20 @@ export const SuperAdminDashboard = () => {
                     value={createForm.description}
                     onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
                     placeholder="IT & Managed Services"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="pt-3 flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <div className="pt-3 flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
               <User className="w-4 h-4" />
               <span>2. Initial Organization Admin Credentials</span>
             </div>
 
             {/* Admin Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Org Admin Full Name *
               </label>
               <div className="relative">
@@ -600,7 +601,7 @@ export const SuperAdminDashboard = () => {
                   onChange={(e) => setCreateForm({ ...createForm, adminName: e.target.value })}
                   required
                   placeholder="John Doe"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                 />
               </div>
             </div>
@@ -608,7 +609,7 @@ export const SuperAdminDashboard = () => {
             {/* Admin Email & Password */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Admin Email Address *
                 </label>
                 <div className="relative">
@@ -619,43 +620,50 @@ export const SuperAdminDashboard = () => {
                     onChange={(e) => setCreateForm({ ...createForm, adminEmail: e.target.value })}
                     required
                     placeholder="admin@acme.com"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Admin Password *
                 </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                   <input
-                    type="password"
+                    type={showAdminPassword ? 'text' : 'password'}
                     value={createForm.adminPassword}
                     onChange={(e) => setCreateForm({ ...createForm, adminPassword: e.target.value })}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showAdminPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end space-x-3">
+          <div className="pt-4 border-t border-slate-200 flex items-center justify-end space-x-3">
             <button
               type="button"
               onClick={() => setShowCreateModal(false)}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-500/25 cursor-pointer disabled:opacity-50 transition-all"
+              className="px-5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer disabled:opacity-50 transition-all"
             >
               {submitting ? 'Provisioning...' : 'Provision Organization'}
             </button>
@@ -672,7 +680,7 @@ export const SuperAdminDashboard = () => {
       >
         <form onSubmit={handleEditSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Organization Name *
             </label>
             <div className="relative">
@@ -682,13 +690,13 @@ export const SuperAdminDashboard = () => {
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 required
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Organization Code *
             </label>
             <div className="relative">
@@ -698,13 +706,13 @@ export const SuperAdminDashboard = () => {
                 value={editForm.code}
                 onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
                 required
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-mono uppercase tracking-wider focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-mono uppercase tracking-wider focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Description
             </label>
             <div className="relative">
@@ -713,23 +721,23 @@ export const SuperAdminDashboard = () => {
                 type="text"
                 value={editForm.description}
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm font-medium focus:ring-2 focus:ring-indigo-500"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
               />
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end space-x-3">
+          <div className="pt-4 border-t border-slate-200 flex items-center justify-end space-x-3">
             <button
               type="button"
               onClick={() => setShowEditModal(false)}
-              className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg cursor-pointer disabled:opacity-50 transition-all"
+              className="px-5 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer disabled:opacity-50 transition-all"
             >
               {submitting ? 'Saving Changes...' : 'Save Changes'}
             </button>
@@ -739,3 +747,4 @@ export const SuperAdminDashboard = () => {
     </div>
   );
 };
+

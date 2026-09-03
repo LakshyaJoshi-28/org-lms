@@ -42,6 +42,7 @@ import { SuperAdminSettings } from '../pages/superAdmin/SuperAdminSettings';
 
 // Common Pages
 import { NotificationsPage } from '../pages/common/NotificationsPage';
+import { AccountSettingsPage } from '../pages/common/AccountSettingsPage';
 
 const RootRedirect = () => {
   const { user } = useAuth();
@@ -84,6 +85,7 @@ export const AppRoutes = () => {
           <Route path="/admin/reports" element={<AdminReports />} />
           <Route path="/admin/notifications" element={<NotificationsPage />} />
           <Route path="/admin/audit-logs" element={<AuditLogs />} />
+          <Route path="/admin/settings" element={<AccountSettingsPage />} />
         </Route>
       </Route>
 
@@ -98,6 +100,7 @@ export const AppRoutes = () => {
           <Route path="/instructor/certificates" element={<InstructorCertificates />} />
           <Route path="/instructor/deadlines" element={<DeadlineManager />} />
           <Route path="/instructor/notifications" element={<NotificationsPage />} />
+          <Route path="/instructor/settings" element={<AccountSettingsPage />} />
         </Route>
       </Route>
 
@@ -111,6 +114,7 @@ export const AppRoutes = () => {
           <Route path="/employee/player/:assignmentId" element={<TrainingPlayer />} />
           <Route path="/employee/notifications" element={<NotificationsPage />} />
           <Route path="/employee/report" element={<MyReport />} />
+          <Route path="/employee/settings" element={<AccountSettingsPage />} />
         </Route>
       </Route>
 
