@@ -21,7 +21,8 @@ export const NotificationProvider = ({ children }) => {
     try {
       const res = await fetchNotificationsApi();
       if (res.data && res.data.data) {
-        setNotifications(res.data.data.notifications || []);
+        const notifsList = res.data.data.notifications || [];
+        setNotifications(notifsList);
         setUnreadCount(res.data.data.unreadCount || 0);
       }
     } catch (err) {
@@ -51,12 +52,8 @@ export const NotificationProvider = ({ children }) => {
           return prev;
         }
 
-        // Only increment unread count and trigger toast for unique new notifications
+        // Increment unread count and add to Notification Center list without triggering toast popups
         setUnreadCount(count => count + 1);
-        if (newNotif.title && newNotif.message) {
-          addToast('info', newNotif.message, newNotif.title);
-        }
-
         return [newNotif, ...prev];
       });
     };

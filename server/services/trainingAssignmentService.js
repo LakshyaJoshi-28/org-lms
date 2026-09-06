@@ -46,6 +46,18 @@ const autoAssignMandatoryTrainings = async (employeeId, organizationId) => {
           }
         });
         assignmentsCreated.push(withId(assignment));
+
+        const { sendUserNotification } = require('./notificationService');
+        await sendUserNotification(
+          empId,
+          orgId,
+          'Employee',
+          'NEW_TRAINING_ASSIGNED',
+          'New Training Assigned',
+          `You have been assigned new training '${training.title}'. Deadline: ${deadline.toDateString()}`,
+          { entityType: 'TrainingAssignment', entityId: assignment.id },
+          { preventDuplicates: true }
+        );
       } catch (err) {
         if (err.code !== 'P2002' && err.code !== 11000) throw err;
       }
@@ -106,6 +118,18 @@ const autoAssignDeptRoleTrainings = async (employeeId, organizationId, departmen
           }
         });
         assignmentsCreated.push(withId(assignment));
+
+        const { sendUserNotification } = require('./notificationService');
+        await sendUserNotification(
+          empId,
+          orgId,
+          'Employee',
+          'NEW_TRAINING_ASSIGNED',
+          'New Training Assigned',
+          `You have been assigned new training '${training.title}'. Deadline: ${deadline.toDateString()}`,
+          { entityType: 'TrainingAssignment', entityId: assignment.id },
+          { preventDuplicates: true }
+        );
       } catch (err) {
         if (err.code !== 'P2002' && err.code !== 11000) throw err;
       }
@@ -129,7 +153,14 @@ const autoAssignRulesToNewEmployee = async (employeeId, organizationId) => {
     const activeRules = await prisma.autoAssignmentRule.findMany({
       where: {
         organizationId: orgId,
-        status: 'active'
+        status: 'active',
+        training: {
+          isPublished: true,
+          status: 'published'
+        }
+      },
+      include: {
+        training: { select: { id: true, title: true } }
       }
     });
 
@@ -162,6 +193,19 @@ const autoAssignRulesToNewEmployee = async (employeeId, organizationId) => {
           }
         });
         assignmentsCreated.push(withId(assignment));
+
+        const { sendUserNotification } = require('./notificationService');
+        const trainingTitle = rule.training?.title || 'Course';
+        await sendUserNotification(
+          empId,
+          orgId,
+          'Employee',
+          'NEW_TRAINING_ASSIGNED',
+          'New Training Assigned',
+          `You have been assigned new training '${trainingTitle}'. Deadline: ${deadline.toDateString()}`,
+          { entityType: 'TrainingAssignment', entityId: assignment.id },
+          { preventDuplicates: true }
+        );
       } catch (err) {
         if (err.code !== 'P2002' && err.code !== 11000) throw err;
       }
@@ -241,7 +285,7 @@ const createAutoAssignmentRule = async (adminId, organizationId, trainingId, cus
     if (existing) continue;
 
     try {
-      await prisma.trainingAssignment.create({
+      const assignment = await prisma.trainingAssignment.create({
         data: {
           employeeId: emp.id,
           trainingId: training.id,
@@ -254,6 +298,18 @@ const createAutoAssignmentRule = async (adminId, organizationId, trainingId, cus
         }
       });
       assignedCount++;
+
+      const { sendUserNotification } = require('./notificationService');
+      await sendUserNotification(
+        emp.id,
+        orgId,
+        'Employee',
+        'NEW_TRAINING_ASSIGNED',
+        'New Training Assigned',
+        `You have been assigned new training '${training.title}'. Deadline: ${deadline.toDateString()}`,
+        { entityType: 'TrainingAssignment', entityId: assignment.id },
+        { preventDuplicates: true }
+      );
     } catch (err) {
       if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
@@ -293,10 +349,16 @@ const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => 
   const rId = String(ruleId);
 
   const rule = await prisma.autoAssignmentRule.findFirst({
-    where: { id: rId, organizationId: orgId }
+    where: { id: rId, organizationId: orgId },
+    include: {
+      training: { select: { id: true, title: true, isPublished: true, status: true } }
+    }
   });
   if (!rule) {
     throw new ApiError(404, 'Auto assignment rule not found');
+  }
+  if (!rule.training || !rule.training.isPublished || rule.training.status !== 'published') {
+    throw new ApiError(400, 'Cannot reactivate auto-assignment rule for an archived or unpublished training');
   }
 
   const updatedRule = await prisma.autoAssignmentRule.update({
@@ -321,7 +383,7 @@ const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => 
     if (existing) continue;
 
     try {
-      await prisma.trainingAssignment.create({
+      const assignment = await prisma.trainingAssignment.create({
         data: {
           employeeId: emp.id,
           trainingId: rule.trainingId,
@@ -334,6 +396,19 @@ const reactivateAutoAssignmentRule = async (adminId, organizationId, ruleId) => 
         }
       });
       newAssignmentsCount++;
+
+      const { sendUserNotification } = require('./notificationService');
+      const trainingTitle = rule.training?.title || 'Course';
+      await sendUserNotification(
+        emp.id,
+        orgId,
+        'Employee',
+        'NEW_TRAINING_ASSIGNED',
+        'New Training Assigned',
+        `You have been assigned new training '${trainingTitle}'. Deadline: ${deadline.toDateString()}`,
+        { entityType: 'TrainingAssignment', entityId: assignment.id },
+        { preventDuplicates: true }
+      );
     } catch (err) {
       if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
@@ -349,7 +424,13 @@ const getAutoAssignmentRules = async (organizationId) => {
   const orgId = String(organizationId);
 
   const rules = await prisma.autoAssignmentRule.findMany({
-    where: { organizationId: orgId },
+    where: {
+      organizationId: orgId,
+      training: {
+        isPublished: true,
+        status: 'published'
+      }
+    },
     include: {
       training: {
         select: {

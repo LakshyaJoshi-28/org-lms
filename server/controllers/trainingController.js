@@ -902,6 +902,12 @@ const deleteTraining = async (req, res, next) => {
       }
     });
 
+    // Automatically deactivate any active auto-assignment rules associated with this training
+    await prisma.autoAssignmentRule.updateMany({
+      where: { trainingId: training.id, status: 'active' },
+      data: { status: 'inactive' }
+    });
+
     const { sendUserNotification, sendAdminNotification } = require('../services/notificationService');
     await sendAdminNotification(
       orgId,

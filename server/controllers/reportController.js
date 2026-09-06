@@ -52,7 +52,11 @@ const getFullOrgReport = async (req, res, next) => {
         orderBy: { title: 'asc' }
       }),
       prisma.autoAssignmentRule.findMany({
-        where: { organizationId: orgId, status: 'active' },
+        where: {
+          organizationId: orgId,
+          status: 'active',
+          training: { isPublished: true, status: 'published' }
+        },
         include: {
           training: {
             select: {
