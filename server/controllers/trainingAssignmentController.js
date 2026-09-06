@@ -604,13 +604,15 @@ const lockTraining = async (req, res, next) => {
       }
     });
 
+    const instructorName = req.user.name || 'Instructor';
+
     await sendUserNotification(
       assignment.employee.id,
       orgId,
       'Employee',
       'TRAINING_LOCKED',
       'Training Account Locked',
-      `Your access to ${assignment.training.title} has been locked by instructor`,
+      `Your access to '${assignment.training.title}' has been locked by instructor ${instructorName}.`,
       { entityType: 'TrainingAssignment', entityId: assignment.id }
     );
 
@@ -618,7 +620,7 @@ const lockTraining = async (req, res, next) => {
       orgId,
       'TRAINING_LOCKED',
       'Employee Training Locked',
-      `Training "${assignment.training.title}" was locked for ${assignment.employee.name}. Reason: ${reason || 'Instructor enforcement'}`,
+      `Training '${assignment.training.title}' has been locked for employee '${assignment.employee.name}' by instructor '${instructorName}'.`,
       { entityType: 'TrainingAssignment', entityId: assignment.id }
     );
 
@@ -680,13 +682,23 @@ const unlockTraining = async (req, res, next) => {
       }
     });
 
+    const instructorName = req.user.name || 'Instructor';
+
     await sendUserNotification(
       assignment.employee.id,
       orgId,
       'Employee',
       'TRAINING_UNLOCKED',
       'Training Unlocked',
-      `Your access to ${assignment.training.title} has been unlocked. You may resume learning.`,
+      `Your access to '${assignment.training.title}' has been unlocked by instructor ${instructorName}. You may resume learning.`,
+      { entityType: 'TrainingAssignment', entityId: assignment.id }
+    );
+
+    await sendAdminNotification(
+      orgId,
+      'TRAINING_UNLOCKED',
+      'Employee Training Unlocked',
+      `Training '${assignment.training.title}' has been unlocked for employee '${assignment.employee.name}' by instructor '${instructorName}'.`,
       { entityType: 'TrainingAssignment', entityId: assignment.id }
     );
 

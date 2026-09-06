@@ -589,8 +589,10 @@ const submitQuiz = async (req, res, next) => {
       await updateOverallProgress(targetAssignmentId, userId);
     }
 
-    // Send quiz result notification to employee
-    const { sendUserNotification } = require('../services/notificationService');
+    // Send quiz result notification to employee & instructor
+    const { sendUserNotification, sendInstructorNotification } = require('../services/notificationService');
+    const empName = req.user.name || 'Employee';
+
     if (passed) {
       await sendUserNotification(
         userId,
@@ -601,6 +603,16 @@ const submitQuiz = async (req, res, next) => {
         `Congratulations! You passed the quiz for ${quiz.title} with a score of ${percentage}%.`,
         { entityType: 'Quiz', entityId: quiz.id }
       );
+      if (quiz.createdBy) {
+        await sendInstructorNotification(
+          quiz.createdBy,
+          orgId,
+          'QUIZ_PASSED',
+          'Employee Passed Quiz',
+          `Employee ${empName} passed quiz '${quiz.title}' with ${percentage}%.`,
+          { entityType: 'Quiz', entityId: quiz.id }
+        );
+      }
     } else {
       await sendUserNotification(
         userId,
@@ -611,6 +623,16 @@ const submitQuiz = async (req, res, next) => {
         `You did not pass the quiz for ${quiz.title}. Score: ${percentage}%.`,
         { entityType: 'Quiz', entityId: quiz.id }
       );
+      if (quiz.createdBy) {
+        await sendInstructorNotification(
+          quiz.createdBy,
+          orgId,
+          'QUIZ_FAILED',
+          'Employee Failed Quiz',
+          `Employee ${empName} failed quiz '${quiz.title}' with ${percentage}%.`,
+          { entityType: 'Quiz', entityId: quiz.id }
+        );
+      }
     }
 
     const populatedAttempt = await getPopulatedQuizAttempt(attempt.id);

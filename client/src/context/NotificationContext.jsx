@@ -44,12 +44,21 @@ export const NotificationProvider = ({ children }) => {
 
     const handleNewNotification = (newNotif) => {
       if (!newNotif) return;
-      setNotifications(prev => [newNotif, ...prev]);
-      setUnreadCount(prev => prev + 1);
+      const notifId = newNotif.id || newNotif._id;
+      
+      setNotifications(prev => {
+        if (notifId && prev.some(n => (n.id === notifId || n._id === notifId))) {
+          return prev;
+        }
 
-      if (newNotif.title && newNotif.message) {
-        addToast('info', newNotif.message, newNotif.title);
-      }
+        // Only increment unread count and trigger toast for unique new notifications
+        setUnreadCount(count => count + 1);
+        if (newNotif.title && newNotif.message) {
+          addToast('info', newNotif.message, newNotif.title);
+        }
+
+        return [newNotif, ...prev];
+      });
     };
 
     socket.on('new_notification', handleNewNotification);
@@ -60,11 +69,25 @@ export const NotificationProvider = ({ children }) => {
   }, [socket, user]);
 
   const addToast = (type, message, title = '') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, type, message, title }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 5000);
+    if (!message) return;
+    const cleanMsg = String(message).trim();
+    const cleanTitle = String(title).trim();
+
+    setToasts(prev => {
+      const now = Date.now();
+      // Suppress duplicate toasts with identical title and message triggered within 3 seconds
+      const isDuplicate = prev.some(
+        t => t.title === cleanTitle && t.message === cleanMsg && (now - t.id < 3000)
+      );
+      if (isDuplicate) return prev;
+
+      const id = now;
+      setTimeout(() => {
+        removeToast(id);
+      }, 5000);
+
+      return [...prev, { id, type, message: cleanMsg, title: cleanTitle }];
+    });
   };
 
   const removeToast = (id) => {

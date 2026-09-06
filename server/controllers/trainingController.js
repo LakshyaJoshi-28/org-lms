@@ -567,8 +567,9 @@ const saveFullCourse = async (req, res, next) => {
 
     const populatedTraining = await getPopulatedTraining(training.id);
 
+    const { sendUserNotification, sendAdminNotification } = require('../services/notificationService');
+
     if (!trainingId) {
-      const { sendAdminNotification } = require('../services/notificationService');
       await sendAdminNotification(
         orgId,
         'NEW_TRAINING_CREATED',
@@ -576,6 +577,50 @@ const saveFullCourse = async (req, res, next) => {
         `Instructor ${req.user.name || 'Instructor'} created a new training: ${title}.`,
         { entityType: 'Training', entityId: training.id }
       );
+      if (training.createdBy) {
+        await sendUserNotification(
+          training.createdBy,
+          orgId,
+          'Instructor',
+          'TRAINING_CREATED',
+          'Training Created',
+          `Your training '${title}' was created successfully.`,
+          { entityType: 'Training', entityId: training.id }
+        );
+      }
+    } else {
+      if (training.createdBy) {
+        await sendUserNotification(
+          training.createdBy,
+          orgId,
+          'Instructor',
+          'TRAINING_UPDATED',
+          'Training Updated',
+          `Training '${title}' details updated.`,
+          { entityType: 'Training', entityId: training.id }
+        );
+      }
+    }
+
+    if (isPublished) {
+      await sendAdminNotification(
+        orgId,
+        'TRAINING_PUBLISHED',
+        'Training Published',
+        `Training '${title}' is now published.`,
+        { entityType: 'Training', entityId: training.id }
+      );
+      if (training.createdBy) {
+        await sendUserNotification(
+          training.createdBy,
+          orgId,
+          'Instructor',
+          'TRAINING_PUBLISHED',
+          'Training Published',
+          `Your training '${title}' is now published.`,
+          { entityType: 'Training', entityId: training.id }
+        );
+      }
     }
 
     res.status(200).json(
@@ -786,6 +831,40 @@ const updateTraining = async (req, res, next) => {
 
     const updatedTraining = await getPopulatedTraining(existing.id);
 
+    const { sendUserNotification, sendAdminNotification } = require('../services/notificationService');
+    if (existing.createdBy) {
+      await sendUserNotification(
+        existing.createdBy,
+        orgId,
+        'Instructor',
+        'TRAINING_UPDATED',
+        'Training Updated',
+        `Training '${updatedTraining.title}' details updated.`,
+        { entityType: 'Training', entityId: existing.id }
+      );
+    }
+
+    if (updateData.isPublished) {
+      await sendAdminNotification(
+        orgId,
+        'TRAINING_PUBLISHED',
+        'Training Published',
+        `Training '${updatedTraining.title}' is now published.`,
+        { entityType: 'Training', entityId: existing.id }
+      );
+      if (existing.createdBy) {
+        await sendUserNotification(
+          existing.createdBy,
+          orgId,
+          'Instructor',
+          'TRAINING_PUBLISHED',
+          'Training Published',
+          `Your training '${updatedTraining.title}' is now published.`,
+          { entityType: 'Training', entityId: existing.id }
+        );
+      }
+    }
+
     res.status(200).json(new ApiResponse(200, { training: updatedTraining }, 'Training updated successfully'));
   } catch (error) {
     next(error);
@@ -822,6 +901,26 @@ const deleteTraining = async (req, res, next) => {
         isPublished: false
       }
     });
+
+    const { sendUserNotification, sendAdminNotification } = require('../services/notificationService');
+    await sendAdminNotification(
+      orgId,
+      'TRAINING_DELETED',
+      'Training Deleted',
+      `Training '${training.title}' has been deleted/archived.`,
+      { entityType: 'Training', entityId: training.id }
+    );
+    if (training.createdBy) {
+      await sendUserNotification(
+        training.createdBy,
+        orgId,
+        'Instructor',
+        'TRAINING_DELETED',
+        'Training Deleted',
+        `Training '${training.title}' has been deleted.`,
+        { entityType: 'Training', entityId: training.id }
+      );
+    }
 
     res.status(200).json(new ApiResponse(200, {}, 'Training archived successfully'));
   } catch (error) {

@@ -128,6 +128,32 @@ const generateCertificateForAssignment = async (trainingAssignmentId) => {
     }
   });
 
+  // Send notifications for Certificate Availability
+  try {
+    const { sendUserNotification, sendAdminNotification } = require('./notificationService');
+    const relEntity = { entityType: 'Certificate', entityId: certificate.id };
+    await sendUserNotification(
+      assignment.employeeId,
+      assignment.organizationId,
+      'Employee',
+      'CERTIFICATE_AVAILABLE',
+      'Certificate Available',
+      `Your certificate of completion for '${assignment.training.title}' is now available for download!`,
+      relEntity,
+      { preventDuplicates: true }
+    );
+    await sendAdminNotification(
+      assignment.organizationId,
+      'CERTIFICATE_AVAILABLE',
+      'Certificate Generated',
+      `Certificate generated for ${assignment.employee.name} on completing '${assignment.training.title}'.`,
+      relEntity,
+      { preventDuplicates: true }
+    );
+  } catch (notifErr) {
+    console.error('Failed to send certificate notification:', notifErr);
+  }
+
   return withId(certificate);
 };
 

@@ -453,9 +453,21 @@ const changePassword = async (req, res, next) => {
       data: { password: hashedPassword }
     });
 
-    // Fire and forget audit log non-blocking to maximize API speed
-    logAuditAction(req.user, 'CHANGE_PASSWORD', 'User', user.id, `Password changed for user ${user.name}`).catch((err) => {
-      console.error('Failed to log audit action for changePassword:', err);
+    // Fire and forget audit log & notification non-blocking
+    const { sendUserNotification } = require('../services/notificationService');
+    Promise.all([
+      logAuditAction(req.user, 'CHANGE_PASSWORD', 'User', user.id, `Password changed for user ${user.name}`),
+      sendUserNotification(
+        user.id,
+        user.organizationId,
+        user.role,
+        'PASSWORD_CHANGED',
+        'Password Changed',
+        'Your account password was changed successfully.',
+        { entityType: 'User', entityId: user.id }
+      )
+    ]).catch((err) => {
+      console.error('Failed to process post-password-change background tasks:', err);
     });
 
     res.status(200).json(new ApiResponse(200, {}, 'Password changed successfully'));

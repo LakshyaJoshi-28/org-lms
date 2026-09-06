@@ -315,23 +315,35 @@ const submitAssignment = async (req, res, next) => {
       await updateOverallProgress(tAssignId, userId);
     }
 
-    // Send notifications to Instructor & Admin
-    const { sendUserNotification, sendAdminNotification } = require('../services/notificationService');
+    // Send notifications to Employee, Instructor & Admin
+    const { sendUserNotification, sendInstructorNotification, sendAdminNotification } = require('../services/notificationService');
+    const relEntity = { entityType: 'AssignmentSubmission', entityId: submission.id };
+
     await sendUserNotification(
-      assignment.createdBy,
+      userId,
       orgId,
-      'Instructor',
+      'Employee',
       'ASSIGNMENT_SUBMITTED',
       'Assignment Submitted',
-      `Employee ${req.user.name} submitted an assignment for ${assignment.title}.`,
-      { entityType: 'AssignmentSubmission', entityId: submission.id }
+      `Assignment '${assignment.title}' submitted successfully.`,
+      relEntity
     );
+
+    await sendInstructorNotification(
+      assignment.createdBy,
+      orgId,
+      'ASSIGNMENT_REQUIRES_REVIEW',
+      'Assignment Requires Review',
+      `Employee ${req.user.name} submitted assignment '${assignment.title}' for review.`,
+      relEntity
+    );
+
     await sendAdminNotification(
       orgId,
       'ASSIGNMENT_SUBMITTED',
       'Assignment Submission',
-      `Assignment submitted by ${req.user.name} for ${assignment.title}.`,
-      { entityType: 'AssignmentSubmission', entityId: submission.id }
+      `Assignment submitted by ${req.user.name} for '${assignment.title}'.`,
+      relEntity
     );
 
     res.status(201).json(new ApiResponse(201, { submission: withId(submission) }, 'Assignment submitted successfully'));
@@ -543,18 +555,32 @@ const reviewSubmission = async (req, res, next) => {
 
     const updatedSubmission = await getPopulatedSubmission(submission.id);
 
-    // Notify Employee
-    const { sendUserNotification } = require('../services/notificationService');
+    // Notify Employee & Instructor
+    const { sendUserNotification, sendInstructorNotification } = require('../services/notificationService');
     const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const relEntity = { entityType: 'AssignmentSubmission', entityId: submission.id };
+
     await sendUserNotification(
       submission.employeeId,
       orgId,
       'Employee',
       'ASSIGNMENT_REVIEWED',
       'Assignment Reviewed',
-      `Your assignment for ${submission.assignment.title} has been reviewed by ${req.user.name}.`,
-      { entityType: 'AssignmentSubmission', entityId: submission.id }
+      `Your submission for '${submission.assignment.title}' was reviewed. Grade: ${grade || 'Graded'}.`,
+      relEntity
     );
+
+    if (req.user.id) {
+      await sendInstructorNotification(
+        req.user.id,
+        orgId,
+        'ASSIGNMENT_REVIEWED',
+        'Assignment Reviewed',
+        `You reviewed assignment '${submission.assignment.title}' for employee.`,
+        relEntity
+      );
+    }
+
     if (feedback && feedback.trim()) {
       await sendUserNotification(
         submission.employeeId,
@@ -563,7 +589,7 @@ const reviewSubmission = async (req, res, next) => {
         'INSTRUCTOR_FEEDBACK',
         'Instructor Feedback',
         `Instructor ${req.user.name} provided feedback on your assignment.`,
-        { entityType: 'AssignmentSubmission', entityId: submission.id }
+        relEntity
       );
     }
 

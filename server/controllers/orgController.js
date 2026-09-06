@@ -29,19 +29,21 @@ const createDepartment = async (req, res, next) => {
     const { name, description, jobRoles } = req.body;
     const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    if (!name) {
+    if (!name || !name.trim()) {
       throw new ApiError(400, 'Department name is required');
     }
 
+    const cleanName = name.trim();
+
     const existingDep = await prisma.department.findFirst({
       where: {
-        name: name.trim(),
+        name: { equals: cleanName, mode: 'insensitive' },
         organizationId: orgId
       }
     });
 
     if (existingDep && existingDep.status === 'active') {
-      throw new ApiError(400, 'Department with this name already exists in your organization');
+      throw new ApiError(400, `Department '${cleanName}' already exists. Please use a different name.`);
     }
 
     let department;
@@ -49,16 +51,17 @@ const createDepartment = async (req, res, next) => {
       department = await prisma.department.update({
         where: { id: existingDep.id },
         data: {
-          name: name.trim(),
+          name: cleanName,
           description: description || null,
           jobRoles: Array.isArray(jobRoles) ? jobRoles : [],
-          status: 'active'
+          status: 'active',
+          createdAt: new Date()
         }
       });
     } else {
       department = await prisma.department.create({
         data: {
-          name: name.trim(),
+          name: cleanName,
           description: description || null,
           jobRoles: Array.isArray(jobRoles) ? jobRoles : [],
           organizationId: orgId,
@@ -98,7 +101,7 @@ const getDepartments = async (req, res, next) => {
         status: true,
         createdAt: true
       },
-      orderBy: { name: 'asc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     res.status(200).json(new ApiResponse(200, { departments: withId(departments) }, 'Departments retrieved successfully'));
@@ -129,17 +132,18 @@ const updateDepartment = async (req, res, next) => {
       throw new ApiError(404, 'Department not found');
     }
 
-    if (name && name.trim() !== department.name) {
+    if (name && name.trim()) {
+      const cleanName = name.trim();
       const existingActive = await prisma.department.findFirst({
         where: {
-          name: name.trim(),
+          name: { equals: cleanName, mode: 'insensitive' },
           organizationId: orgId,
           status: 'active',
           id: { not: department.id }
         }
       });
       if (existingActive) {
-        throw new ApiError(400, 'Department with this name already exists in your organization');
+        throw new ApiError(400, `Department '${cleanName}' already exists. Please use a different name.`);
       }
     }
 
@@ -493,8 +497,18 @@ const updateUserStatus = async (req, res, next) => {
     });
 
     const isDeactivating = status === 'deactivated';
-    const actionName = isDeactivating ? 'DEACTIVATE_USER' : 'ACTIVATE_USER';
-    const actionMessage = isDeactivating ? 'deactivated' : 'reactivated';
+    const actionMessage = isDeactivating ? 'deactivated' : 'activated';
+
+    let userNotifType = isDeactivating ? 'ACCOUNT_LOCKED' : 'ACCOUNT_UNLOCKED';
+    let adminNotifType = '';
+
+    if (updatedUser.role === 'Employee') {
+      adminNotifType = isDeactivating ? 'EMPLOYEE_DEACTIVATED' : 'EMPLOYEE_ACTIVATED';
+    } else if (updatedUser.role === 'Instructor') {
+      adminNotifType = isDeactivating ? 'INSTRUCTOR_DEACTIVATED' : 'INSTRUCTOR_ACTIVATED';
+    } else {
+      adminNotifType = isDeactivating ? 'DEACTIVATE_USER' : 'ACTIVATE_USER';
+    }
 
     // Send Notification & Audit logs asynchronously in background without blocking response
     Promise.all([
@@ -502,26 +516,26 @@ const updateUserStatus = async (req, res, next) => {
         updatedUser.id,
         orgId,
         updatedUser.role,
-        actionName,
-        isDeactivating ? 'Account Deactivated' : 'Account Reactivated',
+        userNotifType,
+        isDeactivating ? 'Account Deactivated' : 'Account Activated',
         isDeactivating
           ? 'Your account has been deactivated by an administrator. Access to the system is currently blocked.'
-          : 'Your account has been reactivated. You may now log in and access the system normally.',
+          : 'Your account has been activated. You may now log in and access the system normally.',
         { entityType: 'User', entityId: updatedUser.id }
       ),
       sendAdminNotification(
         orgId,
-        actionName,
-        `User ${isDeactivating ? 'Deactivated' : 'Reactivated'}`,
+        adminNotifType,
+        `${updatedUser.role} Account ${isDeactivating ? 'Deactivated' : 'Activated'}`,
         `${updatedUser.role} "${updatedUser.name}" (${updatedUser.email}) was ${actionMessage} by Admin ${req.user.name}`,
         { entityType: 'User', entityId: updatedUser.id }
       ),
       logAuditAction(
         req.user,
-        actionName,
+        isDeactivating ? 'DEACTIVATE_USER' : 'ACTIVATE_USER',
         'User',
         updatedUser.id,
-        `${isDeactivating ? 'Deactivated' : 'Reactivated'} ${updatedUser.role} user ${updatedUser.name} (${updatedUser.email})`
+        `${isDeactivating ? 'Deactivated' : 'Activated'} ${updatedUser.role} user ${updatedUser.name} (${updatedUser.email})`
       )
     ]).catch(err => console.error('Background notification error in updateUserStatus:', err));
 

@@ -173,6 +173,40 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
       }
     });
 
+    const isNewlyStarted = assignment.status === 'Assigned' && newStatus === 'In Progress';
+
+    if (isNewlyStarted) {
+      const { sendUserNotification, sendInstructorNotification } = require('./notificationService');
+      const employee = await prisma.user.findUnique({
+        where: { id: empId },
+        select: { name: true }
+      });
+      const empName = employee?.name || 'Employee';
+
+      await sendUserNotification(
+        empId,
+        assignment.organizationId,
+        'Employee',
+        'TRAINING_STARTED',
+        'Training Started',
+        `You started training '${training.title}'. Keep going!`,
+        { entityType: 'Training', entityId: training.id },
+        { preventDuplicates: true }
+      );
+
+      if (training.createdBy) {
+        await sendInstructorNotification(
+          training.createdBy,
+          assignment.organizationId,
+          'EMPLOYEE_STARTED_TRAINING',
+          'Employee Started Training',
+          `Employee ${empName} started training '${training.title}'.`,
+          { entityType: 'Training', entityId: training.id },
+          { preventDuplicates: true }
+        );
+      }
+    }
+
     if (isNewlyCompleted) {
       // Automatically generate certificate for completed training
       try {
@@ -182,7 +216,7 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
         console.error('Failed to generate certificate on training completion:', certErr);
       }
 
-      const { sendUserNotification, sendAdminNotification } = require('./notificationService');
+      const { sendUserNotification, sendInstructorNotification, sendAdminNotification } = require('./notificationService');
       const employee = await prisma.user.findUnique({
         where: { id: empId },
         select: { name: true }
@@ -195,29 +229,51 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
         'Employee',
         'TRAINING_COMPLETED',
         'Training Completed',
-        `Congratulations! You have completed ${training.title}.`,
-        { entityType: 'Training', entityId: training.id }
+        `Congratulations! You have completed '${training.title}'.`,
+        { entityType: 'Training', entityId: training.id },
+        { preventDuplicates: true }
       );
 
       if (training.createdBy) {
-        await sendUserNotification(
+        await sendInstructorNotification(
           training.createdBy,
           assignment.organizationId,
-          'Instructor',
-          'TRAINING_COMPLETED',
+          'EMPLOYEE_COMPLETED_TRAINING',
           'Learner Training Completed',
-          `Learner ${empName} completed your training: ${training.title}.`,
-          { entityType: 'Training', entityId: training.id }
+          `Learner ${empName} completed your training: '${training.title}'.`,
+          { entityType: 'Training', entityId: training.id },
+          { preventDuplicates: true }
         );
       }
 
       await sendAdminNotification(
         assignment.organizationId,
-        'TRAINING_COMPLETED',
+        'EMPLOYEE_COMPLETED_TRAINING',
         'Employee Training Completed',
-        `Employee ${empName} completed assigned training: ${training.title}.`,
-        { entityType: 'Training', entityId: training.id }
+        `Employee ${empName} completed assigned training: '${training.title}'.`,
+        { entityType: 'Training', entityId: training.id },
+        { preventDuplicates: true }
       );
+
+      // Check if employee completed ALL required trainings in org
+      const remainingIncomplete = await prisma.trainingAssignment.count({
+        where: {
+          employeeId: empId,
+          organizationId: assignment.organizationId,
+          status: { notIn: ['Completed'] }
+        }
+      });
+
+      if (remainingIncomplete === 0) {
+        await sendAdminNotification(
+          assignment.organizationId,
+          'EMPLOYEE_COMPLETED_ALL_REQUIRED_TRAINING',
+          'Employee Completed All Required Training',
+          `Employee ${empName} has completed all required training in your organization!`,
+          { entityType: 'User', entityId: empId },
+          { preventDuplicates: true }
+        );
+      }
     }
 
     return {

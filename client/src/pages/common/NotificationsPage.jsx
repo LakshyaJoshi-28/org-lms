@@ -29,22 +29,51 @@ export const NotificationsPage = () => {
   const getNotifIcon = (type) => {
     switch (type) {
       case 'NEW_EMPLOYEE_REGISTERED':
+      case 'NEW_EMPLOYEE_ADDED':
       case 'INSTRUCTOR_ADDED':
+      case 'EMPLOYEE_ACTIVATED':
+      case 'INSTRUCTOR_ACTIVATED':
         return <UserPlus className="w-5 h-5 text-teal-600" />;
+      case 'EMPLOYEE_DEACTIVATED':
+      case 'INSTRUCTOR_DEACTIVATED':
+      case 'ACCOUNT_LOCKED':
+        return <Lock className="w-5 h-5 text-rose-600" />;
+      case 'ACCOUNT_UNLOCKED':
+        return <Unlock className="w-5 h-5 text-emerald-600" />;
       case 'NEW_TRAINING_CREATED':
+      case 'TRAINING_CREATED':
+      case 'TRAINING_UPDATED':
+      case 'TRAINING_PUBLISHED':
       case 'TRAINING_ASSIGNED':
+      case 'NEW_TRAINING_ASSIGNED':
+      case 'AUTO_ASSIGNED_TRAINING':
         return <BookOpen className="w-5 h-5 text-emerald-600" />;
       case 'ASSIGNMENT_SUBMITTED':
+      case 'ASSIGNMENT_REQUIRES_REVIEW':
       case 'ASSIGNMENT_REVIEWED':
       case 'INSTRUCTOR_FEEDBACK':
         return <FileCheck2 className="w-5 h-5 text-emerald-600" />;
       case 'QUIZ_PASSED':
       case 'TRAINING_COMPLETED':
+      case 'EMPLOYEE_COMPLETED_TRAINING':
+      case 'EMPLOYEE_COMPLETED_ALL_REQUIRED_TRAINING':
+      case 'CERTIFICATE_AVAILABLE':
         return <CheckCircle className="w-5 h-5 text-emerald-600" />;
       case 'QUIZ_FAILED':
         return <XCircle className="w-5 h-5 text-rose-600" />;
       case 'DEADLINE_EXTENDED':
+      case 'DEADLINE_APPROACHING_7_DAYS':
+      case 'DEADLINE_APPROACHING_3_DAYS':
+      case 'DEADLINE_APPROACHING_2_DAYS':
+      case 'DEADLINE_APPROACHING_1_DAY':
+      case 'TRAINING_DUE_TODAY':
+      case 'TRAINING_DEADLINE_APPROACHING':
+      case 'TRAINING_DEADLINE_REACHED':
         return <Clock className="w-5 h-5 text-amber-600" />;
+      case 'TRAINING_OVERDUE':
+      case 'EMPLOYEE_TRAINING_OVERDUE':
+      case 'MULTIPLE_EMPLOYEES_OVERDUE':
+      case 'EMPLOYEES_WITH_OVERDUE_TRAINING':
       case 'TRAINING_LOCKED':
         return <Lock className="w-5 h-5 text-rose-600" />;
       case 'TRAINING_UNLOCKED':

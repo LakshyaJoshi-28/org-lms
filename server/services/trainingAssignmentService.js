@@ -469,9 +469,42 @@ const assignTrainingByDeptAndRole = async (adminId, organizationId, departmentId
       });
       results.push(withId(assignment));
       newAssignmentsCount++;
+
+      const { sendUserNotification, sendInstructorNotification } = require('./notificationService');
+      const relEntity = { entityType: 'TrainingAssignment', entityId: assignment.id };
+      await sendUserNotification(
+        emp.id,
+        orgId,
+        'Employee',
+        'NEW_TRAINING_ASSIGNED',
+        'New Training Assigned',
+        `You have been assigned new training '${training.title}'. Deadline: ${deadline.toDateString()}`,
+        relEntity
+      );
+      if (training.createdBy) {
+        await sendInstructorNotification(
+          training.createdBy,
+          orgId,
+          'TRAINING_ASSIGNED',
+          'Training Assigned to Employee',
+          `Training '${training.title}' was assigned to employee ${emp.name}.`,
+          relEntity
+        );
+      }
     } catch (err) {
       if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
+  }
+
+  if (newAssignmentsCount > 0) {
+    const { sendAdminNotification } = require('./notificationService');
+    await sendAdminNotification(
+      orgId,
+      'TRAINING_ASSIGNED',
+      'Training Assigned',
+      `Training '${training.title}' was assigned to ${newAssignmentsCount} employee(s).`,
+      { entityType: 'Training', entityId: training.id }
+    );
   }
 
   return { results, newAssignmentsCount, matchedEmployeesCount: employees.length };
@@ -550,9 +583,42 @@ const assignTrainingToMultipleEmployees = async (adminId, organizationId, employ
       });
       results.push(withId(assignment));
       newAssignmentsCount++;
+
+      const { sendUserNotification, sendInstructorNotification } = require('./notificationService');
+      const relEntity = { entityType: 'TrainingAssignment', entityId: assignment.id };
+      await sendUserNotification(
+        emp.id,
+        orgId,
+        'Employee',
+        'NEW_TRAINING_ASSIGNED',
+        'New Training Assigned',
+        `You have been assigned new training '${training.title}'. Deadline: ${deadline.toDateString()}`,
+        relEntity
+      );
+      if (training.createdBy) {
+        await sendInstructorNotification(
+          training.createdBy,
+          orgId,
+          'TRAINING_ASSIGNED',
+          'Training Assigned to Employee',
+          `Training '${training.title}' was assigned to employee ${emp.name}.`,
+          relEntity
+        );
+      }
     } catch (err) {
       if (err.code !== 'P2002' && err.code !== 11000) throw err;
     }
+  }
+
+  if (newAssignmentsCount > 0) {
+    const { sendAdminNotification } = require('./notificationService');
+    await sendAdminNotification(
+      orgId,
+      'TRAINING_ASSIGNED',
+      'Training Assigned',
+      `Training '${training.title}' was assigned to ${newAssignmentsCount} employee(s).`,
+      { entityType: 'Training', entityId: training.id }
+    );
   }
 
   return { results, newAssignmentsCount, selectedEmployeesCount: employees.length };

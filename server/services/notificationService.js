@@ -14,10 +14,28 @@ const formatNotification = (n) => {
 /**
  * Send notification to a specific user (Employee or Instructor)
  */
-const sendUserNotification = async (recipientId, organizationId, role, type, title, message, relatedEntity = null) => {
+const sendUserNotification = async (recipientId, organizationId, role, type, title, message, relatedEntity = null, options = {}) => {
   try {
     const recId = recipientId ? String(recipientId.id || recipientId._id || recipientId) : null;
     const orgId = String(organizationId.id || organizationId._id || organizationId);
+
+    const relType = relatedEntity?.entityType ? String(relatedEntity.entityType) : null;
+    const relId = relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null;
+
+    if (options.preventDuplicates && recId) {
+      const existing = await prisma.notification.findFirst({
+        where: {
+          recipientId: recId,
+          organizationId: orgId,
+          type,
+          relatedEntityType: relType,
+          relatedEntityId: relId
+        }
+      });
+      if (existing) {
+        return formatNotification(existing);
+      }
+    }
 
     const notification = await prisma.notification.create({
       data: {
@@ -27,8 +45,8 @@ const sendUserNotification = async (recipientId, organizationId, role, type, tit
         type,
         title,
         message,
-        relatedEntityType: relatedEntity?.entityType ? String(relatedEntity.entityType) : null,
-        relatedEntityId: relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null
+        relatedEntityType: relType,
+        relatedEntityId: relId
       }
     });
 
@@ -46,9 +64,17 @@ const sendUserNotification = async (recipientId, organizationId, role, type, tit
 };
 
 /**
+ * Send notification specifically to an Instructor
+ */
+const sendInstructorNotification = async (instructorId, organizationId, type, title, message, relatedEntity = null, options = {}) => {
+  if (!instructorId) return;
+  return sendUserNotification(instructorId, organizationId, 'Instructor', type, title, message, relatedEntity, options);
+};
+
+/**
  * Send aggregated notification to all Organization Admins
  */
-const sendAdminNotification = async (organizationId, type, title, message, relatedEntity = null) => {
+const sendAdminNotification = async (organizationId, type, title, message, relatedEntity = null, options = {}) => {
   try {
     const orgId = String(organizationId.id || organizationId._id || organizationId);
     const admins = await prisma.user.findMany({
@@ -56,42 +82,39 @@ const sendAdminNotification = async (organizationId, type, title, message, relat
     });
 
     if (admins.length > 0) {
-      const records = admins.map((admin) => ({
-        recipientId: admin.id,
-        organizationId: orgId,
-        role: 'Admin',
-        type,
-        title,
-        message,
-        relatedEntityType: relatedEntity?.entityType ? String(relatedEntity.entityType) : null,
-        relatedEntityId: relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null
-      }));
+      const relType = relatedEntity?.entityType ? String(relatedEntity.entityType) : null;
+      const relId = relatedEntity?.entityId ? String(relatedEntity.entityId.id || relatedEntity.entityId._id || relatedEntity.entityId) : null;
 
-      await prisma.notification.createMany({
-        data: records
-      });
+      for (const admin of admins) {
+        if (options.preventDuplicates) {
+          const existing = await prisma.notification.findFirst({
+            where: {
+              recipientId: admin.id,
+              organizationId: orgId,
+              type,
+              relatedEntityType: relType,
+              relatedEntityId: relId
+            }
+          });
+          if (existing) continue;
+        }
 
-      // Emit to each admin user and admin room
-      admins.forEach(admin => {
-        emitToUser(admin.id, 'new_notification', {
-          role: 'Admin',
-          type,
-          title,
-          message,
-          organizationId: orgId,
-          createdAt: new Date().toISOString()
+        const notification = await prisma.notification.create({
+          data: {
+            recipientId: admin.id,
+            organizationId: orgId,
+            role: 'Admin',
+            type,
+            title,
+            message,
+            relatedEntityType: relType,
+            relatedEntityId: relId
+          }
         });
-      });
 
-      const adminRoom = `org_${orgId}_Admin`;
-      emitToRoom(adminRoom, 'new_notification', {
-        role: 'Admin',
-        type,
-        title,
-        message,
-        organizationId: orgId,
-        createdAt: new Date().toISOString()
-      });
+        const formatted = formatNotification(notification);
+        emitToUser(admin.id, 'new_notification', formatted);
+      }
     }
   } catch (error) {
     console.error('Failed to send admin notification:', error);
@@ -100,6 +123,7 @@ const sendAdminNotification = async (organizationId, type, title, message, relat
 
 module.exports = {
   sendUserNotification,
+  sendInstructorNotification,
   sendAdminNotification,
   formatNotification
 };

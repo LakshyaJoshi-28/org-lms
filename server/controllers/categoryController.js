@@ -34,7 +34,8 @@ const createCategory = async (req, res, next) => {
         data: {
           name: name.trim(),
           description: description || null,
-          status: 'active'
+          status: 'active',
+          createdAt: new Date()
         }
       });
     } else {
@@ -76,7 +77,7 @@ const getCategories = async (req, res, next) => {
         status: true,
         createdAt: true
       },
-      orderBy: { name: 'asc' }
+      orderBy: { createdAt: 'desc' }
     });
 
     res.status(200).json(new ApiResponse(200, { categories: withId(categories) }, 'Training categories retrieved successfully'));
