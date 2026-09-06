@@ -100,6 +100,9 @@ export const updateProfilePicture = (formData) => api.put('/auth/profile-picture
   headers: { 'Content-Type': 'multipart/form-data' }
 });
 export const resetProfilePicture = () => api.delete('/auth/profile-picture');
+export const requestForgotPasswordOTP = (data) => api.post('/auth/forgot-password', data);
+export const verifyForgotPasswordOTP = (data) => api.post('/auth/verify-otp', data);
+export const resetPasswordWithOTP = (data) => api.post('/auth/reset-password', data);
 
 // Org & Department & Users APIs
 export const getDepartments = () => api.get('/org/departments');

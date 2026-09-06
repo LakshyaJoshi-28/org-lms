@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 // Auth Pages
 import { Login } from '../pages/auth/Login';
 import { EmployeeRegister } from '../pages/auth/EmployeeRegister';
+import { ForgotPassword } from '../pages/auth/ForgotPassword';
 import { OrgSetup } from '../pages/auth/OrgSetup';
 
 // Admin Pages
@@ -63,6 +64,7 @@ export const AppRoutes = () => {
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/register-employee" element={<EmployeeRegister />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
 
       {/* Protected Super Admin Routes */}

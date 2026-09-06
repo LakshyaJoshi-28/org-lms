@@ -587,6 +587,214 @@ const resetProfilePicture = async (req, res, next) => {
   }
 };
 
+const crypto = require('crypto');
+const { sendPasswordResetOTPEmail } = require('../services/emailService');
+
+/**
+ * @desc    Request Password Reset OTP
+ * @route   POST /api/auth/forgot-password
+ * @access  Public
+ */
+const requestPasswordResetOTP = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      throw new ApiError(400, 'Please provide a valid email address');
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        passwordResetOtpExpiresAt: true
+      }
+    });
+
+    if (user && user.status === 'active') {
+      // Rate limit check: 1 request per 60 seconds
+      if (user.passwordResetOtpExpiresAt) {
+        const lastRequestedTime = new Date(user.passwordResetOtpExpiresAt).getTime() - 5 * 60 * 1000;
+        if (Date.now() - lastRequestedTime < 60 * 1000) {
+          throw new ApiError(429, 'An OTP was recently requested. Please wait 60 seconds before trying again.');
+        }
+      }
+
+      const rawOtp = crypto.randomInt(100000, 1000000).toString();
+      const otpHash = await bcrypt.hash(rawOtp, 10);
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+      // Store OTP directly on User record (invalidates previous OTP)
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetOtpHash: otpHash,
+          passwordResetOtpExpiresAt: expiresAt,
+          passwordResetOtpUsed: false
+        }
+      });
+
+      // Send email via email service
+      sendPasswordResetOTPEmail(cleanEmail, rawOtp, user.name).catch((err) => {
+        console.error('Failed to send OTP email asynchronously:', err);
+      });
+    }
+
+    // Always return neutral response to prevent email enumeration
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {},
+        'If an account with that email exists, a 6-digit OTP has been sent to your email address.'
+      )
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify Password Reset OTP
+ * @route   POST /api/auth/verify-otp
+ * @access  Public
+ */
+const verifyPasswordResetOTP = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      throw new ApiError(400, 'Please provide both email and 6-digit OTP');
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanOtp = String(otp).trim();
+
+    if (cleanOtp.length !== 6) {
+      throw new ApiError(400, 'OTP must be a 6-digit number');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      select: {
+        id: true,
+        passwordResetOtpHash: true,
+        passwordResetOtpExpiresAt: true,
+        passwordResetOtpUsed: true
+      }
+    });
+
+    if (
+      !user ||
+      !user.passwordResetOtpHash ||
+      !user.passwordResetOtpExpiresAt ||
+      user.passwordResetOtpUsed ||
+      new Date(user.passwordResetOtpExpiresAt) <= new Date()
+    ) {
+      throw new ApiError(400, 'Invalid or expired OTP. Please request a new verification code.');
+    }
+
+    const isMatch = await bcrypt.compare(cleanOtp, user.passwordResetOtpHash);
+    if (!isMatch) {
+      throw new ApiError(400, 'Incorrect OTP. Please check the code and try again.');
+    }
+
+    res.status(200).json(new ApiResponse(200, { valid: true }, 'OTP verified successfully'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Reset Password using OTP
+ * @route   POST /api/auth/reset-password
+ * @access  Public
+ */
+const resetPasswordWithOTP = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      throw new ApiError(400, 'Please provide email, OTP, and new password');
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanOtp = String(otp).trim();
+
+    if (newPassword.length < 6) {
+      throw new ApiError(400, 'New password must be at least 6 characters long');
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        organizationId: true,
+        passwordResetOtpHash: true,
+        passwordResetOtpExpiresAt: true,
+        passwordResetOtpUsed: true
+      }
+    });
+
+    if (
+      !user ||
+      !user.passwordResetOtpHash ||
+      !user.passwordResetOtpExpiresAt ||
+      user.passwordResetOtpUsed ||
+      new Date(user.passwordResetOtpExpiresAt) <= new Date()
+    ) {
+      throw new ApiError(400, 'Invalid or expired OTP. Please request a new code.');
+    }
+
+    const isMatch = await bcrypt.compare(cleanOtp, user.passwordResetOtpHash);
+    if (!isMatch) {
+      throw new ApiError(400, 'Incorrect OTP. Please check the code and try again.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update user password and clear OTP fields
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        passwordResetOtpHash: null,
+        passwordResetOtpExpiresAt: null,
+        passwordResetOtpUsed: true
+      }
+    });
+
+    // Log audit & send notification in background
+    const { sendUserNotification } = require('../services/notificationService');
+    Promise.all([
+      logAuditAction(
+        { id: user.id, name: user.name, role: user.role, organizationId: user.organizationId },
+        'RESET_PASSWORD',
+        'User',
+        user.id,
+        `Password reset completed via OTP for ${user.email}`
+      ),
+      sendUserNotification(
+        user.id,
+        user.organizationId,
+        user.role,
+        'PASSWORD_RESET',
+        'Password Reset Successful',
+        'Your account password was successfully reset using OTP verification.',
+        { entityType: 'User', entityId: user.id }
+      )
+    ]).catch((err) => console.error('Background log error in resetPasswordWithOTP:', err));
+
+    res.status(200).json(new ApiResponse(200, {}, 'Password reset successfully. You can now log in with your new password.'));
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   setupOrganization,
   registerEmployee,
@@ -596,5 +804,8 @@ module.exports = {
   updateMyProfile,
   changePassword,
   updateProfilePicture,
-  resetProfilePicture
+  resetProfilePicture,
+  requestPasswordResetOTP,
+  verifyPasswordResetOTP,
+  resetPasswordWithOTP
 };

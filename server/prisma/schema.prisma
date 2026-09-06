@@ -76,6 +76,9 @@ model User {
   profilePicture         String?
   profilePicturePublicId String?
   isCustomAvatar         Boolean                @default(false)
+  passwordResetOtpHash   String?
+  passwordResetOtpExpiresAt DateTime?
+  passwordResetOtpUsed   Boolean?               @default(false)
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
 

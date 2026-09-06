@@ -10,7 +10,10 @@ const {
   updateMyProfile,
   changePassword,
   updateProfilePicture,
-  resetProfilePicture
+  resetProfilePicture,
+  requestPasswordResetOTP,
+  verifyPasswordResetOTP,
+  resetPasswordWithOTP
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
@@ -19,6 +22,9 @@ const { cacheMiddleware } = require('../middleware/cacheMiddleware');
 router.post('/register-employee', registerEmployee);
 router.post('/login', login);
 router.post('/logout', logout);
+router.post('/forgot-password', requestPasswordResetOTP);
+router.post('/verify-otp', verifyPasswordResetOTP);
+router.post('/reset-password', resetPasswordWithOTP);
 
 router.use(protect);
 router.post('/setup-org', authorizeRoles('SuperAdmin'), setupOrganization);
