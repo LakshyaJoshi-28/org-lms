@@ -1,4 +1,9 @@
-const bcrypt = require('bcryptjs');
+let bcrypt;
+try {
+  bcrypt = require('bcrypt');
+} catch (e) {
+  bcrypt = require('bcryptjs');
+}
 const { prisma, withId } = require('../config/prismaClient');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
@@ -188,6 +193,7 @@ const login = async (req, res, next) => {
 
     const cleanEmail = email.toLowerCase().trim();
 
+    // Fast flat query for User record without heavy 3-table relational joins
     const user = await prisma.user.findUnique({
       where: { email: cleanEmail },
       select: {
@@ -201,13 +207,7 @@ const login = async (req, res, next) => {
         departmentId: true,
         jobRole: true,
         isProfileComplete: true,
-        profilePicture: true,
-        organization: {
-          select: { id: true, name: true, code: true, status: true }
-        },
-        department: {
-          select: { id: true, name: true, jobRoles: true }
-        }
+        profilePicture: true
       }
     });
 
@@ -224,13 +224,36 @@ const login = async (req, res, next) => {
       throw new ApiError(403, 'Your account has been deactivated. Please contact your administrator.');
     }
 
-    if (user.role !== 'SuperAdmin' && user.organization && String(user.organization.status || 'ACTIVE').toUpperCase() === 'INACTIVE') {
+    // Parallel fetch of organization and department details only after successful auth
+    const orgPromise = user.organizationId
+      ? prisma.organization.findUnique({
+          where: { id: user.organizationId },
+          select: { id: true, name: true, code: true, status: true }
+        })
+      : Promise.resolve(null);
+
+    const deptPromise = user.departmentId
+      ? prisma.department.findUnique({
+          where: { id: user.departmentId },
+          select: { id: true, name: true, jobRoles: true }
+        })
+      : Promise.resolve(null);
+
+    const [organization, department] = await Promise.all([orgPromise, deptPromise]);
+
+    if (user.role !== 'SuperAdmin' && organization && String(organization.status || 'ACTIVE').toUpperCase() === 'INACTIVE') {
       throw new ApiError(403, 'Your organization has been deactivated by the Super Admin. Please contact your administrator.');
     }
 
-    generateTokenAndSetCookie(res, user.id, user.role, user.organizationId, user.name);
+    const fullUser = {
+      ...user,
+      organization,
+      department
+    };
 
-    const userObj = formatUserResponse(user);
+    generateTokenAndSetCookie(res, fullUser.id, fullUser.role, fullUser.organizationId, fullUser.name);
+
+    const userObj = formatUserResponse(fullUser);
 
     res.status(200).json(
       new ApiResponse(
