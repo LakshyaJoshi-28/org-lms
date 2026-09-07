@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useInvalidateLmsQueries } from '../../hooks/useLmsQueries';
 import { getDepartments, createDepartment, updateDepartment, deleteDepartment } from '../../services/api';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -8,6 +9,7 @@ import { Building2, Plus, Edit2, Trash2, Briefcase, Check, X, Tag } from 'lucide
 
 export const Departments = () => {
   const { addToast } = useNotification();
+  const invalidateQueries = useInvalidateLmsQueries();
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -107,6 +109,7 @@ export const Departments = () => {
           fetchDepts();
         }
         addToast('success', 'Department updated successfully');
+        invalidateQueries(['departments', 'admin-dashboard']);
       } else {
         const res = await createDepartment({ name: cleanName, description: description.trim(), jobRoles });
         const created = res.data?.data?.department;
@@ -121,6 +124,7 @@ export const Departments = () => {
           fetchDepts();
         }
         addToast('success', 'Department created successfully');
+        invalidateQueries(['departments', 'admin-dashboard']);
       }
       setShowModal(false);
     } catch (err) {
@@ -136,6 +140,7 @@ export const Departments = () => {
       await deleteDepartment(id);
       setDepartments(prev => prev.filter(d => (d._id || d.id) !== id));
       addToast('success', 'Department deleted');
+      invalidateQueries(['departments', 'admin-dashboard']);
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to deactivate department');
     }

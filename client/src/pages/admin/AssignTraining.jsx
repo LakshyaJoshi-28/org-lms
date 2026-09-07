@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useInvalidateLmsQueries } from '../../hooks/useLmsQueries';
 import {
   getTrainings,
   getDepartments,
@@ -36,6 +37,7 @@ import {
 
 export const AssignTraining = () => {
   const { addToast } = useNotification();
+  const invalidateQueries = useInvalidateLmsQueries();
 
   // Active Tab: 'auto' | 'targeted'
   const [activeTab, setActiveTab] = useState('auto');
@@ -178,6 +180,7 @@ export const AssignTraining = () => {
       addToast('success', res.data.message || 'Auto-assignment rule configured!');
       setAutoTrainingId('');
       setAutoDeadlineDays(30);
+      invalidateQueries(['auto-rules', 'admin-dashboard']);
       fetchAllData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to create auto-assignment rule');
@@ -200,6 +203,7 @@ export const AssignTraining = () => {
       addToast('success', 'Auto-assignment rule deactivated');
       setShowDeactivateModal(false);
       setSelectedRule(null);
+      invalidateQueries(['auto-rules', 'admin-dashboard']);
       fetchAllData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to deactivate rule');
@@ -221,6 +225,7 @@ export const AssignTraining = () => {
       addToast('success', res.data.message || 'Auto-assignment rule reactivated!');
       setShowReactivateModal(false);
       setSelectedRule(null);
+      invalidateQueries(['auto-rules', 'admin-dashboard']);
       fetchAllData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to reactivate rule');

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useInvalidateLmsQueries } from '../../hooks/useLmsQueries';
 import { getCategories, createCategory, updateCategory, deleteCategory } from '../../services/api';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -8,6 +9,7 @@ import { FolderKanban, Plus, Edit2, Trash2, Check } from 'lucide-react';
 
 export const CategoriesManager = () => {
   const { addToast } = useNotification();
+  const invalidateQueries = useInvalidateLmsQueries();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -66,6 +68,7 @@ export const CategoriesManager = () => {
           fetchCats();
         }
         addToast('success', 'Category updated successfully');
+        invalidateQueries(['categories', 'admin-dashboard']);
       } else {
         const res = await createCategory({ name, description });
         const created = res.data?.data?.category;
@@ -80,6 +83,7 @@ export const CategoriesManager = () => {
           fetchCats();
         }
         addToast('success', 'Category created successfully');
+        invalidateQueries(['categories', 'admin-dashboard']);
       }
       setShowModal(false);
     } catch (err) {
@@ -95,6 +99,7 @@ export const CategoriesManager = () => {
       await deleteCategory(id);
       setCategories(prev => prev.filter(c => (c._id || c.id) !== id));
       addToast('success', 'Category Deleted');
+      invalidateQueries(['categories', 'admin-dashboard']);
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to deactivate category');
     }
