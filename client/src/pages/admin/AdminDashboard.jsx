@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getAdminDashboardReports } from '../../services/api';
 import { useNotification } from '../../context/NotificationContext';
 import { EmptyState } from '../../components/common/EmptyState';
+import { formatAuditAction } from '../../utils/formatters';
 import {
   Users,
   GraduationCap,
@@ -423,7 +424,7 @@ export const AdminDashboard = () => {
                       <tr key={log._id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="px-4 py-3.5">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                            {log.action}
+                            {formatAuditAction(log.action)}
                           </span>
                         </td>
                         <td className="px-4 py-3.5 font-medium text-slate-800 max-w-md truncate">

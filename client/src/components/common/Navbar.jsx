@@ -62,13 +62,16 @@ export const Navbar = ({ onToggleMobileSidebar = () => {} }) => {
                   setShowUserDropdown(false);
                 }}
                 className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none cursor-pointer"
+                aria-label="Notifications"
               >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-emerald-600 text-white font-bold text-[10px] rounded-full flex items-center justify-center shadow-xs">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
+                <div className="relative inline-flex items-center justify-center">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-2.5 -right-2.5 min-w-[18px] h-[18px] px-1.5 bg-emerald-600 text-white font-bold text-[10px] leading-none rounded-full flex items-center justify-center border-2 border-white shadow-xs z-10 pointer-events-none">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </div>
               </button>
 
               {/* Notifications Dropdown Panel */}

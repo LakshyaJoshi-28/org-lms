@@ -96,9 +96,49 @@ export const SuperAdminDashboard = () => {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+
+    const name = (createForm.name || '').trim();
+    const code = (createForm.code || '').trim();
+    const adminName = (createForm.adminName || '').trim();
+    const adminEmail = (createForm.adminEmail || '').trim();
+    const adminPassword = (createForm.adminPassword || '');
+
+    if (!name) {
+      addToast('error', 'Organization Name is required');
+      return;
+    }
+    if (!code) {
+      addToast('error', 'Org Code is required');
+      return;
+    }
+    if (!adminName) {
+      addToast('error', 'Org Admin Full Name is required');
+      return;
+    }
+    if (!adminEmail) {
+      addToast('error', 'Admin Email Address is required');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(adminEmail)) {
+      addToast('error', 'Please enter a valid admin email address');
+      return;
+    }
+    if (!adminPassword || !adminPassword.trim()) {
+      addToast('error', 'Admin Password is required');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await api.post('/super-admin/organizations', createForm);
+      await api.post('/super-admin/organizations', {
+        ...createForm,
+        name,
+        code,
+        adminName,
+        adminEmail,
+        description: (createForm.description || '').trim()
+      });
       addToast('success', 'Organization and initial Org Admin created successfully!');
       setShowCreateModal(false);
       setCreateForm({
@@ -522,6 +562,7 @@ export const SuperAdminDashboard = () => {
         onClose={() => setShowCreateModal(false)}
         title="Provision New Organization"
         maxWidth="max-w-xl"
+        closeOnBackdropClick={false}
       >
         <form onSubmit={handleCreateSubmit} className="space-y-5">
           <div className="space-y-4">
@@ -552,7 +593,7 @@ export const SuperAdminDashboard = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Org Code (Optional)
+                  Org Code *
                 </label>
                 <div className="relative">
                   <Hash className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
@@ -560,6 +601,7 @@ export const SuperAdminDashboard = () => {
                     type="text"
                     value={createForm.code}
                     onChange={(e) => setCreateForm({ ...createForm, code: e.target.value })}
+                    required
                     placeholder="ACME-101"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-mono uppercase tracking-wider focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                   />

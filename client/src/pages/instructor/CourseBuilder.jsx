@@ -544,9 +544,9 @@ export const CourseBuilder = () => {
           <button
             onClick={() => handleFinalSubmit('draft')}
             disabled={submitting}
-            className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-all cursor-pointer disabled:opacity-50"
           >
-            Save Draft
+            {submitting ? 'Saving...' : 'Save Draft'}
           </button>
         </div>
       </div>
@@ -1285,25 +1285,14 @@ export const CourseBuilder = () => {
               Next Step <ChevronRight className="w-4 h-4 ml-1" />
             </button>
           ) : (
-            <>
-              <button
-                onClick={() => handleFinalSubmit('draft')}
-                disabled={submitting}
-                className="inline-flex items-center px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold cursor-pointer transition-colors"
-              >
-                <Save className="w-4 h-4 mr-1.5" />
-                {submitting ? 'Saving...' : 'Save as Draft'}
-              </button>
-
-              <button
-                onClick={() => handleFinalSubmit('published')}
-                disabled={submitting}
-                className="inline-flex items-center px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors"
-              >
-                <Send className="w-4 h-4 mr-1.5" />
-                {submitting ? 'Saving Changes...' : (isEditMode ? 'Save Changes' : 'Publish Training')}
-              </button>
-            </>
+            <button
+              onClick={() => handleFinalSubmit('published')}
+              disabled={submitting}
+              className="inline-flex items-center px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs cursor-pointer transition-colors disabled:opacity-50"
+            >
+              <Send className="w-4 h-4 mr-1.5" />
+              {submitting ? 'Saving Changes...' : (isEditMode ? 'Save Changes' : 'Publish Training')}
+            </button>
           )}
         </div>
       </div>

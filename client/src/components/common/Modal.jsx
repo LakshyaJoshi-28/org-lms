@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 
-export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' }) => {
+export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl', closeOnBackdropClick = true }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -32,7 +32,11 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' 
   return ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-xs animate-fade-in"
-      onClick={onClose}
+      onClick={() => {
+        if (closeOnBackdropClick) {
+          onClose();
+        }
+      }}
     >
       <div
         className={`w-full ${maxWidth} bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden transform transition-all animate-fade-in my-auto max-h-[85vh] flex flex-col`}

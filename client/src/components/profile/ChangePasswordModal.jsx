@@ -50,7 +50,7 @@ export const ChangePasswordModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Change Password" maxWidth="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Change Password" maxWidth="max-w-md" closeOnBackdropClick={false}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">Current Password</label>

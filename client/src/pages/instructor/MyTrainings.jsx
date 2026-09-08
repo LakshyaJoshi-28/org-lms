@@ -4,7 +4,7 @@ import { getTrainings, updateTraining, deleteTraining } from '../../services/api
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useNotification } from '../../context/NotificationContext';
-import { BookOpen, Plus, Edit3, Trash2, Layers, CheckCircle2, FileCode } from 'lucide-react';
+import { BookOpen, Plus, Edit3, Trash2, Layers, CheckCircle2, FileCode, RefreshCw } from 'lucide-react';
 
 export const MyTrainings = () => {
   const navigate = useNavigate();
@@ -12,6 +12,7 @@ export const MyTrainings = () => {
 
   const [trainings, setTrainings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processingId, setProcessingId] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -30,24 +31,39 @@ export const MyTrainings = () => {
   }, []);
 
   const handleTogglePublish = async (t) => {
-    const newStatus = t.status === 'published' ? 'draft' : 'published';
+    if (!t || processingId === t._id) return;
+    const isCurrentlyPublished = t.status === 'published' || t.isPublished;
+    const newStatus = isCurrentlyPublished ? 'draft' : 'published';
+    const newIsPublished = newStatus === 'published';
+    setProcessingId(t._id);
     try {
-      await updateTraining(t._id, { status: newStatus });
+      const res = await updateTraining(t._id, { status: newStatus, isPublished: newIsPublished });
+      const updated = res.data?.data?.training;
+      setTrainings(prev => prev.map(item =>
+        item._id === t._id
+          ? (updated ? { ...item, ...updated } : { ...item, status: newStatus, isPublished: newIsPublished })
+          : item
+      ));
       addToast('success', `Course status changed to ${newStatus}`);
-      fetchData();
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to update status');
+    } finally {
+      setProcessingId(null);
     }
   };
 
   const handleDelete = async (id) => {
+    if (processingId === id) return;
     if (!window.confirm('Are you sure you want to delete this training course?')) return;
+    setProcessingId(id);
     try {
       await deleteTraining(id);
       addToast('success', 'Training course deleted');
-      fetchData();
+      setTrainings(prev => prev.filter(item => item._id !== id));
     } catch (err) {
       addToast('error', err.response?.data?.message || 'Failed to delete training');
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -100,9 +116,9 @@ export const MyTrainings = () => {
                   )}
 
                   <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                    t.status === 'published' ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
+                    (t.status === 'published' || t.isPublished) ? 'bg-emerald-600 text-white' : 'bg-amber-600 text-white'
                   }`}>
-                    {t.status}
+                    {t.status || (t.isPublished ? 'published' : 'draft')}
                   </span>
 
                   {t.isMandatory && (
@@ -142,12 +158,17 @@ export const MyTrainings = () => {
                 <div className="flex items-center space-x-1">
                   <button
                     onClick={() => handleTogglePublish(t)}
-                    title={t.status === 'published' ? 'Unpublish to Draft' : 'Publish Course'}
-                    className={`p-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
-                      t.status === 'published' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-amber-600 hover:bg-amber-50'
+                    disabled={processingId === t._id}
+                    title={(t.status === 'published' || t.isPublished) ? 'Unpublish to Draft' : 'Publish Course'}
+                    className={`p-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors disabled:opacity-50 ${
+                      (t.status === 'published' || t.isPublished) ? 'text-emerald-600 hover:bg-emerald-50' : 'text-amber-600 hover:bg-amber-50'
                     }`}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
+                    {processingId === t._id ? (
+                      <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
                   </button>
                   <button
                     onClick={() => navigate(`/instructor/course-builder/${t._id}`)}
@@ -157,7 +178,8 @@ export const MyTrainings = () => {
                   </button>
                   <button
                     onClick={() => handleDelete(t._id)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer"
+                    disabled={processingId === t._id}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 cursor-pointer disabled:opacity-50"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

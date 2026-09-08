@@ -47,6 +47,10 @@ export const formatAuditAction = (action) => {
   const raw = String(action).trim();
 
   const actionMap = {
+    CHANGE_PASSWORD: 'Change Password',
+    CREATE_USER: 'Create User',
+    UPDATE_USER: 'Update User',
+    DELETE_USER: 'Delete User',
     REACTIVATE_AUTO_ASSIGNMENT_RULE: 'Reactivate Auto-Assignment Rule',
     DEACTIVATE_AUTO_ASSIGNMENT_RULE: 'Deactivate Auto-Assignment Rule',
     CREATE_AUTO_ASSIGNMENT_RULE: 'Create Auto-Assignment Rule',
@@ -79,6 +83,7 @@ export const formatAuditAction = (action) => {
   return raw
     .toLowerCase()
     .split('_')
+    .filter(Boolean)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 };

@@ -1,5 +1,7 @@
 const { prisma, withId } = require('../config/prismaClient');
 const { updateOverallProgress } = require('../services/progressService');
+const { logAuditAction } = require('../services/auditLogService');
+const { sendAdminNotification } = require('../services/notificationService');
 const ApiError = require('../utils/apiError');
 const ApiResponse = require('../utils/apiResponse');
 
@@ -360,7 +362,8 @@ const updateQuiz = async (req, res, next) => {
  */
 const submitQuiz = async (req, res, next) => {
   try {
-    const { userAnswers, trainingAssignmentId, attemptId } = req.body;
+    const userAnswers = req.body.userAnswers || req.body.answers;
+    const { trainingAssignmentId, attemptId } = req.body;
     const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
     const userId = String(req.user.id || req.user._id);
     const paramId = String(req.params.id);
@@ -696,11 +699,62 @@ const getQuizAttempts = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Log a security violation event (Focus Mode)
+ * @route   POST /api/quizzes/:id/security-event
+ * @access  Private (Employee)
+ */
+const logSecurityEvent = async (req, res, next) => {
+  try {
+    const { eventType, details } = req.body;
+    const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
+    const userId = String(req.user.id || req.user._id);
+    const quizId = String(req.params.id);
+
+    const quiz = await prisma.quiz.findFirst({
+      where: { id: quizId, organizationId: orgId }
+    });
+
+    if (!quiz) {
+      throw new ApiError(404, 'Quiz not found');
+    }
+
+    const employeeName = req.user.name || 'Employee';
+    const title = 'Quiz Security Alert';
+    const violationType = eventType === 'fullscreen_exit' ? 'exited Focus Mode/fullscreen during the quiz' : 'switched away from the quiz';
+    const violationMessage = `Quiz Security Alert — ${employeeName} ${violationType}.`;
+
+    // 1. Notify Org Admin
+    await sendAdminNotification(
+      orgId,
+      'security_alert',
+      title,
+      violationMessage,
+      { entityType: 'Quiz', entityId: quiz.id },
+      { preventDuplicates: false }
+    );
+
+    // 2. Audit Log
+    await logAuditAction(
+      req.user,
+      'quiz_security_violation',
+      'Quiz',
+      quiz.id,
+      `Event: ${eventType}. Details: ${details || violationMessage}`
+    );
+
+    res.status(200).json(new ApiResponse(200, null, 'Security event logged successfully'));
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createQuiz,
   getQuizById,
   startQuiz,
   updateQuiz,
   submitQuiz,
-  getQuizAttempts
+  getQuizAttempts,
+  logSecurityEvent
 };

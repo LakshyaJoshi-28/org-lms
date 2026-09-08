@@ -6,7 +6,8 @@ const {
   startQuiz,
   updateQuiz,
   submitQuiz,
-  getQuizAttempts
+  getQuizAttempts,
+  logSecurityEvent
 } = require('../controllers/quizController');
 const { protect } = require('../middleware/authMiddleware');
 const { authorizeRoles } = require('../middleware/roleMiddleware');
@@ -20,6 +21,7 @@ router.route('/:id')
 
 router.post('/:id/start', authorizeRoles('Employee'), startQuiz);
 router.post('/:id/submit', authorizeRoles('Employee'), submitQuiz);
+router.post('/:id/security-event', authorizeRoles('Employee'), logSecurityEvent);
 router.get('/:id/attempts', getQuizAttempts);
 
 module.exports = router;

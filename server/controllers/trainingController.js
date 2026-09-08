@@ -820,9 +820,14 @@ const updateTraining = async (req, res, next) => {
     if (req.user.role === 'Admin' && isMandatory !== undefined) updateData.isMandatory = Boolean(isMandatory);
     if (isPublished !== undefined) {
       updateData.isPublished = Boolean(isPublished);
-      updateData.status = updateData.isPublished ? 'published' : 'draft';
+      if (!status) updateData.status = updateData.isPublished ? 'published' : 'draft';
     }
-    if (status) updateData.status = status;
+    if (status) {
+      updateData.status = status;
+      if (status === 'published' || status === 'draft') {
+        updateData.isPublished = status === 'published';
+      }
+    }
 
     await prisma.training.update({
       where: { id: existing.id },
@@ -844,7 +849,10 @@ const updateTraining = async (req, res, next) => {
       );
     }
 
-    if (updateData.isPublished) {
+    const isNowPublished = updateData.isPublished === true || updateData.status === 'published';
+    const wasPublished = existing.isPublished || existing.status === 'published';
+
+    if (isNowPublished && !wasPublished) {
       await sendAdminNotification(
         orgId,
         'TRAINING_PUBLISHED',

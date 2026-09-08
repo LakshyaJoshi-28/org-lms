@@ -9,13 +9,18 @@ export const NotificationProvider = ({ children }) => {
   const { user } = useAuth();
   const { socket } = useSocket();
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [serverUnreadCount, setServerUnreadCount] = useState(0);
   const [toasts, setToasts] = useState([]);
+
+  // Compute unreadCount dynamically from notifications state to prevent count inflation or stale drift
+  const unreadCount = (notifications.length >= 50 && serverUnreadCount > notifications.filter(n => !n.isRead).length)
+    ? serverUnreadCount
+    : notifications.filter(n => !n.isRead).length;
 
   const loadNotifications = async () => {
     if (!user || user.role === 'SuperAdmin') {
       setNotifications([]);
-      setUnreadCount(0);
+      setServerUnreadCount(0);
       return;
     }
     try {
@@ -23,7 +28,7 @@ export const NotificationProvider = ({ children }) => {
       if (res.data && res.data.data) {
         const notifsList = res.data.data.notifications || [];
         setNotifications(notifsList);
-        setUnreadCount(res.data.data.unreadCount || 0);
+        setServerUnreadCount(res.data.data.unreadCount || 0);
       }
     } catch (err) {
       console.error(err);
@@ -35,7 +40,7 @@ export const NotificationProvider = ({ children }) => {
       loadNotifications();
     } else {
       setNotifications([]);
-      setUnreadCount(0);
+      setServerUnreadCount(0);
     }
   }, [user?.id, user?.role]);
 
@@ -51,11 +56,9 @@ export const NotificationProvider = ({ children }) => {
         if (notifId && prev.some(n => (n.id === notifId || n._id === notifId))) {
           return prev;
         }
-
-        // Increment unread count and add to Notification Center list without triggering toast popups
-        setUnreadCount(count => count + 1);
         return [newNotif, ...prev];
       });
+      setServerUnreadCount(count => count + 1);
     };
 
     socket.on('new_notification', handleNewNotification);
@@ -95,7 +98,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       await markNotificationRead(id);
       setNotifications(prev => prev.map(n => (n.id === id || n._id === id) ? { ...n, isRead: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setServerUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
       console.error(err);
     }
@@ -105,7 +108,7 @@ export const NotificationProvider = ({ children }) => {
     try {
       await markAllNotificationsRead();
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-      setUnreadCount(0);
+      setServerUnreadCount(0);
     } catch (err) {
       console.error(err);
     }

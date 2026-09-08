@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { FocusProvider } from './context/FocusContext';
 import { AppRoutes } from './routes/AppRoutes';
 
 const queryClient = new QueryClient({
@@ -26,7 +27,9 @@ function App() {
           <AuthProvider>
             <SocketProvider>
               <NotificationProvider>
-                <AppRoutes />
+                <FocusProvider>
+                  <AppRoutes />
+                </FocusProvider>
               </NotificationProvider>
             </SocketProvider>
           </AuthProvider>

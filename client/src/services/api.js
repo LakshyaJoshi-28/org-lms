@@ -151,6 +151,7 @@ export const getQuizById = (id) => api.get(`/quizzes/${id}`);
 export const startQuiz = (id, data) => api.post(`/quizzes/${id}/start`, data);
 export const updateQuiz = (id, data) => api.put(`/quizzes/${id}`, data);
 export const submitQuiz = (id, data) => api.post(`/quizzes/${id}/submit`, data);
+export const reportQuizSecurityEvent = (id, data) => api.post(`/quizzes/${id}/security-event`, data);
 export const getQuizAttempts = (id) => api.get(`/quizzes/${id}/attempts`);
 
 // Assignment APIs

@@ -45,9 +45,13 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
 
     training.sections?.forEach(sec => {
       sec.subSections?.forEach(sub => {
-        totalSubSections++;
-        if (sub.quizId) requiredQuizIds.add(String(sub.quizId));
-        if (sub.assignmentId) requiredAssignmentIds.add(String(sub.assignmentId));
+        if (sub.quizId || sub.hasQuiz) {
+          if (sub.quizId) requiredQuizIds.add(String(sub.quizId));
+        } else if (sub.assignmentId || sub.hasAssignment) {
+          if (sub.assignmentId) requiredAssignmentIds.add(String(sub.assignmentId));
+        } else {
+          totalSubSections++;
+        }
       });
     });
 
@@ -71,7 +75,18 @@ const updateOverallProgress = async (trainingAssignmentId, employeeId) => {
       });
     }
 
-    const completedSubSectionCount = progress.completedSubSectionIds?.length || 0;
+    const completedSubSectionSet = new Set((progress.completedSubSectionIds || []).map(id => String(id)));
+    let completedSubSectionCount = 0;
+
+    training.sections?.forEach(sec => {
+      sec.subSections?.forEach(sub => {
+        if (!sub.quizId && !sub.hasQuiz && !sub.assignmentId && !sub.hasAssignment) {
+          if (completedSubSectionSet.has(String(sub.id))) {
+            completedSubSectionCount++;
+          }
+        }
+      });
+    });
 
     // Count passed quizzes
     let passedQuizCount = 0;

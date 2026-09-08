@@ -201,6 +201,40 @@ const getProgressByAssignment = async (req, res, next) => {
       throw new ApiError(404, 'Training assignment not found');
     }
 
+    await updateOverallProgress(assignmentRecord.id, userId).catch(err => console.error('Error updating overall progress in getProgressByAssignment:', err));
+
+    const updatedAssignmentRecord = await prisma.trainingAssignment.findUnique({
+      where: { id: assignmentRecord.id },
+      include: {
+        training: {
+          include: {
+            category: { select: { id: true, name: true } },
+            sections: {
+              orderBy: { order: 'asc' },
+              include: {
+                subSections: {
+                  orderBy: { order: 'asc' },
+                  include: {
+                    pdfResources: true,
+                    assignment: true
+                  }
+                }
+              }
+            },
+            quizzes: {
+              include: { questions: true }
+            },
+            assignments: true
+          }
+        },
+        employee: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    if (updatedAssignmentRecord) {
+      assignmentRecord = updatedAssignmentRecord;
+    }
+
     const assignment = withId(assignmentRecord);
     if (assignment.training) {
       assignment.trainingId = assignment.training;
