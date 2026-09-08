@@ -1362,7 +1362,7 @@ export const CourseBuilder = () => {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Lecture Video *</label>
-            <div className="flex items-center space-x-3 mb-2">
+            <div className="flex items-center space-x-3">
               <label className="cursor-pointer inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800">
                 <Upload className="w-4 h-4 mr-1.5 text-emerald-400" />
                 {uploadingVideo ? 'Uploading Video...' : 'Upload Video File'}
@@ -1372,14 +1372,6 @@ export const CourseBuilder = () => {
                 <span className="text-xs text-emerald-600 font-mono font-bold truncate max-w-xs">Video Attached</span>
               )}
             </div>
-
-            <input
-              type="text"
-              value={lectureVideoUrl}
-              onChange={(e) => setLectureVideoUrl(e.target.value)}
-              placeholder="Or paste video URL directly (e.g. Cloudinary, MP4 URL)..."
-              className="w-full px-4 py-2 rounded-xl border border-slate-300 text-xs font-mono text-slate-900 outline-none focus:border-emerald-600"
-            />
           </div>
 
           <div className="pt-4 border-t border-slate-200 flex justify-end space-x-3">
