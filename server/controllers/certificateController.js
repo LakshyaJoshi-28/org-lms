@@ -199,7 +199,21 @@ const getTemplateSettings = async (req, res, next) => {
 const updateTemplateSettings = async (req, res, next) => {
   try {
     const orgId = String(req.user.organizationId);
-    const { title, primaryColor, accentColor, fontFamily, borderStyle, layoutStyle } = req.body;
+    const {
+      title,
+      primaryColor,
+      accentColor,
+      fontFamily,
+      borderStyle,
+      layoutStyle,
+      logoUrl,
+      logoPublicId,
+      logoPosition,
+      logoWidth,
+      signatureUrl,
+      signaturePublicId,
+      signatureName
+    } = req.body;
 
     let template = await prisma.certificateTemplate.findUnique({
       where: { organizationId: orgId }
@@ -212,6 +226,14 @@ const updateTemplateSettings = async (req, res, next) => {
     if (fontFamily !== undefined) updateData.fontFamily = String(fontFamily).trim();
     if (borderStyle !== undefined) updateData.borderStyle = String(borderStyle).trim();
     if (layoutStyle !== undefined) updateData.layoutStyle = String(layoutStyle).trim();
+
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl ? String(logoUrl).trim() : null;
+    if (logoPublicId !== undefined) updateData.logoPublicId = logoPublicId ? String(logoPublicId).trim() : null;
+    if (logoPosition !== undefined) updateData.logoPosition = String(logoPosition).trim();
+    if (logoWidth !== undefined) updateData.logoWidth = Number(logoWidth) || 130;
+    if (signatureUrl !== undefined) updateData.signatureUrl = signatureUrl ? String(signatureUrl).trim() : null;
+    if (signaturePublicId !== undefined) updateData.signaturePublicId = signaturePublicId ? String(signaturePublicId).trim() : null;
+    if (signatureName !== undefined) updateData.signatureName = String(signatureName).trim();
 
     if (!template) {
       template = await prisma.certificateTemplate.create({

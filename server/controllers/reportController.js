@@ -453,6 +453,8 @@ const getFullOrgReport = async (req, res, next) => {
   }
 };
 
+const { getOrgLicenseStats } = require('../services/licenseService');
+
 /**
  * @desc    Organization Admin Dashboard Analytics & Department Performance
  * @route   GET /api/reports/admin-dashboard
@@ -468,14 +470,16 @@ const getAdminDashboardReports = async (req, res, next) => {
       departments,
       allEmployees,
       allAssignments,
-      logsList
+      logsList,
+      licenseStats
     ] = await Promise.all([
       prisma.user.count({ where: { organizationId: orgId, role: 'Instructor', status: 'active' } }),
       prisma.training.count({ where: { organizationId: orgId, isPublished: true, status: 'published' } }),
       prisma.department.findMany({ where: { organizationId: orgId, status: 'active' }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
       prisma.user.findMany({ where: { organizationId: orgId, role: 'Employee', status: 'active' }, select: { id: true, departmentId: true } }),
       prisma.trainingAssignment.findMany({ where: { organizationId: orgId }, select: { id: true, employeeId: true, status: true, progressPercentage: true } }),
-      prisma.auditLog.findMany({ where: { organizationId: orgId }, select: { id: true, action: true, details: true, userName: true, userRole: true, timestamp: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 10 })
+      prisma.auditLog.findMany({ where: { organizationId: orgId }, select: { id: true, action: true, details: true, userName: true, userRole: true, timestamp: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 10 }),
+      getOrgLicenseStats(orgId)
     ]);
 
     const totalEmployees = allEmployees.length;
@@ -549,8 +553,12 @@ const getAdminDashboardReports = async (req, res, next) => {
             completedTrainings: completedAssignmentsCount,
             inProgressTrainings: inProgressAssignmentsCount,
             overdueTrainings: overdueAssignmentsCount,
-            overallCompletionRate: totalAssignmentsCount > 0 ? `${Math.round((completedAssignmentsCount / totalAssignmentsCount) * 100)}%` : '0%'
+            overallCompletionRate: totalAssignmentsCount > 0 ? `${Math.round((completedAssignmentsCount / totalAssignmentsCount) * 100)}%` : '0%',
+            totalLicenses: licenseStats.totalLicenses,
+            usedLicenses: licenseStats.usedLicenses,
+            remainingLicenses: licenseStats.remainingLicenses
           },
+          licenseStats,
           departmentPerformance,
           departmentCompletion: departmentPerformance,
           recentLogs

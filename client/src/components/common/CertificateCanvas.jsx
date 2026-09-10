@@ -150,7 +150,7 @@ export const CertificateCanvas = ({
 }) => {
   const snapshot = certificate?.templateSnapshot || templateSettings || {};
 
-  const orgName = certificate?.organization?.name || snapshot.organizationName || sampleData?.organizationName || 'Enterprise Organization';
+  const orgName = certificate?.organization?.name || snapshot.organizationName || templateSettings?.organization?.name || sampleData?.organizationName || 'Enterprise Organization';
   const empName = certificate?.employee?.name || sampleData?.employeeName || 'John Doe';
   const trainingTitle = certificate?.training?.title || sampleData?.trainingTitle || 'Advanced Corporate Compliance & Security';
   const certId = certificate?.certificateId || sampleData?.certificateId || 'CERT-2026-SAMPLE';
@@ -162,12 +162,31 @@ export const CertificateCanvas = ({
   const selectedFont = snapshot.fontFamily || 'Inter';
   const borderStyle = snapshot.borderStyle || 'classic_gold';
 
+  const logoUrl = snapshot.logoUrl || sampleData?.logoUrl || null;
+  const logoPosition = (snapshot.logoPosition || sampleData?.logoPosition || 'center').toLowerCase();
+  const logoWidth = Number(snapshot.logoWidth || sampleData?.logoWidth || 130);
+  const logoHeight = Math.round(logoWidth * 0.45);
+
+  const signatureUrl = snapshot.signatureUrl || sampleData?.signatureUrl || null;
+  const signatureName = snapshot.signatureName !== undefined ? snapshot.signatureName : (sampleData?.signatureName || '');
+
   const fontFamily = `${selectedFont}, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
   const formattedDate = formatDate(dateVal);
 
   const titleLines = formatTrainingTitleLines(trainingTitle);
   const empNameFontSize = getEmployeeNameFontSize(empName);
   const orgNameFontSize = getOrgNameFontSize(orgName);
+
+  // Logo X/Y coordinates
+  let logoX = 600 - logoWidth / 2;
+  let logoY = 46;
+  if (logoPosition === 'left') {
+    logoX = 70;
+    logoY = 55;
+  } else if (logoPosition === 'right') {
+    logoX = 1130 - logoWidth;
+    logoY = 55;
+  }
 
   return (
     <div
@@ -241,11 +260,77 @@ export const CertificateCanvas = ({
           </g>
         )}
 
-        {/* HEADER: Organization Name */}
+        {borderStyle === 'single_classic' && (
+          <g>
+            <rect x="30" y="30" width="1140" height="790" fill="none" stroke={primaryColor} strokeWidth="4" rx="4" />
+            <rect x="40" y="40" width="1120" height="770" fill="none" stroke={accentColor} strokeWidth="1.5" rx="2" />
+          </g>
+        )}
+
+        {borderStyle === 'double_classic' && (
+          <g>
+            <rect x="25" y="25" width="1150" height="800" fill="none" stroke={primaryColor} strokeWidth="5" />
+            <rect x="35" y="35" width="1130" height="780" fill="none" stroke={accentColor} strokeWidth="2" />
+            <rect x="42" y="42" width="1116" height="766" fill="none" stroke={primaryColor} strokeWidth="1" />
+          </g>
+        )}
+
+        {borderStyle === 'rounded_border' && (
+          <g>
+            <rect x="25" y="25" width="1150" height="800" fill="none" stroke={primaryColor} strokeWidth="6" rx="24" />
+          </g>
+        )}
+
+        {borderStyle === 'elegant_inner' && (
+          <g>
+            <rect x="20" y="20" width="1160" height="810" fill="none" stroke={primaryColor} strokeWidth="10" rx="8" />
+            <rect x="38" y="38" width="1124" height="774" fill="none" stroke={accentColor} strokeWidth="2" rx="4" />
+          </g>
+        )}
+
+        {borderStyle === 'minimal_border' && (
+          <g>
+            <rect x="35" y="35" width="1130" height="780" fill="none" stroke={primaryColor} strokeWidth="2" rx="2" />
+          </g>
+        )}
+
+        {borderStyle === 'decorative_corner' && (
+          <g>
+            <rect x="30" y="30" width="1140" height="790" fill="none" stroke={primaryColor} strokeWidth="3" rx="6" />
+            <path d="M 20 50 L 20 20 L 50 20" fill="none" stroke={accentColor} strokeWidth="4" />
+            <path d="M 1180 50 L 1180 20 L 1150 20" fill="none" stroke={accentColor} strokeWidth="4" />
+            <path d="M 20 800 L 20 830 L 50 830" fill="none" stroke={accentColor} strokeWidth="4" />
+            <path d="M 1180 800 L 1180 830 L 1150 830" fill="none" stroke={accentColor} strokeWidth="4" />
+          </g>
+        )}
+
+        {borderStyle === 'formal_academic' && (
+          <g>
+            <rect x="25" y="25" width="1150" height="800" fill="none" stroke={primaryColor} strokeWidth="7" />
+            <rect x="36" y="36" width="1128" height="778" fill="none" stroke={accentColor} strokeWidth="3" />
+            <rect x="20" y="20" width="20" height="20" fill={accentColor} />
+            <rect x="1160" y="20" width="20" height="20" fill={accentColor} />
+            <rect x="20" y="810" width="20" height="20" fill={accentColor} />
+            <rect x="1160" y="810" width="20" height="20" fill={accentColor} />
+          </g>
+        )}
+
+        {/* HEADER: Organization Logo & Name */}
         <g>
+          {logoUrl && (
+            <image
+              href={logoUrl}
+              x={logoX}
+              y={logoY}
+              width={logoWidth}
+              height={logoHeight}
+              preserveAspectRatio="xMidYMid meet"
+            />
+          )}
+
           <text
             x="600"
-            y="130"
+            y={logoUrl && logoPosition === 'center' ? Math.max(130, logoY + logoHeight + 20) : 130}
             textAnchor="middle"
             fill={primaryColor}
             fontSize={orgNameFontSize}
@@ -330,23 +415,23 @@ export const CertificateCanvas = ({
         </g>
 
         {/* BADGE / EMBLEM CENTERING */}
-        <g transform="translate(560, 580)">
-          <circle cx="40" cy="40" r="30" fill={accentColor} opacity="0.15" />
-          <circle cx="40" cy="40" r="24" fill="none" stroke={accentColor} strokeWidth="2" />
+        <g transform="translate(560, 575)">
+          <circle cx="40" cy="40" r="28" fill={accentColor} opacity="0.15" />
+          <circle cx="40" cy="40" r="22" fill="none" stroke={accentColor} strokeWidth="2" />
           <path d="M 32 40 L 38 46 L 48 32" fill="none" stroke={accentColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         </g>
 
-        {/* FOOTER SECTION: Date, Badge text, Certificate ID */}
+        {/* FOOTER SECTION: Date, Badge text, Signature */}
         <g transform="translate(0, 10)">
-          {/* Left: Date */}
-          <g transform="translate(100, 720)">
+          {/* Left Column: Date */}
+          <g transform="translate(100, 680)">
             <text x="0" y="0" fill="#64748B" fontSize="13" fontWeight="600" letterSpacing="1">COMPLETED DATE</text>
             <text x="0" y="24" fill="#0F172A" fontSize="17" fontWeight="800">{formattedDate}</text>
             <line x1="0" y1="34" x2="220" y2="34" stroke="#CBD5E1" strokeWidth="1" />
           </g>
 
-          {/* Center: Verification Seal */}
-          <g transform="translate(600, 735)" textAnchor="middle">
+          {/* Center Column: Verification Seal */}
+          <g transform="translate(600, 695)" textAnchor="middle">
             <text x="0" y="0" textAnchor="middle" fill="#64748B" fontSize="12" fontWeight="700" letterSpacing="2">
               OFFICIAL LMS CERTIFICATION
             </text>
@@ -355,11 +440,31 @@ export const CertificateCanvas = ({
             </text>
           </g>
 
-          {/* Right: Certificate ID */}
-          <g transform="translate(880, 720)">
-            <text x="0" y="0" fill="#64748B" fontSize="13" fontWeight="600" letterSpacing="1">CERTIFICATE ID</text>
-            <text x="0" y="24" fill={primaryColor} fontSize="17" fontWeight="800" fontFamily="monospace">{certId}</text>
+          {/* Right Column: Signature Block */}
+          <g transform="translate(880, 680)">
+            {signatureUrl && (
+              <image
+                href={signatureUrl}
+                x="20"
+                y="-48"
+                width="180"
+                height="45"
+                preserveAspectRatio="xMidYMid meet"
+              />
+            )}
             <line x1="0" y1="34" x2="220" y2="34" stroke="#CBD5E1" strokeWidth="1" />
+            {signatureName && (
+              <text x="110" y="54" textAnchor="middle" fill="#0F172A" fontSize="15" fontWeight="700">
+                {signatureName}
+              </text>
+            )}
+          </g>
+
+          {/* Dedicated Bottom-Center: Certificate ID */}
+          <g transform="translate(600, 778)" textAnchor="middle">
+            <text x="0" y="0" textAnchor="middle" fill="#64748B" fontSize="12" fontWeight="600" letterSpacing="1">
+              CERTIFICATE ID: <tspan fill={primaryColor} fontSize="13" fontWeight="800" fontFamily="monospace">{certId}</tspan>
+            </text>
           </g>
         </g>
       </svg>

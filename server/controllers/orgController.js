@@ -200,6 +200,8 @@ const deleteDepartment = async (req, res, next) => {
   }
 };
 
+const { checkAndReserveLicense } = require('../services/licenseService');
+
 /**
  * @desc    Create Instructor (Only Admin can create)
  * @route   POST /api/org/instructors
@@ -234,20 +236,27 @@ const createInstructor = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const profilePicture = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name.trim())}`;
 
-    const instructor = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        password: hashedPassword,
-        role: 'Instructor',
-        organizationId: orgId,
-        departmentId: departmentId ? String(departmentId) : null,
-        isProfileComplete: true,
-        profilePicture
-      },
-      include: {
-        department: { select: { id: true, name: true } }
+    const instructor = await prisma.$transaction(async (tx) => {
+      const licenseReservation = await checkAndReserveLicense(orgId, tx);
+      if (!licenseReservation.allowed) {
+        throw new ApiError(400, 'All available licenses have been used. Please contact your administrator to add more licenses.');
       }
+
+      return await tx.user.create({
+        data: {
+          name: name.trim(),
+          email: email.toLowerCase().trim(),
+          password: hashedPassword,
+          role: 'Instructor',
+          organizationId: orgId,
+          departmentId: departmentId ? String(departmentId) : null,
+          isProfileComplete: true,
+          profilePicture
+        },
+        include: {
+          department: { select: { id: true, name: true } }
+        }
+      });
     });
 
     const { sendAdminNotification } = require('../services/notificationService');
@@ -331,16 +340,23 @@ const createAdmin = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const profilePicture = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name.trim())}`;
 
-    const admin = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        password: hashedPassword,
-        role: 'Admin',
-        organizationId: orgId,
-        isProfileComplete: true,
-        profilePicture
+    const admin = await prisma.$transaction(async (tx) => {
+      const licenseReservation = await checkAndReserveLicense(orgId, tx);
+      if (!licenseReservation.allowed) {
+        throw new ApiError(400, 'All available licenses have been used. Please contact your administrator to add more licenses.');
       }
+
+      return await tx.user.create({
+        data: {
+          name: name.trim(),
+          email: email.toLowerCase().trim(),
+          password: hashedPassword,
+          role: 'Admin',
+          organizationId: orgId,
+          isProfileComplete: true,
+          profilePicture
+        }
+      });
     });
 
     logAuditAction(req.user, 'CREATE_ADMIN', 'User', admin.id, `Created admin ${admin.name} (${admin.email})`).catch(err => console.error('Audit log error in createAdmin:', err));
@@ -353,6 +369,8 @@ const createAdmin = async (req, res, next) => {
   }
 };
 
+const { getOrgLicenseStats } = require('../services/licenseService');
+
 /**
  * @desc    Get all Employees
  * @route   GET /api/org/employees
@@ -362,31 +380,34 @@ const getEmployees = async (req, res, next) => {
   try {
     const orgId = String(req.user.organizationId.id || req.user.organizationId._id || req.user.organizationId);
 
-    const employees = await prisma.user.findMany({
-      where: {
-        organizationId: orgId,
-        role: 'Employee'
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true,
-        jobRole: true,
-        isProfileComplete: true,
-        profilePicture: true,
-        departmentId: true,
-        organizationId: true,
-        createdAt: true,
-        department: { select: { id: true, name: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    const [employees, licenseStats] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          organizationId: orgId,
+          role: 'Employee'
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          status: true,
+          jobRole: true,
+          isProfileComplete: true,
+          profilePicture: true,
+          departmentId: true,
+          organizationId: true,
+          createdAt: true,
+          department: { select: { id: true, name: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      getOrgLicenseStats(orgId)
+    ]);
 
     const formattedEmployees = employees.map(formatUserResponse);
 
-    res.status(200).json(new ApiResponse(200, { employees: formattedEmployees }, 'Employees retrieved successfully'));
+    res.status(200).json(new ApiResponse(200, { employees: formattedEmployees, licenseStats }, 'Employees retrieved successfully'));
   } catch (error) {
     next(error);
   }

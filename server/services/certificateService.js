@@ -8,7 +8,14 @@ const DEFAULT_TEMPLATE = {
   accentColor: '#D97706',  // Warm Gold
   fontFamily: 'Inter',
   borderStyle: 'classic_gold',
-  layoutStyle: 'centered'
+  layoutStyle: 'centered',
+  logoUrl: null,
+  logoPublicId: null,
+  logoPosition: 'center',
+  logoWidth: 130,
+  signatureUrl: null,
+  signaturePublicId: null,
+  signatureName: ''
 };
 
 /**
@@ -36,7 +43,8 @@ const generateUniqueCertificateId = async () => {
  */
 const getOrCreateTemplateSettings = async (organizationId) => {
   let template = await prisma.certificateTemplate.findUnique({
-    where: { organizationId }
+    where: { organizationId },
+    include: { organization: { select: { id: true, name: true, code: true } } }
   });
 
   if (!template) {
@@ -44,7 +52,8 @@ const getOrCreateTemplateSettings = async (organizationId) => {
       data: {
         organizationId,
         ...DEFAULT_TEMPLATE
-      }
+      },
+      include: { organization: { select: { id: true, name: true, code: true } } }
     });
   }
 
@@ -116,6 +125,13 @@ const generateCertificateForAssignment = async (trainingAssignmentId) => {
         fontFamily: template.fontFamily || DEFAULT_TEMPLATE.fontFamily,
         borderStyle: template.borderStyle || DEFAULT_TEMPLATE.borderStyle,
         layoutStyle: template.layoutStyle || DEFAULT_TEMPLATE.layoutStyle,
+        logoUrl: template.logoUrl || null,
+        logoPublicId: template.logoPublicId || null,
+        logoPosition: template.logoPosition || 'center',
+        logoWidth: template.logoWidth || 130,
+        signatureUrl: template.signatureUrl || null,
+        signaturePublicId: template.signaturePublicId || null,
+        signatureName: template.signatureName || '',
         organizationName: assignment.organization.name
       }
     },

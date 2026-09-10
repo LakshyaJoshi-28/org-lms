@@ -8,10 +8,19 @@ const ApiResponse = require('../utils/apiResponse');
 // @access  Private (SuperAdmin)
 const createOrganization = async (req, res, next) => {
   try {
-    const { name, code, description, adminName, adminEmail, adminPassword } = req.body;
+    const { name, code, description, adminName, adminEmail, adminPassword, totalLicenses } = req.body;
 
     if (!name || !adminName || !adminEmail || !adminPassword) {
       throw new ApiError(400, 'Organization name, Admin name, email, and password are required');
+    }
+
+    let totalLicensesNum = 5;
+    if (totalLicenses !== undefined && totalLicenses !== null && totalLicenses !== '') {
+      const parsed = Number(totalLicenses);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new ApiError(400, 'Total Licenses must be a valid positive integer (at least 1)');
+      }
+      totalLicensesNum = parsed;
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -39,6 +48,7 @@ const createOrganization = async (req, res, next) => {
         name: name.trim(),
         code: orgCode,
         description: description ? description.trim() : null,
+        totalLicenses: totalLicensesNum,
         status: 'ACTIVE'
       }
     });
@@ -62,7 +72,7 @@ const createOrganization = async (req, res, next) => {
         userName: req.user.name || 'System Super Admin',
         userRole: 'SuperAdmin',
         action: 'CREATE_ORGANIZATION',
-        details: `Organization "${organization.name}" (${organization.code}) created with Admin "${adminUser.email}"`
+        details: `Organization "${organization.name}" (${organization.code}) created with ${totalLicensesNum} total licenses and Admin "${adminUser.email}"`
       }
     });
 
@@ -114,10 +124,16 @@ const getAllOrganizations = async (req, res, next) => {
           code: true,
           description: true,
           status: true,
+          totalLicenses: true,
           createdAt: true,
           updatedAt: true,
+          users: {
+            where: { role: 'Admin' },
+            select: { id: true, name: true, email: true },
+            take: 1
+          },
           _count: {
-            select: { users: true, departments: true, trainings: true }
+            select: { departments: true, trainings: true }
           }
         }
       }),
@@ -133,16 +149,37 @@ const getAllOrganizations = async (req, res, next) => {
       search ? prisma.organization.count() : Promise.resolve(null)
     ]);
 
+    const orgIds = orgs.map(o => o.id);
+    const activeUserCounts = orgIds.length > 0 ? await prisma.user.groupBy({
+      by: ['organizationId'],
+      where: {
+        organizationId: { in: orgIds },
+        role: { in: ['Admin', 'Instructor', 'Employee'] },
+        status: 'active'
+      },
+      _count: { id: true }
+    }) : [];
+
+    const countMap = new Map();
+    activeUserCounts.forEach(c => countMap.set(c.organizationId, c._count.id));
+
     const globalOrgCount = search ? searchGlobalCount : totalCount;
     const dbTime = (performance.now() - dbStart).toFixed(2);
 
     const formattedOrgs = orgs.map(org => {
       const transformed = withId(org);
+      const total = typeof org.totalLicenses === 'number' && !isNaN(org.totalLicenses) ? org.totalLicenses : 5;
+      const used = countMap.get(org.id) || 0;
+      const primaryAdmin = org.users && org.users[0] ? org.users[0] : null;
       return {
         ...transformed,
-        userCount: org._count.users,
+        totalLicenses: total,
+        usedLicenses: used,
+        remainingLicenses: Math.max(0, total - used),
         departmentCount: org._count.departments,
-        trainingCount: org._count.trainings
+        trainingCount: org._count.trainings,
+        adminEmail: primaryAdmin ? primaryAdmin.email : '',
+        adminName: primaryAdmin ? primaryAdmin.name : ''
       };
     });
 
@@ -184,7 +221,7 @@ const getAllOrganizations = async (req, res, next) => {
 const updateOrganization = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, code, description } = req.body;
+    const { name, code, description, totalLicenses, adminEmail, adminName } = req.body;
 
     const existingOrg = await prisma.organization.findUnique({
       where: { id }
@@ -202,12 +239,77 @@ const updateOrganization = async (req, res, next) => {
       }
     }
 
+    let updatedTotalLicenses;
+    if (totalLicenses !== undefined && totalLicenses !== null && totalLicenses !== '') {
+      const parsed = Number(totalLicenses);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        throw new ApiError(400, 'Total Licenses must be a valid positive integer (at least 1)');
+      }
+
+      const currentlyUsedLicenses = await prisma.user.count({
+        where: {
+          organizationId: id,
+          role: { in: ['Admin', 'Instructor', 'Employee'] },
+          status: 'active'
+        }
+      });
+
+      if (parsed < currentlyUsedLicenses) {
+        throw new ApiError(400, `License limit cannot be reduced below the number of licenses currently in use. ${currentlyUsedLicenses} licenses are currently in use.`);
+      }
+
+      updatedTotalLicenses = parsed;
+    }
+
+    // Handle Organization Admin Email / Name Update
+    if (adminEmail !== undefined && adminEmail !== null && String(adminEmail).trim() !== '') {
+      const normalizedEmail = String(adminEmail).trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(normalizedEmail)) {
+        throw new ApiError(400, 'Please enter a valid email address.');
+      }
+
+      const orgAdmin = await prisma.user.findFirst({
+        where: { organizationId: id, role: 'Admin' },
+        orderBy: { createdAt: 'asc' }
+      });
+
+      if (orgAdmin) {
+        if (normalizedEmail !== orgAdmin.email) {
+          const existingUser = await prisma.user.findFirst({
+            where: {
+              email: normalizedEmail,
+              id: { not: orgAdmin.id }
+            }
+          });
+
+          if (existingUser) {
+            throw new ApiError(400, 'This email address is already in use. Please use a different email.');
+          }
+
+          await prisma.user.update({
+            where: { id: orgAdmin.id },
+            data: {
+              email: normalizedEmail,
+              ...(adminName && String(adminName).trim() !== '' && { name: String(adminName).trim() })
+            }
+          });
+        } else if (adminName && String(adminName).trim() !== '' && String(adminName).trim() !== orgAdmin.name) {
+          await prisma.user.update({
+            where: { id: orgAdmin.id },
+            data: { name: String(adminName).trim() }
+          });
+        }
+      }
+    }
+
     const updatedOrg = await prisma.organization.update({
       where: { id },
       data: {
         ...(name && { name: name.trim() }),
         ...(code && { code: code.trim().toUpperCase() }),
-        ...(description !== undefined && { description: description ? description.trim() : null })
+        ...(description !== undefined && { description: description ? description.trim() : null }),
+        ...(updatedTotalLicenses !== undefined && { totalLicenses: updatedTotalLicenses })
       }
     });
 

@@ -4,7 +4,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { EmptyState } from '../../components/common/EmptyState';
 import { Modal } from '../../components/common/Modal';
 import { useNotification } from '../../context/NotificationContext';
-import { Users, UserCheck, Plus, CheckCircle2, Power, Eye, EyeOff } from 'lucide-react';
+import { Users, UserCheck, Plus, CheckCircle2, Power, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 export const UsersManager = () => {
   const { addToast } = useNotification();
@@ -13,6 +13,7 @@ export const UsersManager = () => {
   const [employees, setEmployees] = useState([]);
   const [instructors, setInstructors] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [licenseStats, setLicenseStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Modal states
@@ -35,6 +36,9 @@ export const UsersManager = () => {
         getDepartments()
       ]);
       setEmployees(empRes.data.data.employees || []);
+      if (empRes.data.data.licenseStats) {
+        setLicenseStats(empRes.data.data.licenseStats);
+      }
       setInstructors(instRes.data.data.instructors || []);
       setDepartments(depRes.data.data.departments || []);
     } catch (err) {
@@ -136,6 +140,23 @@ export const UsersManager = () => {
           )}
         </div>
       </div>
+
+      {/* License Alert / Usage Banner */}
+      {licenseStats && licenseStats.remainingLicenses === 0 && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center space-x-3 shadow-xs">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+          <div className="text-xs font-semibold">
+            All available licenses have been used. Please add more licenses to create or register new users.
+          </div>
+        </div>
+      )}
+      {licenseStats && licenseStats.remainingLicenses > 0 && (
+        <div className="px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-medium flex items-center justify-between">
+          <span>
+            License usage: <strong className="text-slate-900 font-bold">{licenseStats.usedLicenses}/{licenseStats.totalLicenses}</strong> — <span className="text-emerald-700 font-semibold">{licenseStats.remainingLicenses} {licenseStats.remainingLicenses === 1 ? 'license' : 'licenses'} remaining</span>
+          </span>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex space-x-2 border-b border-slate-200 pb-2">

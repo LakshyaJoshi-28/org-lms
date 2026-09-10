@@ -10,6 +10,7 @@ import {
   CheckCircle,
   BarChart3,
   ShieldAlert,
+  ShieldCheck,
   Award,
   RefreshCw,
   AlertCircle,
@@ -29,6 +30,36 @@ import {
   CartesianGrid,
   Cell
 } from 'recharts';
+
+const renderAuditDetails = (details) => {
+  if (!details) return <span className="text-slate-400 italic">No details provided</span>;
+
+  const match = details.match(/^Event:\s*([^.,]+)[.,]\s*(?:Details:\s*)?(.+)$/i);
+
+  if (match) {
+    const eventName = match[1].trim();
+    const mainDetails = match[2].trim();
+
+    return (
+      <div className="flex flex-col gap-1 py-0.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            Event: {eventName}
+          </span>
+        </div>
+        <p className="text-xs text-slate-800 font-medium leading-relaxed whitespace-normal break-words">
+          {mainDetails}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <p className="text-xs text-slate-800 font-medium leading-relaxed whitespace-normal break-words py-0.5">
+      {details}
+    </p>
+  );
+};
 
 export const AdminDashboard = () => {
   const { addToast } = useNotification();
@@ -145,8 +176,8 @@ export const AdminDashboard = () => {
       {/* SKELETON LOADING STATE */}
       {loading ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
-            {[1, 2, 3, 4].map((n) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map((n) => (
               <div key={n} className="p-5 rounded-2xl bg-white border border-slate-200 animate-pulse space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-slate-200" />
                 <div className="h-4 w-24 bg-slate-200 rounded" />
@@ -160,55 +191,152 @@ export const AdminDashboard = () => {
         </div>
       ) : (
         <>
-          {/* SECTION 2: 4 QUICK STATS CARDS GRID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4.5">
-            {/* Card 1: Total Employees */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Employees</p>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
-                  {quickStats.totalEmployees ?? 0}
-                </h3>
-                <p className="text-xs text-slate-500">Active organization staff</p>
+          {/* SECTION 2: 5 QUICK STATS CARDS GRID */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Card 1: Total Licenses Usage (Visually Highlighted with Adaptive States) */}
+            {(() => {
+              const total = quickStats.totalLicenses ?? 5;
+              const used = quickStats.usedLicenses ?? 0;
+              const remaining = quickStats.remainingLicenses ?? Math.max(0, total - used);
+              const usagePercent = Math.min(100, Math.max(0, Math.round((used / (total || 1)) * 100)));
+              const isExhausted = remaining === 0;
+              const isLow = remaining === 1;
+
+              let themeStyles = {
+                cardBg: 'bg-white border-slate-200/90 hover:border-emerald-300',
+                badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                badgeText: 'ACTIVE',
+                barColor: 'bg-emerald-500',
+                iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                remainingText: 'text-emerald-700'
+              };
+
+              if (isExhausted) {
+                themeStyles = {
+                  cardBg: 'bg-rose-50/40 border-rose-200/90 hover:border-rose-300',
+                  badgeBg: 'bg-rose-600 text-white border-rose-600 font-black',
+                  badgeText: 'LIMIT REACHED',
+                  barColor: 'bg-rose-500',
+                  iconBg: 'bg-rose-100 text-rose-600 border-rose-200',
+                  remainingText: 'text-rose-700'
+                };
+              } else if (isLow) {
+                themeStyles = {
+                  cardBg: 'bg-amber-50/40 border-amber-200/90 hover:border-amber-300',
+                  badgeBg: 'bg-amber-100 text-amber-800 border-amber-200 font-extrabold',
+                  badgeText: '1 SEAT LEFT',
+                  barColor: 'bg-amber-500',
+                  iconBg: 'bg-amber-100 text-amber-700 border-amber-200',
+                  remainingText: 'text-amber-700'
+                };
+              }
+
+              return (
+                <div className={`p-5 rounded-2xl border shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3.5 ${themeStyles.cardBg}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Licenses</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-bold border tracking-wider ${themeStyles.badgeBg}`}>
+                          {themeStyles.badgeText}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline space-x-1.5">
+                        <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+                          {used} <span className="text-base font-semibold text-slate-400">/ {total}</span>
+                        </h3>
+                      </div>
+                    </div>
+                    <div className={`p-3 rounded-xl border shrink-0 ${themeStyles.iconBg}`}>
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* Progress Bar & Sub-metrics */}
+                  <div className="space-y-2 pt-1 border-t border-slate-100">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-slate-600">Used: <strong className="text-slate-900 font-bold">{used}</strong></span>
+                      <span className="text-slate-600">Remaining: <strong className={`font-bold ${themeStyles.remainingText}`}>{remaining}</strong></span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden p-0.5">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${themeStyles.barColor}`}
+                        style={{ width: `${usagePercent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Card 2: Total Employees */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Employees</p>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+                    {quickStats.totalEmployees ?? 0}
+                  </h3>
+                </div>
+                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+                  <Users className="w-5 h-5" />
+                </div>
               </div>
-              <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
-                <Users className="w-5 h-5" />
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Active org staff</span>
+                <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[10px]">
+                  Staff Roster
+                </span>
               </div>
             </div>
 
-            {/* Card 2: Instructors */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Instructors</p>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
-                  {quickStats.totalInstructors ?? 0}
-                </h3>
-                <p className="text-xs text-slate-500">Course & syllabus authors</p>
+            {/* Card 3: Instructors */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Instructors</p>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+                    {quickStats.totalInstructors ?? 0}
+                  </h3>
+                </div>
+                <div className="p-3 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 shrink-0">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
               </div>
-              <div className="p-3.5 rounded-xl bg-teal-50 text-teal-600 border border-teal-100 shrink-0">
-                <GraduationCap className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Card 3: Active Trainings */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Trainings</p>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
-                  {quickStats.activeTrainings ?? 0}
-                </h3>
-                <p className="text-xs text-slate-500">Published active courses</p>
-              </div>
-              <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
-                <BookOpen className="w-5 h-5" />
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Course authors</span>
+                <span className="text-teal-700 font-semibold bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200 text-[10px]">
+                  Faculty
+                </span>
               </div>
             </div>
 
-            {/* Card 4: Completed Trainings & Completion Progress */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-md transition-all flex flex-col justify-between space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed</p>
+            {/* Card 4: Active Trainings */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Active Trainings</p>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
+                    {quickStats.activeTrainings ?? 0}
+                  </h3>
+                </div>
+                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 shrink-0">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>Published courses</span>
+                <span className="text-indigo-700 font-semibold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200 text-[10px]">
+                  Catalog
+                </span>
+              </div>
+            </div>
+
+            {/* Card 5: Completed Trainings */}
+            <div className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Completed</p>
                   <div className="flex items-baseline space-x-2">
                     <h3 className="text-2xl font-black text-slate-900 tracking-tight font-heading">
                       {quickStats.completedTrainings ?? 0}
@@ -218,17 +346,21 @@ export const AdminDashboard = () => {
                     </span>
                   </div>
                 </div>
-                <div className="p-3.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
+                <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shrink-0">
                   <CheckCircle className="w-5 h-5" />
                 </div>
               </div>
-
-              {/* Mini Completion Progress Bar */}
-              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                <div
-                  className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(isNaN(overallRateNum) ? 0 : overallRateNum, 100)}%` }}
-                />
+              <div className="space-y-2 pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-600">
+                  <span>Completion Rate</span>
+                  <span className="text-emerald-700 font-bold">{quickStats.overallCompletionRate || '0%'}</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden p-0.5">
+                  <div
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(isNaN(overallRateNum) ? 0 : overallRateNum, 100)}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -422,15 +554,15 @@ export const AdminDashboard = () => {
                   <tbody className="divide-y divide-slate-100">
                     {recentLogs.map((log) => (
                       <tr key={log._id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-3.5 align-top">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
                             {formatAuditAction(log.action)}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 font-medium text-slate-800 max-w-md truncate">
-                          {log.details}
+                        <td className="px-4 py-3.5 min-w-[280px] max-w-lg align-top">
+                          {renderAuditDetails(log.details)}
                         </td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-3.5 align-top">
                           <div className="inline-flex items-center space-x-2">
                             <span className="font-bold text-slate-900">{log.userName}</span>
                             <span className="uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
@@ -438,7 +570,7 @@ export const AdminDashboard = () => {
                             </span>
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 text-right font-mono text-xs text-slate-500">
+                        <td className="px-4 py-3.5 text-right font-mono text-xs text-slate-500 align-top">
                           {new Date(log.timestamp || log.createdAt).toLocaleDateString()} {new Date(log.timestamp || log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
                       </tr>
@@ -453,5 +585,3 @@ export const AdminDashboard = () => {
     </div>
   );
 };
-
-

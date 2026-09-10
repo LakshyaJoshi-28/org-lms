@@ -14,6 +14,8 @@ connectDB()
   .then(async () => {
     const ensureSuperAdminExists = require('./utils/seedSuperAdmin');
     await ensureSuperAdminExists();
+    const { ensureOrganizationLicensesValid } = require('./services/licenseService');
+    await ensureOrganizationLicensesValid();
     const app = require('./app');
 
     server = http.createServer(app);

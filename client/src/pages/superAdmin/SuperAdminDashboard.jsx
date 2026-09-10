@@ -55,6 +55,7 @@ export const SuperAdminDashboard = () => {
     name: '',
     code: '',
     description: '',
+    totalLicenses: 5,
     adminName: '',
     adminEmail: '',
     adminPassword: ''
@@ -62,7 +63,10 @@ export const SuperAdminDashboard = () => {
   const [editForm, setEditForm] = useState({
     name: '',
     code: '',
-    description: ''
+    description: '',
+    totalLicenses: 5,
+    adminEmail: '',
+    adminName: ''
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -102,6 +106,7 @@ export const SuperAdminDashboard = () => {
     const adminName = (createForm.adminName || '').trim();
     const adminEmail = (createForm.adminEmail || '').trim();
     const adminPassword = (createForm.adminPassword || '');
+    const totalLicenses = parseInt(createForm.totalLicenses, 10);
 
     if (!name) {
       addToast('error', 'Organization Name is required');
@@ -109,6 +114,10 @@ export const SuperAdminDashboard = () => {
     }
     if (!code) {
       addToast('error', 'Org Code is required');
+      return;
+    }
+    if (isNaN(totalLicenses) || totalLicenses < 1) {
+      addToast('error', 'Total Licenses must be a valid positive integer (at least 1)');
       return;
     }
     if (!adminName) {
@@ -137,6 +146,7 @@ export const SuperAdminDashboard = () => {
         code,
         adminName,
         adminEmail,
+        totalLicenses,
         description: (createForm.description || '').trim()
       });
       addToast('success', 'Organization and initial Org Admin created successfully!');
@@ -145,6 +155,7 @@ export const SuperAdminDashboard = () => {
         name: '',
         code: '',
         description: '',
+        totalLicenses: 5,
         adminName: '',
         adminEmail: '',
         adminPassword: ''
@@ -160,9 +171,23 @@ export const SuperAdminDashboard = () => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!selectedOrg) return;
+
+    if (editForm.adminEmail && editForm.adminEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(editForm.adminEmail.trim())) {
+        addToast('error', 'Please enter a valid email address.');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
-      await api.put(`/super-admin/organizations/${selectedOrg.id}`, editForm);
+      await api.put(`/super-admin/organizations/${selectedOrg.id}`, {
+        ...editForm,
+        totalLicenses: parseInt(editForm.totalLicenses, 10),
+        adminEmail: (editForm.adminEmail || '').trim(),
+        adminName: (editForm.adminName || '').trim()
+      });
       addToast('success', 'Organization updated successfully!');
       setShowEditModal(false);
       setSelectedOrg(null);
@@ -196,7 +221,10 @@ export const SuperAdminDashboard = () => {
     setEditForm({
       name: org.name || '',
       code: org.code || '',
-      description: org.description || ''
+      description: org.description || '',
+      totalLicenses: org.totalLicenses || 5,
+      adminEmail: org.adminEmail || '',
+      adminName: org.adminName || ''
     });
     setShowEditModal(true);
   };
@@ -392,7 +420,7 @@ export const SuperAdminDashboard = () => {
               <tr>
                 <th className="px-6 py-3.5">Organization</th>
                 <th className="px-6 py-3.5">Org Code</th>
-                <th className="px-6 py-3.5">Members</th>
+                <th className="px-6 py-3.5">Licenses (Used / Total)</th>
                 <th className="px-6 py-3.5">Status</th>
                 <th className="px-6 py-3.5">Created Date</th>
                 <th className="px-6 py-3.5 text-right">Actions</th>
@@ -458,11 +486,11 @@ export const SuperAdminDashboard = () => {
                         </span>
                       </td>
 
-                      {/* Users Count */}
-                      <td className="px-6 py-4 text-xs">
-                        <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-medium">
-                          <Users className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
-                          <span>{org.userCount || 0} members</span>
+                      {/* Licenses */}
+                      <td className="px-6 py-4 text-xs font-semibold">
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                          <ShieldCheck className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                          <span>{org.usedLicenses ?? 0} / {org.totalLicenses ?? 5}</span>
                         </div>
                       </td>
 
@@ -589,8 +617,8 @@ export const SuperAdminDashboard = () => {
               </div>
             </div>
 
-            {/* Code & Description Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Code, Description & Total Licenses Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Org Code *
@@ -604,6 +632,25 @@ export const SuperAdminDashboard = () => {
                     required
                     placeholder="ACME-101"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-mono uppercase tracking-wider focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Total Licenses *
+                </label>
+                <div className="relative">
+                  <Users className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={createForm.totalLicenses}
+                    onChange={(e) => setCreateForm({ ...createForm, totalLicenses: e.target.value })}
+                    required
+                    placeholder="5"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
                   />
                 </div>
               </div>
@@ -765,6 +812,66 @@ export const SuperAdminDashboard = () => {
                 onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Total Licenses *
+            </label>
+            <div className="relative">
+              <Users className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={editForm.totalLicenses}
+                onChange={(e) => setEditForm({ ...editForm, totalLicenses: e.target.value })}
+                required
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Org Admin Information Section */}
+          <div className="pt-3 border-t border-slate-100 space-y-3">
+            <div className="flex items-center space-x-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
+              <User className="w-4 h-4" />
+              <span>Organization Admin Details</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Org Admin Full Name
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={editForm.adminName}
+                    onChange={(e) => setEditForm({ ...editForm, adminName: e.target.value })}
+                    placeholder="Admin Name"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Organization Admin Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input
+                    type="email"
+                    value={editForm.adminEmail}
+                    onChange={(e) => setEditForm({ ...editForm, adminEmail: e.target.value })}
+                    placeholder="admin@company.com"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 outline-none"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

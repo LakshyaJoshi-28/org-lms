@@ -106,6 +106,8 @@ const setupOrganization = async (req, res, next) => {
   }
 };
 
+const { checkAndReserveLicense } = require('../services/licenseService');
+
 /**
  * @desc    Public Employee Registration
  * @route   POST /api/auth/register-employee
@@ -136,16 +138,33 @@ const registerEmployee = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const profilePicture = getDefaultDiceBearAvatar(name);
 
-    const employee = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        password: hashedPassword,
-        role: 'Employee',
-        organizationId: organization.id,
-        isProfileComplete: false,
-        profilePicture
+    const employee = await prisma.$transaction(async (tx) => {
+      const licenseReservation = await checkAndReserveLicense(organization.id, tx);
+      if (!licenseReservation.allowed) {
+        // Send notification to Org Admins asynchronously
+        const { sendAdminNotification } = require('../services/notificationService');
+        sendAdminNotification(
+          organization.id,
+          'LICENSE_LIMIT_REACHED',
+          'License Limit Reached',
+          'An employee attempted to register, but all available licenses for your organization have been used. Please add more licenses to allow new employee registrations.',
+          { entityType: 'Organization', entityId: organization.id }
+        ).catch((err) => console.error('Failed to send license limit admin notification:', err));
+
+        throw new ApiError(400, 'All available licenses have been used. Please contact your administrator to add more licenses.');
       }
+
+      return await tx.user.create({
+        data: {
+          name: name.trim(),
+          email: email.toLowerCase().trim(),
+          password: hashedPassword,
+          role: 'Employee',
+          organizationId: organization.id,
+          isProfileComplete: false,
+          profilePicture
+        }
+      });
     });
 
     // Auto-assign mandatory trainings & active auto-assignment rules

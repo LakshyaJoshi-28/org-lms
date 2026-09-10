@@ -21,6 +21,7 @@ model Organization {
   code                String               @unique
   description         String?
   status              String               @default("ACTIVE")
+  totalLicenses       Int                  @default(5)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   
@@ -522,7 +523,16 @@ model CertificateTemplate {
   fontFamily     String       @default("Inter")
   borderStyle    String       @default("classic_gold")
   layoutStyle    String       @default("centered")
-  createdAt      DateTime     @default(now())
+  logoUrl           String?
+  logoPublicId      String?
+  logoPosition      String?      @default("top-center")
+  logoWidth         Int?         @default(120)
+  signatureUrl      String?
+  signaturePublicId String?
+  signatureName     String?
+  signaturePosition String?      @default("bottom-right")
+  signatureWidth    Int?         @default(160)
+  createdAt         DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
